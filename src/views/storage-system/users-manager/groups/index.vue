@@ -1,216 +1,90 @@
-<!-- 用户管理 -->
-<!-- art-full-height 自动计算出页面剩余高度 -->
-<!-- art-table-card 一个符合系统样式的 class，同时自动撑满剩余高度 -->
-<!-- 更多 useTable 使用示例请移步至 功能示例 下面的 高级表格示例或者查看官方文档 -->
-<!-- useTable 文档：https://www.artd.pro/docs/zh/guide/hooks/use-table.html -->
 <template>
-  <div class="user-page art-full-height">
-    <!-- 搜索栏 -->
-    <UserSearch v-model="searchForm" @search="handleSearch" @reset="resetSearchParams"></UserSearch>
-
-    <ElCard class="art-table-card" shadow="never">
-      <!-- 表格头部 -->
-      <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
-        <template #left>
-          <ElSpace wrap>
-            <ElButton @click="showDialog('add')" v-ripple>新增用户</ElButton>
-          </ElSpace>
-        </template>
-      </ArtTableHeader>
-
-      <!-- 表格 -->
-      <ArtTable
-        :loading="loading"
-        :data="data"
-        :columns="columns"
-        :pagination="pagination"
-        @selection-change="handleSelectionChange"
-        @pagination:size-change="handleSizeChange"
-        @pagination:current-change="handleCurrentChange"
-      >
-      </ArtTable>
-
-      <!-- 用户弹窗 -->
-      <UserDialog
-        v-model:visible="dialogVisible"
-        :type="dialogType"
-        :user-data="currentUserData"
-        @submit="handleDialogSubmit"
-      />
-    </ElCard>
+  <div class="art-full-height">
+    <div class="tree-container">
+      <div class="left-sidebar" style="width: 300px">
+        <ElCard class="art-table-card" shadow="never" style="margin-top: 0">
+          <template #header>
+            <b>用户组</b>
+          </template>
+          <ElScrollbar>
+            <group-list :groupList="groupsList" />
+          </ElScrollbar>
+        </ElCard>
+      </div>
+      <div class="right-content art-full-height">
+        <ElSpace wrap>
+          <ElButton @click="showDialog('add')" v-ripple>新增用户组</ElButton>
+        </ElSpace>
+        <ElCard class="art-table-card" shadow="never">
+          <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
+            <template #left>
+              <ElSpace wrap>
+                <ElButton>删除用户组</ElButton>
+                <ElButton>编辑用户组</ElButton>
+                <ElButton @click="showDialog('add')" v-ripple>新增用户</ElButton>
+              </ElSpace>
+            </template>
+          </ArtTableHeader>
+          <ArtTable
+            :loading="loading"
+            :data="data"
+            :columns="columns"
+            :pagination="pagination"
+            @pagination:size-change="handleSizeChange"
+            @pagination:current-change="handleCurrentChange"
+          >
+          </ArtTable>
+        </ElCard>
+      </div>
+    </div>
+    <!-- 用户弹窗 -->
+    <UserDialog v-model:visible="dialogVisible" :type="dialogType" @submit="handleDialogSubmit" />
   </div>
 </template>
 
 <script setup lang="ts">
-  import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
-  import { ACCOUNT_TABLE_DATA } from '@/mock/temp/formData'
   import { useTable } from '@/composables/useTable'
   import { fetchGetUserList } from '@/api/system-manage'
-  import UserSearch from './modules/user-search.vue'
   import UserDialog from './modules/user-dialog.vue'
-  import { ElTag, ElMessageBox, ElImage } from 'element-plus'
+  import UserListItem = Api.SystemManage.UserListItem
+  import GroupList from '@views/storage-system/users-manager/groups/modules/group-list.vue'
 
-  defineOptions({ name: 'GroupsManager' })
-
-  type UserListItem = Api.SystemManage.UserListItem
-
-  // 弹窗相关
   const dialogType = ref<Form.DialogType>('add')
   const dialogVisible = ref(false)
-  const currentUserData = ref<Partial<UserListItem>>({})
+  // 当前选中的用户组选项
+  defineOptions({ name: 'GroupsManager' })
 
-  // 选中行
-  const selectedRows = ref<UserListItem[]>([])
-
-  // 搜索表单
-  const searchForm = ref({
-    userName: undefined,
-    userGender: undefined,
-    userPhone: undefined,
-    userEmail: undefined,
-    status: '1'
-  })
-
-  // 用户状态配置
-  const USER_STATUS_CONFIG = {
-    '1': { type: 'success' as const, text: '在线' },
-    '2': { type: 'info' as const, text: '离线' },
-    '3': { type: 'warning' as const, text: '异常' },
-    '4': { type: 'danger' as const, text: '注销' }
-  } as const
-
-  /**
-   * 获取用户状态配置
-   */
-  const getUserStatusConfig = (status: string) => {
-    return (
-      USER_STATUS_CONFIG[status as keyof typeof USER_STATUS_CONFIG] || {
-        type: 'info' as const,
-        text: '未知'
-      }
-    )
-  }
-
-  const {
-    columns,
-    columnChecks,
-    data,
-    loading,
-    pagination,
-    getData,
-    searchParams,
-    resetSearchParams,
-    handleSizeChange,
-    handleCurrentChange,
-    refreshData
-  } = useTable({
-    // 核心配置
-    core: {
-      apiFn: fetchGetUserList,
-      apiParams: {
-        current: 1,
-        size: 20,
-        ...searchForm.value
-      },
-      // 自定义分页字段映射，未设置时将使用全局配置 tableConfig.ts 中的 paginationKey
-      // paginationKey: {
-      //   current: 'pageNum',
-      //   size: 'pageSize'
-      // },
-      columnsFactory: () => [
-        { type: 'selection' }, // 勾选列
-        { type: 'index', width: 60, label: '序号' }, // 序号
-        {
-          prop: 'avatar',
-          label: '用户名',
-          width: 280,
-          formatter: (row) => {
-            return h('div', { class: 'user', style: 'display: flex; align-items: center' }, [
-              h(ElImage, {
-                class: 'avatar',
-                src: row.avatar,
-                previewSrcList: [row.avatar],
-                // 图片预览是否插入至 body 元素上，用于解决表格内部图片预览样式异常
-                previewTeleported: true
-              }),
-              h('div', {}, [
-                h('p', { class: 'user-name' }, row.userName),
-                h('p', { class: 'email' }, row.userEmail)
-              ])
-            ])
-          }
-        },
-        {
-          prop: 'userGender',
-          label: '性别',
-          sortable: true,
-          // checked: false, // 隐藏列
-          formatter: (row) => row.userGender
-        },
-        { prop: 'userPhone', label: '手机号' },
-        {
-          prop: 'status',
-          label: '状态',
-          formatter: (row) => {
-            const statusConfig = getUserStatusConfig(row.status)
-            return h(ElTag, { type: statusConfig.type }, () => statusConfig.text)
-          }
-        },
-        {
-          prop: 'createTime',
-          label: '创建日期',
-          sortable: true
-        },
-        {
-          prop: 'operation',
-          label: '操作',
-          width: 120,
-          fixed: 'right', // 固定列
-          formatter: (row) =>
-            h('div', [
-              h(ArtButtonTable, {
-                type: 'edit',
-                onClick: () => showDialog('edit', row)
-              }),
-              h(ArtButtonTable, {
-                type: 'delete',
-                onClick: () => deleteUser(row)
-              })
-            ])
-        }
-      ]
+  const groupsList = ref<Api.Sys.SysGroup[]>([])
+  groupsList.value = [
+    {
+      groupName: '用户组1',
+      groupAlias: '用户组1的描述',
+      createTime: '',
+      gid: 1,
+      totalPeople: 10
     },
-    // 数据处理
-    transform: {
-      // 数据转换器 - 替换头像
-      dataTransformer: (records) => {
-        // 类型守卫检查
-        if (!Array.isArray(records)) {
-          console.warn('数据转换器: 期望数组类型，实际收到:', typeof records)
-          return []
-        }
-
-        // 使用本地头像替换接口返回的头像
-        return records.map((item, index: number) => {
-          return {
-            ...item,
-            avatar: ACCOUNT_TABLE_DATA[index % ACCOUNT_TABLE_DATA.length].avatar
-          }
-        })
-      }
+    {
+      groupName: '用户组2',
+      groupAlias: '用户组2的描述',
+      createTime: '',
+      gid: 2,
+      totalPeople: 10
+    },
+    {
+      groupName: '用户组3',
+      groupAlias: '用户组3的描述',
+      createTime: '',
+      gid: 3,
+      totalPeople: 10
+    },
+    {
+      groupName: '用户组4',
+      groupAlias: '用户组4的描述',
+      createTime: '',
+      gid: 4,
+      totalPeople: 10
     }
-  })
-
-  /**
-   * 搜索处理
-   * @param params 参数
-   */
-  const handleSearch = (params: Record<string, any>) => {
-    console.log(params)
-    // 搜索参数赋值
-    Object.assign(searchParams, params)
-    getData()
-  }
+  ]
 
   /**
    * 显示用户弹窗
@@ -218,23 +92,9 @@
   const showDialog = (type: Form.DialogType, row?: UserListItem): void => {
     console.log('打开弹窗:', { type, row })
     dialogType.value = type
-    currentUserData.value = row || {}
+    // currentUserData.value = row || {}
     nextTick(() => {
       dialogVisible.value = true
-    })
-  }
-
-  /**
-   * 删除用户
-   */
-  const deleteUser = (row: UserListItem): void => {
-    console.log('删除用户:', row)
-    ElMessageBox.confirm(`确定要注销该用户吗？`, '注销用户', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'error'
-    }).then(() => {
-      ElMessage.success('注销成功')
     })
   }
 
@@ -244,38 +104,95 @@
   const handleDialogSubmit = async () => {
     try {
       dialogVisible.value = false
-      currentUserData.value = {}
+      // currentUserData.value = {}
     } catch (error) {
       console.error('提交失败:', error)
     }
   }
 
-  /**
-   * 处理表格行选择变化
-   */
-  const handleSelectionChange = (selection: UserListItem[]): void => {
-    selectedRows.value = selection
-    console.log('选中行数据:', selectedRows.value)
-  }
+  const {
+    data,
+    columns,
+    columnChecks,
+    loading,
+    pagination,
+    refreshData,
+    handleSizeChange,
+    handleCurrentChange
+  } = useTable({
+    core: {
+      apiFn: fetchGetUserList,
+      apiParams: {
+        current: 1,
+        size: 20,
+        userName: '',
+        userPhone: '',
+        userEmail: ''
+      },
+      columnsFactory: () => [
+        {
+          prop: 'id',
+          label: 'ID'
+        },
+        {
+          prop: 'nickName',
+          label: '昵称'
+        },
+        {
+          prop: 'userGender',
+          label: '性别',
+          sortable: true,
+          formatter: (row) => row.userGender || '未知'
+        },
+        {
+          prop: 'userPhone',
+          label: '手机号'
+        },
+        {
+          prop: 'userEmail',
+          label: '邮箱'
+        }
+      ]
+    }
+  })
 </script>
 
 <style lang="scss" scoped>
-  .user-page {
-    :deep(.user) {
-      .avatar {
-        width: 40px;
-        height: 40px;
-        margin-left: 0;
-        border-radius: 6px;
-      }
+  .tree-container {
+    box-sizing: border-box;
+    display: flex;
+    gap: 16px;
+    height: 100%;
 
-      > div {
-        margin-left: 10px;
+    .left-sidebar {
+      flex-shrink: 0;
+      width: 230px;
+      height: 100%;
+    }
 
-        .user-name {
-          font-weight: 500;
-          color: var(--art-text-gray-800);
-        }
+    .right-content {
+      flex-grow: 1;
+      min-width: 0;
+      height: 100%;
+    }
+
+    .art-table-card {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+  }
+
+  @media screen and (max-width: $device-ipad) {
+    .tree-container {
+      display: block;
+      gap: 0;
+      height: auto;
+
+      .left-sidebar {
+        width: 100%;
+        height: auto;
+        margin-bottom: 20px;
       }
     }
   }

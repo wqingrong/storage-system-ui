@@ -6,6 +6,15 @@
  */
 
 declare namespace Api {
+  namespace Sys {
+    interface SysGroup {
+      groupName: string
+      groupAlias: string
+      createTime: string
+      gid: number
+      totalPeople: number
+    }
+  }
   /** 通用类型 */
   namespace Common {
     /** 分页参数 */
