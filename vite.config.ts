@@ -29,6 +29,14 @@ export default ({ mode }: { mode: string }) => {
         '/api': {
           target: VITE_API_PROXY_URL,
           changeOrigin: true
+        },
+        '/system': {
+          target: 'http://127.0.0.1:9090',
+          changeOrigin: true
+        },
+        '/disk': {
+          target: 'http://127.0.0.1:9090',
+          changeOrigin: true
         }
       },
       host: true

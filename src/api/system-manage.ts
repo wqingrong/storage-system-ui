@@ -23,3 +23,11 @@ export function fetchGetMenuList() {
     url: '/api/system/menus'
   })
 }
+
+// 获取菜单列表
+export function fetchGetOperationList(params: Api.Sys.OperationLoggerSearchParams) {
+  return request.get<Api.Sys.OperationLoggerList>({
+    url: '/system/getOperationLoggerList',
+    params
+  })
+}

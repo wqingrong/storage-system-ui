@@ -15,6 +15,29 @@ declare namespace Api {
       gid: number
       totalPeople: number
     }
+    // 操作日志的基本格式
+    interface OperationLogger {
+      id: number
+      logType: string
+      optionOwner: string
+      operationMessage_Zh: string
+      operationMessage_En: string
+      operationTime: string
+    }
+    // 搜索日志的参数的数据结构
+    interface SearchOperationLoggerParams {
+      logType: string
+      optionOwner: string
+      operationMessage_Zh: string
+      operationMessage_En: string
+      operationTime: string
+    }
+
+    /** 用户搜索日志的参数*/
+    type OperationLoggerSearchParams = Partial<SearchOperationLoggerParams> &
+      Api.Common.CommonSearchParams
+
+    type OperationLoggerList = Api.Common.PaginatedResponse<OperationLogger>
   }
   /** 通用类型 */
   namespace Common {
