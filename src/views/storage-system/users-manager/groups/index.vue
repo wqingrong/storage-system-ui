@@ -7,21 +7,21 @@
             <b>用户组</b>
           </template>
           <ElScrollbar>
-            <group-list :groupList="groupsList" />
+            <group-list :groupList="groupsList" v-model:currentGroupItem="currentGroupItem" />
           </ElScrollbar>
         </ElCard>
       </div>
       <div class="right-content art-full-height">
         <ElSpace wrap>
-          <ElButton @click="showDialog('add')" v-ripple>新增用户组</ElButton>
+          <ElButton @click="showGroupDialog('add')">新增用户组</ElButton>
         </ElSpace>
         <ElCard class="art-table-card" shadow="never">
           <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
             <template #left>
               <ElSpace wrap>
-                <ElButton>删除用户组</ElButton>
-                <ElButton>编辑用户组</ElButton>
-                <ElButton @click="showDialog('add')" v-ripple>新增用户</ElButton>
+                <ElButton @click="handleDeleteGroup">删除用户组</ElButton>
+                <ElButton @click="handleEditGroup">编辑用户组</ElButton>
+                <ElButton @click="showAddUserDialog('add')" v-ripple>新增用户</ElButton>
               </ElSpace>
             </template>
           </ArtTableHeader>
@@ -39,6 +39,14 @@
     </div>
     <!-- 用户弹窗 -->
     <UserDialog v-model:visible="dialogVisible" :type="dialogType" @submit="handleDialogSubmit" />
+    <!--    用户组弹出-->
+    <GroupDialog
+      v-model:visible="dialogAddGroupVisible"
+      :type="dialogType"
+      :groupData="currentGroupItem"
+      @groupAddSubmit="handleAddGroupDialogSubmit"
+      @groupEditSubmit="handleEditGroupDialogSubmit"
+    />
   </div>
 </template>
 
@@ -47,10 +55,14 @@
   import { fetchGetUserList } from '@/api/system-manage'
   import UserDialog from './modules/user-dialog.vue'
   import UserListItem = Api.SystemManage.UserListItem
+  import SysGroup = Api.Sys.SysGroup
   import GroupList from '@views/storage-system/users-manager/groups/modules/group-list.vue'
+  import GroupDialog from '@views/storage-system/users-manager/groups/modules/group-dialog.vue'
 
   const dialogType = ref<Form.DialogType>('add')
   const dialogVisible = ref(false)
+  const dialogAddGroupVisible = ref(false)
+  const currentGroupItem = ref<SysGroup>() // 与用户组列表双重绑定的变量
   // 当前选中的用户组选项
   defineOptions({ name: 'GroupsManager' })
 
@@ -59,6 +71,7 @@
     {
       groupName: '用户组1',
       groupAlias: '用户组1的描述',
+      groupDesc: '',
       createTime: '',
       gid: 1,
       totalPeople: 10
@@ -67,6 +80,7 @@
       groupName: '用户组2',
       groupAlias: '用户组2的描述',
       createTime: '',
+      groupDesc: '',
       gid: 2,
       totalPeople: 10
     },
@@ -74,6 +88,7 @@
       groupName: '用户组3',
       groupAlias: '用户组3的描述',
       createTime: '',
+      groupDesc: '',
       gid: 3,
       totalPeople: 10
     },
@@ -81,21 +96,27 @@
       groupName: '用户组4',
       groupAlias: '用户组4的描述',
       createTime: '',
+      groupDesc: '',
       gid: 4,
       totalPeople: 10
     }
   ]
-
+  currentGroupItem.value = groupsList.value[0]
   /**
    * 显示用户弹窗
    */
-  const showDialog = (type: Form.DialogType, row?: UserListItem): void => {
+  const showAddUserDialog = (type: Form.DialogType, row?: UserListItem): void => {
     console.log('打开弹窗:', { type, row })
     dialogType.value = type
     // currentUserData.value = row || {}
     nextTick(() => {
       dialogVisible.value = true
     })
+  }
+
+  const showGroupDialog = (type: Form.DialogType, row?: SysGroup): void => {
+    dialogType.value = type
+    dialogAddGroupVisible.value = true
   }
 
   /**
@@ -108,6 +129,37 @@
     } catch (error) {
       console.error('提交失败:', error)
     }
+  }
+
+  const handleAddGroupDialogSubmit = async (formData: Api.Sys.SysGroup) => {
+    try {
+      console.log('信息提交的表单信息>>>>', formData)
+      dialogAddGroupVisible.value = false
+      // currentUserData.value = {}
+    } catch (error) {
+      console.error('提交失败:', error)
+    }
+  }
+
+  const handleEditGroupDialogSubmit = async (formData: Api.Sys.SysGroup) => {
+    try {
+      console.log('编辑提交的表单信息>>>>', formData)
+      dialogAddGroupVisible.value = false
+      // currentUserData.value = {}
+    } catch (error) {
+      console.error('提交失败:', error)
+    }
+  }
+
+  const handleDeleteGroup = () => {
+    console.log('删除用户组')
+    console.log(currentGroupItem.value)
+  }
+
+  const handleEditGroup = () => {
+    console.log('编辑用户组')
+    console.log(currentGroupItem.value)
+    showGroupDialog('edit', currentGroupItem.value)
   }
 
   const {

@@ -11,6 +11,7 @@ declare namespace Api {
       groupName: string
       groupAlias: string
       createTime: string
+      groupDesc: string
       gid: number
       totalPeople: number
     }

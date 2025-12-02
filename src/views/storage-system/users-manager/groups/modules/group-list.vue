@@ -1,5 +1,5 @@
 <template>
-  <dev style="width: 100%; height: 100%">
+  <div style="width: 100%; height: 100%">
     <ElCol :gutter="20">
       <ElRow :xs="24" v-for="item in groupList" :key="item.gid">
         <ArtStatsCard
@@ -13,7 +13,7 @@
         />
       </ElRow>
     </ElCol>
-  </dev>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -22,18 +22,27 @@
       type: Array as PropType<Api.Sys.SysGroup[]>,
       required: true,
       default: () => []
+    },
+    currentGroupItem: {
+      type: Object as PropType<Api.Sys.SysGroup>,
+      required: true,
+      default: () => null
     }
   })
+
+  const emit = defineEmits<{
+    (e: 'update:currentGroupItem', value: Api.Sys.SysGroup | null): void // 添加更新事件
+  }>()
 
   const currentClickGroupItemId = ref(-1)
   onMounted(() => {
     initData()
-    console.log(props.groupList)
   })
 
   const initData = () => {
     if (props.groupList.length > 0) {
       currentClickGroupItemId.value = props.groupList[0].gid
+      emit('update:currentGroupItem', props.groupList[0])
     }
   }
   /**
@@ -42,8 +51,8 @@
    */
   const handleGroupCardClick = (groupItem: Api.Sys.SysGroup) => {
     currentClickGroupItemId.value = groupItem.gid
+    emit('update:currentGroupItem', groupItem)
   }
-  
 </script>
 
 <style scoped lang="scss"></style>
