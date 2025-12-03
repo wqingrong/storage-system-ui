@@ -13,7 +13,7 @@ export const systemManagerRoutes: AppRouteRecord = {
     {
       path: 'operation-logger',
       name: 'operationLogger',
-      component: '/storage-system/system-manager/user',
+      component: '/storage-system/system-manager/operation-logger',
       meta: {
         title: '操作日志',
         keepAlive: true
