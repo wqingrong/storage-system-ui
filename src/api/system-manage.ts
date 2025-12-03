@@ -24,10 +24,15 @@ export function fetchGetMenuList() {
   })
 }
 
-// 获取菜单列表
+// 获取操作日志信息
 export function fetchGetOperationList(params: Api.Sys.OperationLoggerSearchParams) {
   return request.get<Api.Sys.OperationLoggerList>({
     url: '/system/getOperationLoggerList',
     params
+  })
+}
+export function fetchGetAllDiscDeviceList() {
+  return request.get<Disk.Device.DeviceMessage>({
+    url: '/disk/getAllDiskList'
   })
 }

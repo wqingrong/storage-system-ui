@@ -13,6 +13,7 @@ import { basicMessageRoutes } from './basicmessage'
 import { watchStatusRoutes } from './watchstatus'
 import { usersManager } from './users-manager'
 import { systemManagerRoutes } from '@/router/modules/system-manager'
+import { storageManager } from '@/router/modules/storage-manager'
 
 /**
  * 导出所有模块化路由
@@ -20,6 +21,7 @@ import { systemManagerRoutes } from '@/router/modules/system-manager'
 export const routeModules: AppRouteRecord[] = [
   basicMessageRoutes,
   usersManager,
+  storageManager,
   watchStatusRoutes,
   systemManagerRoutes,
   dashboardRoutes,
