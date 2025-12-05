@@ -11,8 +11,8 @@ export const storageManager: AppRouteRecord = {
   },
   children: [
     {
-      path: 'basic-console',
-      name: 'BasicConsole',
+      path: 'storage-space',
+      name: 'StorageSpace',
       component: '/storage-system/storage-manager/console',
       meta: {
         title: '存储空间',
@@ -30,11 +30,11 @@ export const storageManager: AppRouteRecord = {
       }
     },
     {
-      path: 'basic-ecommerce',
-      name: 'BasicEcommerce',
-      component: '/storage-system/storage-manager/ecommerce',
+      path: 'disk-manager',
+      name: 'DiskManager',
+      component: '/storage-system/storage-manager/disk-manager',
       meta: {
-        title: 'menus.dashboard.ecommerce',
+        title: '硬盘管理',
         keepAlive: false
       }
     }

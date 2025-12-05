@@ -36,3 +36,9 @@ export function fetchGetAllDiscDeviceList() {
     url: '/disk/getAllDiskList'
   })
 }
+// 获取硬盘的详细信息列表
+export function fetchGetDiscDeviceDetailList() {
+  return request.get<Disk.Device.DiskDeviceList>({
+    url: '/disk/getDiskDetailList'
+  })
+}

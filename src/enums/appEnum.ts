@@ -55,3 +55,10 @@ export enum BgColorEnum {
   DANGER = 'bg-danger',
   INFO = 'bg-info'
 }
+// 磁盘的健康状态
+export enum HealthStatus {
+  OK = 'OK', // 良好
+  WARNING = 'warning', // 警告
+  BAD = 'bad', // 故障
+  UNKNOWN = 'unknown' // 未知
+}
