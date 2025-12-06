@@ -32,7 +32,7 @@ export function fetchGetOperationList(params: Api.Sys.OperationLoggerSearchParam
   })
 }
 export function fetchGetAllDiscDeviceList() {
-  return request.get<Disk.Device.DeviceMessage>({
+  return request.get<Disk.Device.DiskDeviceSimpleList>({
     url: '/disk/getAllDiskList'
   })
 }

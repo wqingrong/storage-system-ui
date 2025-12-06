@@ -25,5 +25,6 @@ declare namespace Disk {
     }
 
     type DiskDeviceList = Api.Common.PaginatedResponse<DiskDeviceDetail>
+    type DiskDeviceSimpleList = Api.Common.PaginatedResponse<DeviceMessage>
   }
 }
