@@ -1,9 +1,18 @@
 <template>
-  <DiskInfoCard :disk-info="hardDiskData" />
+  <!--  菜单选项结构-->
+  <div class="art-full-height">
+    <div class="menu-container">
+      <ElSpace wrap>
+        <ElButton>状态信息</ElButton>
+        <ElButton>创建存储池</ElButton>
+      </ElSpace>
+    </div>
+    <DiskDetail :disk-info="hardDiskData" />
+  </div>
 </template>
 
 <script setup lang="ts">
-  import DiskInfoCard from './modules/disk-message.vue'
+  import DiskDetail from './modules/disk-detail.vue'
 
   // 模拟硬盘数据（和示例一致）
   const hardDiskData = {
@@ -23,3 +32,9 @@
     ]
   }
 </script>
+
+<style scope>
+  .menu-container {
+    margin: 10px;
+  }
+</style>
