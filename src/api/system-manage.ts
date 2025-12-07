@@ -31,11 +31,19 @@ export function fetchGetOperationList(params: Api.Sys.OperationLoggerSearchParam
     params
   })
 }
+//  获取所有磁盘
 export function fetchGetAllDiscDeviceList() {
   return request.get<Disk.Device.DiskDeviceSimpleList>({
     url: '/disk/getAllDiskList'
   })
 }
+
+export function fetchGetFreeDiscDeviceList() {
+  return request.get<Disk.Device.DiskDeviceSimpleList>({
+    url: '/disk/getFreeDiskList'
+  })
+}
+
 // 获取硬盘的详细信息列表
 export function fetchGetDiscDeviceDetailList() {
   return request.get<Disk.Device.DiskDeviceList>({

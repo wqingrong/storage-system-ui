@@ -69,7 +69,6 @@
 
   defineOptions({ name: 'DiskMessage' })
 
-  // eslint-disable-next-line no-undef
   type diskDeviceMessage = Disk.Device.DeviceMessage
 
   // 选中的行
@@ -192,7 +191,7 @@
 
     // 性能优化
     performance: {
-      enableCache: true, // 开启缓存
+      enableCache: false, // 开启缓存
       cacheTime: 5 * 60 * 1000, // 5分钟
       debounceTime: 300,
       maxCacheSize: 100
