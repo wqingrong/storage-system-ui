@@ -130,26 +130,13 @@
   } = useTable({
     // 核心配置
     core: {
-      apiFn: (params) => {
-        // 在API调用前添加调试信息
-        const requestKey = JSON.stringify(params)
-        console.log('🚀 API 请求参数:', params)
-        addCacheLog(`🚀 API 请求: current=${params.current}, size=${params.size}`)
-        addCacheLog(`🔑 请求键: ${requestKey.substring(0, 100)}...`)
-
+      apiFn: () => {
         return fetchGetAllDiscDeviceList()
       },
       apiParams: {
         current: 1,
         size: 20
       },
-      // 排除 apiParams 中的属性
-      excludeParams: ['daterange'],
-      // 自定义分页字段映射，未设置时将使用全局配置 tableConfig.ts 中的 paginationKey
-      // paginationKey: {
-      //   current: 'pageNum',
-      //   size: 'pageSize'
-      // },
       immediate: true, // 是否立即加载数据
       columnsFactory: () => [
         { type: 'selection', width: 50 },

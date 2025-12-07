@@ -118,7 +118,6 @@
   import { ref } from 'vue'
   import { fetchGetDiscDeviceDetailList } from '@/api/system-manage'
   import { HealthStatus } from '@/enums/appEnum'
-  // eslint-disable-next-line no-undef
   const diskDeviceList = ref<Disk.Device.DiskDeviceDetail[]>([])
   const getDiskHealthStatusImage = (status: string) => {
     if (status === HealthStatus.OK) {
@@ -130,7 +129,6 @@
     }
   }
   const currentSelectItemDevice = ref('')
-  // eslint-disable-next-line no-undef
   const handleChange = (item: Disk.Device.DiskDeviceDetail) => {
     if (currentSelectItemDevice.value === item.device) {
       currentSelectItemDevice.value = ''
@@ -139,6 +137,7 @@
     }
   }
   onMounted(() => {
+    console.log('>>>页面挂载...')
     fetchGetDiscDeviceDetailList().then((res) => {
       if (res) {
         diskDeviceList.value = res.records

@@ -12,7 +12,7 @@
         <el-form :model="storageForm">
           <el-form-item label="RAID 类别:" label-position="left" label-width="200px">
             <el-select
-              v-model="createStoragePoolFormData.raidGrade"
+              v-model="createStoragePoolFormData.grade"
               placeholder="请选择RAID类别"
               style="width: 300px"
             >
@@ -22,13 +22,13 @@
               <el-option :label="RaidGrade.RAID_6" :value="RaidGrade.RAID_6" />
             </el-select>
             <span style="line-height: 2">{{
-              raidGradeTipTxt(createStoragePoolFormData.raidGrade)
+              raidGradeTipTxt(createStoragePoolFormData.grade)
             }}</span>
           </el-form-item>
 
           <el-form-item label="存储池描述:" label-position="left" label-width="200px">
             <el-input
-              v-model="createStoragePoolFormData.desc"
+              v-model="createStoragePoolFormData.storagePoolDesc"
               placeholder="可选，输入存储池描述"
               style="width: 300px"
             />
@@ -40,8 +40,8 @@
     <!-- 步骤2：选择磁盘 -->
     <div v-else-if="currentStep === 1">
       <div style="font-size: 16px"
-        >请选择至少选择 {{ diskNumber(createStoragePoolFormData.raidGrade) }} 块硬盘创建
-        {{ createStoragePoolFormData.raidGrade }}
+        >请选择至少选择 {{ diskNumber(createStoragePoolFormData.grade) }} 块硬盘创建
+        {{ createStoragePoolFormData.grade }}
       </div>
       <div class="form-box">
         <el-table
@@ -68,14 +68,12 @@
           <div>
             <div class="form-item">
               <div style="width: 50%">磁盘数量</div>
-              <div style="width: 50%">{{
-                createStoragePoolFormData.selectDiskDeviceList.length
-              }}</div>
+              <div style="width: 50%">{{ createStoragePoolFormData.diskDeviceList.length }}</div>
             </div>
             <el-divider />
           </div>
           <!---------循环显示磁盘列表-------------->
-          <div v-for="disk in createStoragePoolFormData.selectDiskDeviceList" :key="disk.device">
+          <div v-for="disk in createStoragePoolFormData.diskDeviceList" :key="disk.device">
             <div class="form-item">
               <div style="width: 50%">{{ disk.device }}</div>
               <div style="width: 50%">{{ disk.totalSize }}</div>
@@ -87,7 +85,7 @@
         <div>
           <div class="form-item">
             <div style="width: 50%">RAID等级</div>
-            <div style="width: 50%">{{ createStoragePoolFormData.raidGrade }}</div>
+            <div style="width: 50%">{{ createStoragePoolFormData.grade }}</div>
           </div>
           <el-divider />
         </div>
@@ -100,14 +98,109 @@
         </div>
       </div>
     </div>
+    <!--创建成功的显示框-->
+    <div v-else-if="currentStep === 3">
+      <el-result
+        v-if="createStoragePoolSuccessResponse?.raidStatusInfo.status.toUpperCase() === 'INACTIVE'"
+        icon="success"
+        style="height: 100px"
+        title="存储池创建成功"
+      />
+      <el-result v-else icon="error" style="height: 100px" title="存储池创建失败" />
+      <div class="form-box">
+        <div>
+          <div class="form-item">
+            <div style="width: 50%">磁盘数量</div>
+            <div style="width: 50%">{{
+              createStoragePoolSuccessResponse?.raidStatusInfo.diskDeviceList.length
+            }}</div>
+          </div>
+          <el-divider />
+        </div>
+        <!-- 表格结构 超出一定数量时显示滚动条-->
+        <el-scrollbar max-height="200px">
+          <div>
+            <!---------循环显示磁盘列表-------------->
+            <div
+              v-for="disk in createStoragePoolSuccessResponse?.raidStatusInfo.diskDeviceList"
+              :key="disk.device"
+            >
+              <div class="form-item">
+                <div style="width: 50%">{{ disk.device }}</div>
+                <div style="width: 50%">{{ disk.totalSize }}</div>
+              </div>
+              <el-divider />
+            </div>
+          </div>
+        </el-scrollbar>
+        <!--        ---------------------------------------->
+        <div>
+          <div class="form-item">
+            <div style="width: 50%">RAID等级</div>
+            <div style="width: 50%">{{
+              createStoragePoolSuccessResponse?.raidStatusInfo.grade
+            }}</div>
+          </div>
+          <el-divider />
+        </div>
+        <div>
+          <div class="form-item">
+            <div style="width: 50%">块大小</div>
+            <div style="width: 50%">{{
+              createStoragePoolSuccessResponse?.raidStatusInfo.blockSize
+            }}</div>
+          </div>
+          <el-divider />
+        </div>
+        <div>
+          <div class="form-item">
+            <div style="width: 50%">RAID状态</div>
+            <div style="width: 50%">{{
+              createStoragePoolSuccessResponse?.raidStatusInfo.status
+            }}</div>
+          </div>
+          <el-divider />
+        </div>
+        <div>
+          <div class="form-item">
+            <div style="width: 50%">卷组名称</div>
+            <div style="width: 50%">{{ createStoragePoolSuccessResponse?.vgsName }}</div>
+          </div>
+          <el-divider />
+        </div>
+        <div>
+          <div class="form-item">
+            <div style="width: 50%">存储池</div>
+            <div style="width: 50%">{{ createStoragePoolSuccessResponse?.poolName }}</div>
+          </div>
+          <el-divider />
+        </div>
+        <div>
+          <div class="form-item">
+            <div style="width: 50%">存储池容量</div>
+            <div style="width: 50%">{{ createStoragePoolSuccessResponse?.poolSize }}</div>
+          </div>
+          <el-divider />
+        </div>
+        <div>
+          <div class="form-item">
+            <div style="width: 50%">描述信息</div>
+            <div style="width: 50%">{{ createStoragePoolSuccessResponse?.storagePoolDesc }}</div>
+          </div>
+          <el-divider />
+        </div>
+      </div>
+    </div>
     <!-- 底部按钮 -->
     <template #footer>
       <el-button v-if="currentStep == 1" style="float: left" @click="advancedSetup"
         >高级设置</el-button
       >
-      <el-button @click="prevStep" :disabled="currentStep === 0">上一步</el-button>
+      <el-button v-if="currentStep <= 2" @click="prevStep" :disabled="currentStep === 0"
+        >上一步</el-button
+      >
       <el-button type="primary" @click="nextStep" :disabled="isNextDisabled">
-        {{ currentStep === 2 ? '完成' : '下一步' }}
+        {{ currentStep >= 2 ? '完成' : '下一步' }}
       </el-button>
     </template>
   </el-dialog>
@@ -116,17 +209,22 @@
 <script setup lang="ts">
   import { ref, reactive, computed, watch } from 'vue'
   import { RaidGrade } from '@/enums/formEnum'
-  import { fetchGetFreeDiscDeviceList } from '@/api/system-manage'
+  import { fetchGetFreeDiscDeviceList, fetchCreateStoragePool } from '@/api/system-manage'
+  import { Disk } from '@/typings/disk'
 
   interface Props {
     visible: boolean
   }
 
-  const createStoragePoolFormData = reactive({
-    raidGrade: RaidGrade.RAID_0,
-    selectDiskDeviceList: [] as Disk.Device.DeviceMessage[],
-    desc: ''
+  const createStoragePoolFormData = reactive<Disk.Device.CreateStoragePoolDto>({
+    grade: RaidGrade.RAID_0,
+    diskDeviceList: [],
+    storagePoolDesc: '',
+    blockSize: '64k'
   })
+
+  // 创建成功的返回值
+  const createStoragePoolSuccessResponse = ref<Disk.Device.CreateStoragePoolSuccessResponse>()
 
   // 至少需要的磁盘数量
   const diskNumber = (raidGrade: RaidGrade) => {
@@ -236,19 +334,17 @@
     })
   }
   const handleSelectionChange = (val: Disk.Device.DeviceMessage[]) => {
-    createStoragePoolFormData.selectDiskDeviceList = val
+    createStoragePoolFormData.diskDeviceList = val
     console.log(val)
   }
 
-  // const isSelectable = (row: Disk.Device.DeviceMessage) => {
-  //   return createStoragePoolFormData.selectDiskDeviceList.some((item) => item.device === row.device)
-  // }
   // 重置步骤和表单
   const resetSteps = () => {
     currentStep.value = 0
-    storageForm.raidType = 'Basic'
-    storageForm.desc = ''
-    storageForm.selectedDisks = []
+    createStoragePoolFormData.grade = RaidGrade.RAID_0
+    createStoragePoolFormData.diskDeviceList = []
+    createStoragePoolFormData.storagePoolDesc = ''
+    createStoragePoolFormData.blockSize = '64k'
   }
 
   // 关闭弹窗
@@ -263,8 +359,8 @@
     if (currentStep.value === 1) {
       // 保证磁盘数量至少大于等于选中的等级至少需要的数量
       return !(
-        createStoragePoolFormData.selectDiskDeviceList.length >=
-        diskNumber(createStoragePoolFormData.raidGrade)
+        createStoragePoolFormData.diskDeviceList.length >=
+        diskNumber(createStoragePoolFormData.grade)
       )
     }
     return false
@@ -273,12 +369,24 @@
   // 下一步
   const nextStep = () => {
     if (currentStep.value === 2) {
-      // 最后一步：完成操作
-      console.log('存储池配置提交:', storageForm)
+      // TODO: 提交表单,若返回值为成功则value正常 ++
+      submitStoragePoolFormData()
+    } else if (currentStep.value === 3) {
       handleClose()
     } else {
       currentStep.value++
     }
+  }
+
+  const submitStoragePoolFormData = () => {
+    fetchCreateStoragePool(createStoragePoolFormData)
+      .then((res) => {
+        createStoragePoolSuccessResponse.value = res
+        currentStep.value++
+      })
+      .catch((error) => {
+        console.log('=====>', error)
+      })
   }
 
   // 上一步

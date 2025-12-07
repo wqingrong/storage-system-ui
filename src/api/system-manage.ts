@@ -1,5 +1,6 @@
 import request from '@/utils/http'
 import { AppRouteRecord } from '@/types/router'
+import { Disk } from '@/typings/disk'
 
 // 获取用户列表
 export function fetchGetUserList(params: Api.SystemManage.UserSearchParams) {
@@ -48,5 +49,12 @@ export function fetchGetFreeDiscDeviceList() {
 export function fetchGetDiscDeviceDetailList() {
   return request.get<Disk.Device.DiskDeviceList>({
     url: '/disk/getDiskDetailList'
+  })
+}
+
+export function fetchCreateStoragePool(data: Disk.Device.CreateStoragePoolDto) {
+  return request.post<Disk.Device.CreateStoragePoolSuccessResponse>({
+    url: '/disk/createStoragePool',
+    data
   })
 }

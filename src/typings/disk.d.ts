@@ -1,3 +1,5 @@
+import { RaidGrade } from '@/enums/formEnum'
+
 declare namespace Disk {
   namespace Device {
     interface DeviceMessage {
@@ -26,5 +28,29 @@ declare namespace Disk {
 
     type DiskDeviceList = Api.Common.PaginatedResponse<DiskDeviceDetail>
     type DiskDeviceSimpleList = Api.Common.PaginatedResponse<DeviceMessage>
+    // 创建存储池的请求参数
+    interface CreateStoragePoolDto {
+      grade: RaidGrade
+      diskDeviceList: Device.DeviceMessage[]
+      storagePoolDesc: string
+      blockSize: string
+    }
+
+    interface RaidStatusInfo {
+      status: string
+      devicePath: string
+      device: string
+      blockSize: string
+      grade: string
+      diskDeviceList: Disk.Device.DeviceMessage[]
+    }
+
+    interface CreateStoragePoolSuccessResponse {
+      raidStatusInfo: RaidStatusInfo
+      poolSize: string
+      poolName: string
+      vgsName: string
+      storagePoolDesc: string
+    }
   }
 }
