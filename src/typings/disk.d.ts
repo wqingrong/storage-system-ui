@@ -28,6 +28,7 @@ declare namespace Disk {
 
     type DiskDeviceList = Api.Common.PaginatedResponse<DiskDeviceDetail>
     type DiskDeviceSimpleList = Api.Common.PaginatedResponse<DeviceMessage>
+
     // 创建存储池的请求参数
     interface CreateStoragePoolDto {
       grade: RaidGrade
@@ -52,5 +53,41 @@ declare namespace Disk {
       vgsName: string
       storagePoolDesc: string
     }
+
+    interface RaidDetailInfo {
+      status: string
+      devicePath: string
+      device: string
+      blockSize: string
+      grade: string
+      diskDeviceList: Device.DiskDeviceDetail[]
+    }
+
+    interface StorageSpace {
+      spaceName: string
+      volumeName: string
+      mountPath: string
+      vgsName: string
+      fileSystem: string
+      spaceSize: string
+      useSize: string
+      freeSize: string
+      useRatio: number
+      mountStatus: string
+    }
+
+    interface StoragePool {
+      poolName: string
+      poolStatus: string
+      vgsName: string
+      raidDetailInfo: Device.RaidDetailInfo
+      storageSpaceList: Device.StorageSpace[]
+      storageSize: string
+      useSize: string
+      freeSize: string
+      useRatio: number
+    }
+
+    type StoragePoolList = Api.Common.PaginatedResponse<StoragePool>
   }
 }

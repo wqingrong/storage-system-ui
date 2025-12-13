@@ -118,6 +118,7 @@
   import { ref } from 'vue'
   import { fetchGetDiscDeviceDetailList } from '@/api/system-manage'
   import { HealthStatus } from '@/enums/appEnum'
+  import { Disk } from '@/typings/disk'
   const diskDeviceList = ref<Disk.Device.DiskDeviceDetail[]>([])
   const getDiskHealthStatusImage = (status: string) => {
     if (status === HealthStatus.OK) {

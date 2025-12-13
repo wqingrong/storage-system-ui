@@ -37,6 +37,10 @@ export default ({ mode }: { mode: string }) => {
         '/disk': {
           target: 'http://127.0.0.1:9090',
           changeOrigin: true
+        },
+        '/storage': {
+          target: 'http://127.0.0.1:9090',
+          changeOrigin: true
         }
       },
       host: true

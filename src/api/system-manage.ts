@@ -58,3 +58,9 @@ export function fetchCreateStoragePool(data: Disk.Device.CreateStoragePoolDto) {
     data
   })
 }
+
+export function fetchGetStoragePoolList() {
+  return request.get<Disk.Device.StoragePoolList>({
+    url: 'storage/getStoragePoolList'
+  })
+}
