@@ -83,7 +83,7 @@
               <span>卷组名称:</span>
             </div>
             <div class="detail-value">
-              <span> {{ item.vgsName }}</span>
+              <span> {{ item.vgName }}</span>
             </div>
           </div>
           <div class="detail-item">
@@ -231,12 +231,12 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed, nextTick, ref } from 'vue'
+  import { computed, nextTick, ref, defineExpose } from 'vue'
   import { fetchGetStoragePoolList } from '@/api/system-manage'
   import { HealthStatus } from '@/enums/appEnum'
   import { Disk } from '@/typings/disk'
-  import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
+  import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'
   import { MoreFilled } from '@element-plus/icons-vue'
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
@@ -251,17 +251,24 @@
   }
 
   const getStorageSpaceStatusImage = (status: string) => {
-    console.log(status)
-    return new URL('/src/assets/img/svg/storage-space.svg', import.meta.url).href
+    if (status) {
+      return new URL('/src/assets/img/svg/storage-space.svg', import.meta.url).href
+    }
   }
 
   onMounted(() => {
-    console.log('存储空间页面挂载==>>')
+    refreshStorageSpaceData()
+  })
+  const refreshStorageSpaceData = () => {
     fetchGetStoragePoolList().then((res) => {
       if (res) {
         storagePoolList.value = res.records
       }
     })
+  }
+
+  defineExpose({
+    refreshStorageSpaceData
   })
 
   interface User {
@@ -271,11 +278,6 @@
   }
 
   const currentRow = ref()
-  // const singleTableRef = ref<TableInstance>()
-
-  // const setCurrent = (row?: User) => {
-  //   singleTableRef.value!.setCurrentRow(row)
-  // }
   const handleCurrentChange = (val: User | undefined) => {
     currentRow.value = val
   }

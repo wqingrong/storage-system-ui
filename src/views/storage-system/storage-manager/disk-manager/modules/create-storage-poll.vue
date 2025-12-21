@@ -164,7 +164,7 @@
         <div>
           <div class="form-item">
             <div style="width: 50%">卷组名称</div>
-            <div style="width: 50%">{{ createStoragePoolSuccessResponse?.vgsName }}</div>
+            <div style="width: 50%">{{ createStoragePoolSuccessResponse?.vgName }}</div>
           </div>
           <el-divider />
         </div>

@@ -1,6 +1,6 @@
 <template>
   <!-- 弹窗容器 -->
-  <el-dialog v-model="dialogVisible" title="创建存储空间" width="600px" @close="handleClose">
+  <el-dialog v-model="dialogVisible" title="创建存储空间" width="600px" @close="handleClose(false)">
     <!-- 步骤1：配置存储空间容量 -->
     <div style="background: white" v-if="currentStep === 0">
       <div style="font-size: 16px">配置存储空间容量</div>
@@ -11,40 +11,39 @@
         <el-form :model="createStorageSpaceFormData">
           <el-form-item label="存储池:" label-position="left" label-width="200px">
             <el-select
-              v-model="createStorageSpaceFormData.vgsName"
+              v-model="createStorageSpaceFormData.vgName"
               placeholder="请选择存储池"
               style="width: 300px"
             >
               <el-option
                 v-for="item in storagePoolList"
                 :label="item.poolName"
-                :value="item.vgsName"
-                :key="item.vgsName"
+                :value="item.vgName"
+                :key="item.vgName"
               />
             </el-select>
           </el-form-item>
           <el-form-item label="总容量:" label-position="left" label-width="200px">
             <span>{{
-              getTargetStoragePoolItem(createStorageSpaceFormData.vgsName)?.storageSize
+              getTargetStoragePoolItem(createStorageSpaceFormData.vgName)?.storageSize
             }}</span>
           </el-form-item>
           <el-form-item label="可用容量:" label-position="left" label-width="200px">
-            <span>{{
-              getTargetStoragePoolItem(createStorageSpaceFormData.vgsName)?.freeSize
-            }}</span>
+            <span>{{ getTargetStoragePoolItem(createStorageSpaceFormData.vgName)?.freeSize }}</span>
           </el-form-item>
 
           <el-form-item label="分配大小:" label-position="left" label-width="200px">
             <el-input
               v-model="createStorageSpaceFormData.spaceSize"
               placeholder="输入存储空间大小"
+              type="number"
               style="width: 300px"
             />
           </el-form-item>
 
           <el-form-item label="存储空间描述:" label-position="left" label-width="200px">
             <el-input
-              v-model="createStorageSpaceFormData.DescTxt"
+              v-model="createStorageSpaceFormData.descTxt"
               placeholder="可选，输入存储空间描述"
               style="width: 300px"
             />
@@ -80,7 +79,7 @@
             <div class="form-item">
               <div style="width: 50%">存储池</div>
               <div style="width: 50%">{{
-                getTargetStoragePoolItem(createStorageSpaceFormData.vgsName)?.poolName
+                getTargetStoragePoolItem(createStorageSpaceFormData.vgName)?.poolName
               }}</div>
             </div>
             <el-divider style="margin: 12px 0" />
@@ -90,7 +89,9 @@
         <div>
           <div class="form-item">
             <div style="width: 50%">配置容量</div>
-            <div style="width: 50%">{{ createStorageSpaceFormData.spaceSize }}</div>
+            <div style="width: 50%"
+              >{{ createStorageSpaceFormData.spaceSize }}{{ createStorageSpaceFormData.unit }}</div
+            >
           </div>
           <el-divider style="margin: 12px 0" />
         </div>
@@ -104,7 +105,7 @@
         <div>
           <div class="form-item">
             <div style="width: 50%">描述信息</div>
-            <div style="width: 50%"> {{ createStorageSpaceFormData.DescTxt }}</div>
+            <div style="width: 50%"> {{ createStorageSpaceFormData.descTxt }}</div>
           </div>
           <el-divider style="margin: 12px 0" />
         </div>
@@ -113,7 +114,7 @@
     <!--创建成功的显示框-->
     <div v-else-if="currentStep === 3">
       <el-result
-        v-if="createStoragePoolSuccessResponse?.raidStatusInfo.status.toUpperCase() === 'INACTIVE'"
+        v-if="resultResponse?.success"
         icon="success"
         style="height: 100px"
         title="存储池创建成功"
@@ -123,9 +124,24 @@
         <div>
           <div class="form-item">
             <div style="width: 50%">存储池</div>
-            <div style="width: 50%">{{
-              getTargetStoragePoolItem(createStorageSpaceFormData.vgsName)?.poolName
-            }}</div>
+            <div style="width: 50%">{{ resultResponse?.storagePoolName }}</div>
+          </div>
+          <el-divider style="margin: 12px 0" />
+
+          <div class="form-item">
+            <div style="width: 50%">存储空间</div>
+            <div style="width: 50%">{{ resultResponse?.storageSpaceName }}</div>
+          </div>
+          <el-divider style="margin: 12px 0" />
+
+          <div class="form-item">
+            <div style="width: 50%">容量</div>
+            <div style="width: 50%">{{ resultResponse?.spaceSize }}</div>
+          </div>
+          <el-divider style="margin: 12px 0" />
+          <div class="form-item">
+            <div style="width: 50%">描述信息</div>
+            <div style="width: 50%">{{ resultResponse?.descTxt }}</div>
           </div>
           <el-divider style="margin: 12px 0" />
         </div>
@@ -139,7 +155,7 @@
       <el-button
         v-if="currentStep <= 3 && currentStep != 0"
         @click="prevStep"
-        :disabled="currentStep === 0"
+        :disabled="currentStep === 0 || resultResponse?.success"
         >上一步</el-button
       >
       <el-button type="primary" @click="nextStep">
@@ -151,32 +167,25 @@
 
 <script setup lang="ts">
   import { ref, reactive, watch } from 'vue'
-  import { fetchGetFreeDiscDeviceList } from '@/api/system-manage'
+  import { fetchGetStoragePoolSimpleList, fetchNewtStorageSpace } from '@/api/system-manage'
   import { Disk } from '@/typings/disk'
 
   interface Props {
     visible: boolean
   }
-
-  interface StorageSpaceFormData {
-    storagePoolName: string
-    vgsName: string
-    DescTxt: string
-    spaceSize: string
-    fileSystem: string
-  }
   // 创建存储空间的表单信息
-  const createStorageSpaceFormData = reactive<StorageSpaceFormData>({
+  const createStorageSpaceFormData = reactive<Disk.Device.StorageSpaceFormData>({
     storagePoolName: '',
-    vgsName: '',
-    DescTxt: '',
+    vgName: '',
+    descTxt: '',
     spaceSize: '',
-    fileSystem: ''
+    fileSystem: '',
+    unit: ''
   })
 
   // 创建获取当前选中的存储空间对象
-  const getTargetStoragePoolItem = (vgsName: string) => {
-    return storagePoolList.find((item) => item.vgsName === vgsName)
+  const getTargetStoragePoolItem = (vgName: string) => {
+    return storagePoolList.value.find((item) => item.vgName === vgName)
   }
 
   const fileSystemList = [
@@ -197,44 +206,13 @@
     }
   ]
 
-  const storagePoolList = [
-    {
-      poolName: '存储空间1',
-      vgsName: 'VGS_MD0_RAID_5',
-      storageSize: '100GB',
-      raidGrade: 'RAID_5',
-      freeSize: '50GB'
-    },
-    {
-      poolName: '存储空间2',
-      vgsName: 'VGS_MD1_RAID_5',
-      storageSize: '1000GB',
-      raidGrade: 'RAID_5',
-      freeSize: '500GB'
-    },
-    {
-      poolName: '存储空间3',
-      vgsName: 'VGS_MD2_RAID_5',
-      storageSize: '10000GB',
-      raidGrade: 'RAID_5',
-      freeSize: '5000GB'
-    },
-    {
-      poolName: '存储空间4',
-      vgsName: 'VGS_MD3_RAID_5',
-      storageSize: '100000GB',
-      raidGrade: 'RAID_5',
-      freeSize: '50000GB'
-    }
-  ]
-
   // 创建成功的返回值
-  const createStoragePoolSuccessResponse = ref<Disk.Device.CreateStoragePoolSuccessResponse>()
-
+  const resultResponse = ref<Disk.Device.NewStorageSpaceResult>()
   const props = defineProps<Props>()
 
   const emit = defineEmits<{
     (e: 'update:visible', value: boolean): void
+    (e: 'call-storage-method', methodName: string, ...args: any[]): void
   }>()
 
   // 弹窗显隐
@@ -250,34 +228,62 @@
       if (newVal) {
         // 弹窗打开的情况
         resetSteps()
-        loadingDiskDeviceList()
+        loadingStoragePoolList()
       }
     }
   )
-  // 加载磁盘列表
-  const diskDeviceList = ref<Disk.Device.DeviceMessage[]>([])
-  const loadingDiskDeviceList = () => {
-    fetchGetFreeDiscDeviceList().then((res) => {
-      diskDeviceList.value = res.records
+
+  watch(
+    () => createStorageSpaceFormData.vgName,
+    (newVal) => {
+      let item = getTargetStoragePoolItem(newVal)
+      if (item) {
+        createStorageSpaceFormData.storagePoolName = item.poolName
+        createStorageSpaceFormData.unit = item.unit
+      }
+    }
+  )
+
+  const storagePoolList = ref<Disk.Device.StoragePoolSimpleInfo[]>([])
+  const loadingStoragePoolList = () => {
+    fetchGetStoragePoolSimpleList().then((res) => {
+      storagePoolList.value = res.records
+      if (storagePoolList.value.length > 0) {
+        createStorageSpaceFormData.vgName = storagePoolList.value[0].vgName
+      }
     })
   }
 
-  // 重置步骤和表单
+  // 重置步骤和表单,设置默认信息
   const resetSteps = () => {
     currentStep.value = 0
     createStorageSpaceFormData.fileSystem = 'btrfs'
+    createStorageSpaceFormData.unit = ''
+    createStorageSpaceFormData.spaceSize = ''
+    createStorageSpaceFormData.vgName = ''
+    createStorageSpaceFormData.storagePoolName = ''
+    createStorageSpaceFormData.descTxt = ''
   }
 
   // 关闭弹窗
-  const handleClose = () => {
+  const handleClose = (isRefresh: boolean) => {
+    if (isRefresh) {
+      emit('call-storage-method', 'refreshStorageSpaceData', '参数1', '参数2')
+    }
     emit('update:visible', false)
-    resetSteps()
   }
 
   // 下一步
   const nextStep = () => {
-    if (currentStep.value === 3) {
-      handleClose()
+    // 提交表单信息
+    if (currentStep.value === 2) {
+      // 获取当前单位
+      fetchNewtStorageSpace(createStorageSpaceFormData).then((res) => {
+        resultResponse.value = res
+      })
+      currentStep.value++
+    } else if (currentStep.value === 3) {
+      handleClose(true)
     } else {
       currentStep.value++
     }

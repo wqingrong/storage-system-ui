@@ -7,9 +7,12 @@
       </ElSpace>
     </div>
     <!--    存储空间详细信息显示-->
-    <StorageSpace />
+    <StorageSpace ref="storageSpaceRef" />
     <!--    创建存储空间弹窗-->
-    <CreateStorageSpace v-model:visible="createStorageSpaceDialogVisible" />
+    <CreateStorageSpace
+      v-model:visible="createStorageSpaceDialogVisible"
+      @call-storage-method="handleCallStorageMethod"
+    />
   </div>
 </template>
 
@@ -21,8 +24,18 @@
   useCommon().scrollToTop()
   const createStorageSpaceDialogVisible = ref(false)
   const handleCreateStorageSpace = () => {
-    console.log('创建存储空间')
     createStorageSpaceDialogVisible.value = true
+  }
+  const storageSpaceRef = ref(null)
+  const handleCallStorageMethod = (methodName: any, ...args: any) => {
+    // 校验：实例存在 + 方法存在
+    if (storageSpaceRef.value && typeof storageSpaceRef.value[methodName] === 'function') {
+      // 执行 StorageSpace 的方法并返回结果（可选）
+      console.log('>>>>>调用了组件方法', methodName)
+      return storageSpaceRef?.value[methodName](...args)
+    } else {
+      console.warn(`StorageSpace 中不存在方法：${methodName}`)
+    }
   }
 </script>
 

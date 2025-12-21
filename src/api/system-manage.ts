@@ -64,3 +64,16 @@ export function fetchGetStoragePoolList() {
     url: 'storage/getStoragePoolList'
   })
 }
+
+export function fetchGetStoragePoolSimpleList() {
+  return request.get<Disk.Device.StoragePoolSimpleList>({
+    url: 'storage/getStoragePoolSimpleList'
+  })
+}
+
+export function fetchNewtStorageSpace(data: Disk.Device.StorageSpaceFormData) {
+  return request.post<Disk.Device.NewStorageSpaceResult>({
+    url: 'storage/newStorageSpace',
+    data
+  })
+}

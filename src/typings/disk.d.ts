@@ -50,7 +50,7 @@ declare namespace Disk {
       raidStatusInfo: RaidStatusInfo
       poolSize: string
       poolName: string
-      vgsName: string
+      vgName: string
       storagePoolDesc: string
     }
 
@@ -67,7 +67,7 @@ declare namespace Disk {
       spaceName: string
       volumeName: string
       mountPath: string
-      vgsName: string
+      vgName: string
       fileSystem: string
       spaceSize: string
       useSize: string
@@ -79,7 +79,7 @@ declare namespace Disk {
     interface StoragePool {
       poolName: string
       poolStatus: string
-      vgsName: string
+      vgName: string
       raidDetailInfo: Device.RaidDetailInfo
       storageSpaceList: Device.StorageSpace[]
       storageSize: string
@@ -88,6 +88,37 @@ declare namespace Disk {
       useRatio: number
     }
 
+    interface StoragePoolSimpleInfo {
+      poolName: string
+      vgName: string
+      storageSize: string
+      freeSize: string
+      grad: string
+      unit: string
+    }
+
+    interface StorageSpaceFormData {
+      storagePoolName: string
+      vgName: string
+      descTxt: string
+      spaceSize: string
+      fileSystem: string
+      unit: string
+    }
+
+    interface NewStorageSpaceResult {
+      storagePoolName: string
+      storageSpaceName: string
+      unit: string
+      vgName: string
+      descTxt: string
+      spaceSize: string
+      fileSystem: string
+      success: boolean
+    }
+
     type StoragePoolList = Api.Common.PaginatedResponse<StoragePool>
+
+    type StoragePoolSimpleList = Api.Common.PaginatedResponse<StoragePoolSimpleInfo>
   }
 }
