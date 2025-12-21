@@ -5,6 +5,7 @@ declare namespace Http {
     code: number
     // 消息
     message: string
+    showTip: boolean
     // 数据
     data: T
   }

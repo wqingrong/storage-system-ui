@@ -54,7 +54,7 @@ export function fetchGetDiscDeviceDetailList() {
 
 export function fetchCreateStoragePool(data: Disk.Device.CreateStoragePoolDto) {
   return request.post<Disk.Device.CreateStoragePoolSuccessResponse>({
-    url: '/disk/createStoragePool',
+    url: 'storage/createStoragePool',
     data
   })
 }
@@ -74,6 +74,27 @@ export function fetchGetStoragePoolSimpleList() {
 export function fetchNewtStorageSpace(data: Disk.Device.StorageSpaceFormData) {
   return request.post<Disk.Device.NewStorageSpaceResult>({
     url: 'storage/newStorageSpace',
+    data
+  })
+}
+
+export function fetchMountStorageSpace(data: Api.Dto.MountStorageSpaceDto) {
+  return request.post<Disk.Device.StorageSpace>({
+    url: 'storage/mountStorageSpace',
+    data
+  })
+}
+
+export function fetchUmountStorageSpace(data: Api.Dto.UmountStorageSpaceDto) {
+  return request.post<any>({
+    url: 'storage/umountStorageSpace',
+    data
+  })
+}
+
+export function fetchDestroyStorageSpace(data: Api.Dto.DestroyStorageSpace) {
+  return request.post<any>({
+    url: 'storage/destroyStorageSpace',
     data
   })
 }

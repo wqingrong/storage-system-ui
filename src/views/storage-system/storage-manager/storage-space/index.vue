@@ -3,7 +3,7 @@
     <div class="menu-container" style="margin-bottom: 10px">
       <ElSpace wrap>
         <!--        <ElButton>状态信息</ElButton>-->
-        <ElButton @click="handleCreateStorageSpace">创建存储池</ElButton>
+        <ElButton @click="handleCreateStorageSpace">创建存储空间</ElButton>
       </ElSpace>
     </div>
     <!--    存储空间详细信息显示-->

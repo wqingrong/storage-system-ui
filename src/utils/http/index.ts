@@ -160,7 +160,7 @@ async function request<T = any>(config: ExtendedAxiosRequestConfig): Promise<T> 
   try {
     const res = await axiosInstance.request<Http.BaseResponse<T>>(config)
     // 显示成功消息
-    if (config.showSuccessMessage && res.data.message) {
+    if (res.data.showTip) {
       showSuccess(res.data.message)
     }
 

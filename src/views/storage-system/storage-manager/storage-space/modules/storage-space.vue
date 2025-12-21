@@ -53,7 +53,7 @@
                 height: 40px; /* 建议设置，否则垂直居中效果不明显 */
                 cursor: pointer; /* 鼠标悬浮显示手型，提升交互体验 */
               "
-              @contextmenu.prevent="showMenu"
+              @contextmenu.prevent="showMenu($event, 'storagePool', item)"
             >
               <el-icon style="font-size: 20px">
                 <MoreFilled />
@@ -180,7 +180,7 @@
                 height: 40px; /* 建议设置，否则垂直居中效果不明显 */
                 cursor: pointer; /* 鼠标悬浮显示手型，提升交互体验 */
               "
-              @contextmenu.prevent="showMenu"
+              @contextmenu.prevent="showMenu($event, 'storageSpace', spaceItem)"
             >
               <el-icon style="font-size: 20px">
                 <MoreFilled />
@@ -232,7 +232,12 @@
 
 <script lang="ts" setup>
   import { computed, nextTick, ref, defineExpose } from 'vue'
-  import { fetchGetStoragePoolList } from '@/api/system-manage'
+  import {
+    fetchDestroyStorageSpace,
+    fetchGetStoragePoolList,
+    fetchMountStorageSpace,
+    fetchUmountStorageSpace
+  } from '@/api/system-manage'
   import { HealthStatus } from '@/enums/appEnum'
   import { Disk } from '@/typings/disk'
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
@@ -284,79 +289,54 @@
 
   const menuRef = ref<InstanceType<typeof ArtMenuRight>>()
   const lastAction = ref('')
-
+  const menuContainer = ref('')
+  const menuItemData = ref(null)
   /**
    * 右键菜单选项配置
    */
-  const menuItems = computed((): MenuItemType[] => [
-    {
-      key: 'copy',
-      label: '复制',
-      icon: '&#xe7b2;'
-    },
-    {
-      key: 'paste',
-      label: '粘贴',
-      icon: '&#xe70b;'
-    },
-    {
-      key: 'cut',
-      label: '剪切',
-      icon: '&#xe7b8;',
-      showLine: true
-    },
-    {
-      key: 'export',
-      label: '导出选项',
-      icon: '&#xe78b;',
-      children: [
+  const menuItems = computed((): MenuItemType[] => {
+    if (menuContainer.value === 'storagePool') {
+      return [
         {
-          key: 'exportExcel',
-          label: '导出 Excel',
-          icon: '&#xe604;'
+          key: 'raid_mount',
+          label: 'raid挂载',
+          icon: '&#xe67a;'
         },
         {
-          key: 'exportPdf',
-          label: '导出 PDF',
-          icon: '&#xe89e;'
-        }
-      ]
-    },
-    {
-      key: 'edit',
-      label: '编辑选项',
-      icon: '&#xe706;',
-      children: [
-        {
-          key: 'rename',
-          label: '重命名',
-          icon: '&#xe607;'
+          key: 'raid_umount',
+          label: 'raid卸载',
+          icon: '&#xe701;'
         },
         {
-          key: 'duplicate',
-          label: '复制副本',
-          icon: '&#xe608;'
+          key: 'raid_destroy',
+          label: 'raid销毁',
+          icon: '&#xe6d4;',
+          showLine: true
         }
       ]
-    },
-    {
-      key: 'share',
-      label: '分享',
-      icon: '&#xe73b;',
-      showLine: true
-    },
-    {
-      key: 'delete',
-      label: '删除',
-      icon: '&#xe850;'
-    },
-    {
-      key: 'disabled',
-      label: '禁用选项',
-      icon: '&#xe619;',
-      disabled: true
+    } else if (menuContainer.value === 'storageSpace') {
+      return [
+        {
+          key: 'space_mount',
+          label: '存储空间挂载',
+          icon: '&#xe67a;'
+        },
+        {
+          key: 'space_umount',
+          label: '存储空间卸载',
+          icon: '&#xe701;'
+        },
+        {
+          key: 'space_destroy',
+          label: '存储空间销毁',
+          icon: '&#xe6d4;',
+          showLine: true
+        }
+      ]
+    } else {
+      return []
     }
-  ])
+  })
 
   /**
    * 处理菜单项选择
@@ -364,18 +344,92 @@
    */
   const handleSelect = (item: MenuItemType) => {
     lastAction.value = `${item.label} (${item.key})`
-    ElMessage.success(`执行操作: ${item.label}`)
-    console.log('选择了菜单项:', item)
+    console.log('当前菜单绑定的数据为：', menuItemData.value)
+    switch (item.key) {
+      case 'raid_mount':
+        console.log('raid挂载')
+        break
+      case 'raid_umount':
+        console.log('raid卸载')
+        break
+      case 'raid_destroy':
+        console.log('raid销毁')
+        break
+      case 'space_mount':
+        storageSpaceMount(menuItemData.value)
+        break
+      case 'space_umount':
+        storageSpaceUmount(menuItemData.value)
+        break
+      case 'space_destroy':
+        destroyStorageSpace(menuItemData.value)
+        break
+      default:
+        break
+    }
+  }
+
+  //  存储空间的挂载
+  const storageSpaceMount = (menuItemData: any) => {
+    const mountDto = ref<Api.Dto.MountStorageSpaceDto>({
+      vgName: menuItemData?.vgName,
+      volumeName: menuItemData?.volumeName
+    })
+    fetchMountStorageSpace(mountDto.value)
+      .then((res) => {
+        console.log(res)
+      })
+      .finally(() => {
+        refreshStorageSpaceData()
+      })
+  }
+
+  // 存储空间的卸载
+  const storageSpaceUmount = (menuItemData: any) => {
+    const mountDto = ref<Api.Dto.UmountStorageSpaceDto>({
+      vgName: menuItemData?.vgName,
+      volumeName: menuItemData?.volumeName
+    })
+    fetchUmountStorageSpace(mountDto.value)
+      .then((res) => {
+        console.log(res)
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        refreshStorageSpaceData()
+      })
+  }
+  // 存储空间的卸载
+  const destroyStorageSpace = (menuItemData: any) => {
+    const paramsDto = ref<Api.Dto.DestroyStorageSpace>({
+      vgName: menuItemData?.vgName,
+      volumeName: menuItemData?.volumeName
+    })
+    fetchDestroyStorageSpace(paramsDto.value)
+      .then((res) => {
+        console.log(res)
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        refreshStorageSpaceData()
+      })
   }
 
   /**
    * 显示右键菜单
    * @param e 鼠标事件
+   * @param container
+   * @param itemData
    */
-  const showMenu = (e: MouseEvent) => {
+  const showMenu = (e: MouseEvent, container: string, itemData: any) => {
     e.preventDefault()
     e.stopPropagation()
-
+    menuItemData.value = itemData
+    menuContainer.value = container
     nextTick(() => {
       menuRef.value?.show(e)
     })

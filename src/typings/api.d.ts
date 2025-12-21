@@ -6,6 +6,24 @@
  */
 
 declare namespace Api {
+  //  接口参数实体类型的包装
+  namespace Dto {
+    interface MountStorageSpaceDto {
+      vgName: string
+      volumeName: string
+    }
+
+    interface UmountStorageSpaceDto {
+      vgName: string
+      volumeName: string
+    }
+
+    interface DestroyStorageSpace {
+      vgName: string
+      volumeName: string
+    }
+  }
+
   namespace Sys {
     interface SysGroup {
       groupName: string

@@ -278,10 +278,14 @@
     // 提交表单信息
     if (currentStep.value === 2) {
       // 获取当前单位
-      fetchNewtStorageSpace(createStorageSpaceFormData).then((res) => {
-        resultResponse.value = res
-      })
-      currentStep.value++
+      fetchNewtStorageSpace(createStorageSpaceFormData)
+        .then((res) => {
+          resultResponse.value = res
+          currentStep.value++
+        })
+        .catch(() => {
+          currentStep.value++
+        })
     } else if (currentStep.value === 3) {
       handleClose(true)
     } else {
