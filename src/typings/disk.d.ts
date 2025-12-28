@@ -34,14 +34,14 @@ declare namespace Disk {
       grade: RaidGrade
       diskDeviceList: Device.DeviceMessage[]
       storagePoolDesc: string
-      blockSize: string
+      chunkSize: string
     }
 
     interface RaidStatusInfo {
       status: string
       devicePath: string
       device: string
-      blockSize: string
+      chunkSize: string
       grade: string
       diskDeviceList: Disk.Device.DeviceMessage[]
     }
@@ -58,7 +58,7 @@ declare namespace Disk {
       status: string
       devicePath: string
       device: string
-      blockSize: string
+      chunkSize: string
       grade: string
       diskDeviceList: Device.DiskDeviceDetail[]
     }

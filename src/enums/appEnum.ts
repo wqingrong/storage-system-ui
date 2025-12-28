@@ -62,3 +62,12 @@ export enum HealthStatus {
   BAD = 'bad', // 故障
   UNKNOWN = 'unknown' // 未知
 }
+
+export enum PoolStatus {
+  POOL_STATUS_STOP = 'STOP',
+  POOL_STATUS_ACTIVE = 'ACTIVE',
+  POOL_STATUS_SYNC = 'SYNC',
+  POOL_STATUS_DEGRADATION = 'DEGRADATION',
+  POOL_STATUS_WARRING = 'WARRING',
+  POOL_STATUS_UNKNOWN = 'UNKNOWN'
+}

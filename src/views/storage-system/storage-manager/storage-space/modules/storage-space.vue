@@ -29,10 +29,14 @@
               <!--              第二行-->
               <div style="display: flex; justify-self: flex-start; width: 100%">
                 <div style="width: 60%">
-                  <span v-if="item.poolStatus === HealthStatus.OK" style="color: #4caf50"
+                  <span
+                    v-if="item.poolStatus === PoolStatus.POOL_STATUS_ACTIVE"
+                    style="color: #4caf50"
                     >良好</span
                   >
-                  <span v-else-if="item.poolStatus === HealthStatus.WARNING" style="color: #ec6f30"
+                  <span
+                    v-else-if="item.poolStatus === PoolStatus.POOL_STATUS_STOP"
+                    style="color: #ec6f30"
                     >异常</span
                   >
                   <span v-else style="color: #e80536">损坏</span>
@@ -53,7 +57,7 @@
                 height: 40px; /* 建议设置，否则垂直居中效果不明显 */
                 cursor: pointer; /* 鼠标悬浮显示手型，提升交互体验 */
               "
-              @contextmenu.prevent="showMenu($event, 'storagePool', item)"
+              @click.stop="showMenu($event, 'storagePool', item)"
             >
               <el-icon style="font-size: 20px">
                 <MoreFilled />
@@ -75,7 +79,7 @@
               <span>块大小:</span>
             </div>
             <div class="detail-value">
-              <span>{{ item.raidDetailInfo.blockSize }}</span>
+              <span>{{ item.raidDetailInfo.chunkSize }}</span>
             </div>
           </div>
           <div class="detail-item">
@@ -180,7 +184,7 @@
                 height: 40px; /* 建议设置，否则垂直居中效果不明显 */
                 cursor: pointer; /* 鼠标悬浮显示手型，提升交互体验 */
               "
-              @contextmenu.prevent="showMenu($event, 'storageSpace', spaceItem)"
+              @click.stop="showMenu($event, 'storageSpace', spaceItem)"
             >
               <el-icon style="font-size: 20px">
                 <MoreFilled />
@@ -238,7 +242,7 @@
     fetchMountStorageSpace,
     fetchUmountStorageSpace
   } from '@/api/system-manage'
-  import { HealthStatus } from '@/enums/appEnum'
+  import { PoolStatus } from '@/enums/appEnum'
   import { Disk } from '@/typings/disk'
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
   import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'
@@ -246,9 +250,9 @@
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
   const getStoragePoolStatusImage = (status: string) => {
-    if (status === HealthStatus.OK) {
+    if (status === PoolStatus.POOL_STATUS_ACTIVE) {
       return new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href
-    } else if (status === HealthStatus.WARNING) {
+    } else if (status === PoolStatus.POOL_STATUS_STOP) {
       return new URL('/src/assets/img/storage/storage-pool-waring.png', import.meta.url).href
     } else {
       return new URL('/src/assets/img/storage/storage-pool-error.png', import.meta.url).href

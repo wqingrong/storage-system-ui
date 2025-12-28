@@ -147,7 +147,7 @@
           <div class="form-item">
             <div style="width: 50%">块大小</div>
             <div style="width: 50%">{{
-              createStoragePoolSuccessResponse?.raidStatusInfo.blockSize
+              createStoragePoolSuccessResponse?.raidStatusInfo.chunkSize
             }}</div>
           </div>
           <el-divider />
@@ -220,7 +220,7 @@
     grade: RaidGrade.RAID_0,
     diskDeviceList: [],
     storagePoolDesc: '',
-    blockSize: '64k'
+    chunkSize: '64k'
   })
 
   // 创建成功的返回值
@@ -344,7 +344,7 @@
     createStoragePoolFormData.grade = RaidGrade.RAID_0
     createStoragePoolFormData.diskDeviceList = []
     createStoragePoolFormData.storagePoolDesc = ''
-    createStoragePoolFormData.blockSize = '64k'
+    createStoragePoolFormData.chunkSize = '64k'
   }
 
   // 关闭弹窗
