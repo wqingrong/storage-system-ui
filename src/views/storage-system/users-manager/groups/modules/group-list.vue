@@ -2,15 +2,21 @@
   <div style="width: 100%; height: 100%">
     <ElCol :gutter="20">
       <ElRow :xs="24" v-for="item in groupList" :key="item.gid">
-        <ArtStatsCard
-          style="width: 100%; height: 70px"
-          :title="item.groupName"
-          :description="item.groupAlias"
-          :backgroundColor="
-            item.gid === currentClickGroupItemId ? 'rgb(var(--art-bg-primary))' : ''
+        <el-card
+          style="width: 100%; margin-top: 5px; padding: 5px 10px !important"
+          :shadow="item.gid === currentClickGroupItemId ? 'always' : 'hover'"
+          :style="
+            item.gid === currentClickGroupItemId
+              ? 'background-color: rgb(var(--art-bg-primary))'
+              : ''
           "
           @click="handleGroupCardClick(item)"
-        />
+        >
+          <div>
+            <div style="font-size: 17px">{{ item.groupName }}</div>
+            <div style="font-size: 14px">{{ item.groupName }}描述信息...</div>
+          </div>
+        </el-card>
       </ElRow>
     </ElCol>
   </div>

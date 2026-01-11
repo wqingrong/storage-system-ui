@@ -19,7 +19,7 @@
     <template #footer>
       <div class="dialog-footer">
         <ElButton @click="dialogVisible = false">取消</ElButton>
-        <ElButton type="primary" @click="handleSubmit">提交</ElButton>
+        <ElButton type="primary" @click="handleSubmit">确定</ElButton>
       </div>
     </template>
   </ElDialog>
@@ -86,7 +86,6 @@
   const initFormData = () => {
     const isEdit = props.type === 'edit' && props.groupData
     const row = props.groupData
-    console.log('>>>>', props.groupData)
     Object.assign(formData, {
       groupName: isEdit && row ? row.groupName || '' : '',
       groupAlias: isEdit && row ? row.groupAlias || '' : '',
@@ -120,14 +119,11 @@
 
     await formRef.value.validate((valid) => {
       if (valid) {
-        console.log('表单信息>>>>', formData.groupDesc)
-        ElMessage.success(dialogType.value === 'add' ? '添加成功' : '更新成功')
         if (dialogType.value == 'add') {
           emit('groupAddSubmit', formData)
         } else {
           emit('groupEditSubmit', formData)
         }
-        dialogVisible.value = false
       }
     })
   }

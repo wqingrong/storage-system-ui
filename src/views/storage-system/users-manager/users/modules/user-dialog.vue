@@ -4,43 +4,161 @@
     :title="dialogType === 'add' ? '添加用户' : '编辑用户'"
     width="30%"
     align-center
+    class="dialog"
   >
-    <ElForm ref="formRef" :model="formData" :rules="rules" label-width="80px">
-      <ElFormItem label="用户名" prop="username">
-        <ElInput v-model="formData.username" placeholder="请输入用户名" />
-      </ElFormItem>
-      <ElFormItem label="手机号" prop="phone">
-        <ElInput v-model="formData.phone" placeholder="请输入手机号" />
-      </ElFormItem>
-      <ElFormItem label="性别" prop="gender">
-        <ElSelect v-model="formData.gender">
-          <ElOption label="男" value="男" />
-          <ElOption label="女" value="女" />
-        </ElSelect>
-      </ElFormItem>
-      <ElFormItem label="角色" prop="role">
-        <ElSelect v-model="formData.role" multiple>
-          <ElOption
-            v-for="role in roleList"
-            :key="role.roleCode"
-            :value="role.roleCode"
-            :label="role.roleName"
+    <ElForm ref="formRef" :model="addSysUserDto" :rules="rules" label-width="80px">
+      <div v-if="currentStep == 0">
+        <ElFormItem label="用户名" prop="userName">
+          <ElInput v-model="addSysUserDto.userName" placeholder="请输入用户名" />
+        </ElFormItem>
+        <ElFormItem label="别名" prop="userAlias">
+          <ElInput v-model="addSysUserDto.userAlias" placeholder="请输入用户别名" />
+        </ElFormItem>
+        <ElFormItem label="密码" prop="password">
+          <ElInput
+            v-model="addSysUserDto.password"
+            type="password"
+            placeholder="请输入密码"
+            :show-password="true"
           />
-        </ElSelect>
-      </ElFormItem>
+        </ElFormItem>
+        <ElFormItem label="备注" prop="userDesc">
+          <ElInput v-model="addSysUserDto.userDesc" placeholder="请输入备注信息" />
+        </ElFormItem>
+      </div>
+      <!--  选中用户组-->
+      <div v-if="currentStep == 1">
+        <span style="font-size: 15px; margin-bottom: 10px">请选择用户组</span>
+        <div style="max-height: 400px">
+          <el-table
+            ref="selectGroupTableRef"
+            :data="groupDataList.records"
+            @selectionChange="selectGroupChange"
+            row-key="gid"
+            style="width: 100%"
+            :reserve-selection="true"
+          >
+            <el-table-column type="selection" width="55" />
+            <el-table-column property="groupName" label="用户组" align="center"></el-table-column>
+            <el-table-column property="groupAlias" label="用户组别名" align="center" />
+            <el-table-column property="groupDesc" label="描述信息" align="left" />
+            <el-table-column property="totalPeople" label="成员数" align="center" />
+          </el-table>
+        </div>
+        <el-pagination
+          v-if="groupDataList.total > 0"
+          background
+          :page-sizes="[10, 20, 40, 60]"
+          layout="prev, pager, next"
+          :total="groupDataList.total"
+          :current-page="groupDataList.current"
+          :page-size="groupDataList.size"
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
+          :hide-on-single-page="true"
+          style="display: flex !important; justify-content: center !important"
+        />
+      </div>
+
+      <!--  选中用户主组-->
+      <div v-if="currentStep == 2">
+        <span style="font-size: 15px; margin-bottom: 10px">请选择用户主要组</span>
+        <div style="max-height: 400px">
+          <el-table
+            id="master-groups"
+            ref="masterGroupRef"
+            :data="selectGroups"
+            @select="handleMasterGroupSelect"
+            style="width: 100%"
+          >
+            <el-table-column type="selection" width="55" />
+            <el-table-column property="groupName" label="用户组" align="center"></el-table-column>
+            <el-table-column property="groupAlias" label="用户组别名" align="center" />
+            <el-table-column property="groupDesc" label="描述信息" align="left" />
+            <el-table-column property="totalPeople" label="成员数" align="center" />
+          </el-table>
+        </div>
+      </div>
+      <!--  信息展示-->
+      <div v-if="currentStep == 3">
+        <span style="font-size: 15px; margin-bottom: 10px">用户信息</span>
+
+        <div class="form-box">
+          <div>
+            <div class="form-item">
+              <div style="width: 50%">用户名</div>
+              <div style="width: 50%">{{ addSysUserDto.userName }}</div>
+            </div>
+            <el-divider style="margin: 12px 0" />
+
+            <div class="form-item">
+              <div style="width: 50%">用户别名</div>
+              <div style="width: 50%">{{ addSysUserDto.userAlias }}</div>
+            </div>
+            <el-divider style="margin: 12px 0" />
+
+            <div class="form-item">
+              <div style="width: 50%">密码</div>
+              <div style="width: 50%">{{ addSysUserDto.password }}</div>
+            </div>
+            <el-divider style="margin: 12px 0" />
+
+            <div class="form-item">
+              <div style="width: 50%">主要组</div>
+              <div style="width: 50%">{{ addSysUserDto.masterGroup.groupName }}</div>
+            </div>
+            <el-divider style="margin: 12px 0" />
+
+            <div class="form-item">
+              <div style="width: 50%">描述信息</div>
+              <div style="width: 50%">{{ addSysUserDto.userDesc }}</div>
+            </div>
+            <el-divider style="margin: 12px 0" />
+            <div>
+              <span>附属组</span>
+            </div>
+            <div style="max-height: 400px">
+              <el-table
+                ref="masterGroupRef"
+                :data="addSysUserDto.slaveGroupList"
+                row-key="gid"
+                style="width: 100%"
+              >
+                <el-table-column
+                  property="groupName"
+                  label="用户组"
+                  align="center"
+                ></el-table-column>
+                <el-table-column property="groupAlias" label="用户组别名" align="center" />
+                <el-table-column property="groupDesc" label="描述信息" align="left" />
+                <el-table-column property="totalPeople" label="成员数" align="center" />
+              </el-table>
+            </div>
+          </div>
+        </div>
+      </div>
     </ElForm>
     <template #footer>
-      <div class="dialog-footer">
-        <ElButton @click="dialogVisible = false">取消</ElButton>
-        <ElButton type="primary" @click="handleSubmit">提交</ElButton>
-      </div>
+      <!--      <el-button v-if="currentStep == 1" style="float: left" @click="advancedSetup"-->
+      <!--        >高级设置</el-button-->
+      <!--      >-->
+      <el-button
+        v-if="currentStep <= 3 && currentStep != 0"
+        @click="prevStep"
+        :disabled="currentStep === 0"
+        >上一步
+      </el-button>
+      <el-button type="primary" @click="nextStep">
+        {{ currentStep >= 3 ? '完成' : '下一步' }}
+      </el-button>
     </template>
   </ElDialog>
 </template>
 
 <script setup lang="ts">
-  import { ROLE_LIST_DATA } from '@/mock/temp/formData'
-  import type { FormInstance, FormRules } from 'element-plus'
+  import { ElTable, FormInstance, FormRules } from 'element-plus'
+  import { fetchGetGroupList, fetchAddUser } from '@/api/system-manage'
+  import { aesEncrypt, aseDecrypt } from '@utils/encryption'
 
   interface Props {
     visible: boolean
@@ -50,14 +168,32 @@
 
   interface Emits {
     (e: 'update:visible', value: boolean): void
-    (e: 'submit'): void
+    (e: 'addUserSubmit', value: Api.Dto.AddSysUserDto): void
   }
+
+  const selectGroupTableRef = ref(ElTable)
+  const masterGroupRef = ref(ElTable)
+
+  //  初始化表单信息
+  const addSysUserDto = ref<Api.Dto.AddSysUserDto>({
+    userName: '',
+    userAlias: '',
+    userDesc: '',
+    password: '',
+    masterGroup: {
+      groupName: '',
+      groupAlias: '',
+      createTime: '',
+      groupDesc: '',
+      gid: 0,
+      totalPeople: 0
+    },
+    slaveGroupList: []
+  })
 
   const props = defineProps<Props>()
   const emit = defineEmits<Emits>()
-
-  // 角色列表数据
-  const roleList = ref(ROLE_LIST_DATA)
+  const currentStep = ref(0)
 
   // 对话框显示控制
   const dialogVisible = computed({
@@ -70,26 +206,86 @@
   // 表单实例
   const formRef = ref<FormInstance>()
 
-  // 表单数据
-  const formData = reactive({
-    username: '',
-    phone: '',
-    gender: '男',
-    role: [] as string[]
-  })
-
   // 表单验证规则
   const rules: FormRules = {
-    username: [
+    userName: [
       { required: true, message: '请输入用户名', trigger: 'blur' },
-      { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-zA-Z0-9_]+$/,
+        min: 2,
+        max: 20,
+        message: '用户名长度在 2 到 20 个字母且只能为字母,数字,下划线',
+        trigger: 'blur'
+      }
     ],
-    phone: [
-      { required: true, message: '请输入手机号', trigger: 'blur' },
-      { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
+    password: [
+      { required: true, message: '请输入密码', trigger: 'blur' },
+      {
+        pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d!@#$%^&*()_\-+=[\]{}|;:,.?~]{8,30}$/,
+        message: '密码不符合要求：需8-30位，包含大小写字母和数字',
+        trigger: 'blur'
+      }
     ],
-    gender: [{ required: true, message: '请选择性别', trigger: 'blur' }],
-    role: [{ required: true, message: '请选择角色', trigger: 'blur' }]
+    userAlias: [
+      { required: false, max: 50, message: '别名长度最长不超过50个字符', trigger: 'blur' }
+    ],
+    userDesc: [{ required: false, max: 50, message: '描述信息最长不超过50个字符', trigger: 'blur' }]
+  }
+
+  // 返回的表单信息
+  const groupDataList = ref<Api.result.GroupList>({
+    current: 0,
+    size: 0,
+    total: 0,
+    records: []
+  })
+
+  const handlePageChange = (page: number) => {
+    loadGroupListParams.value.current = page
+    loadGroupDataList()
+  }
+
+  const handleSizeChange = (size: number) => {
+    loadGroupListParams.value.size = size
+    loadGroupDataList()
+  }
+
+  // 当前选中的用户组选项
+  const selectGroups = ref<Api.Sys.SysGroup[]>([])
+
+  const selectGroupChange = (value: any) => {
+    selectGroups.value = value
+  }
+
+  const handleMasterGroupSelect = (val: any, row: any) => {
+    // 获取表格实例
+    const table = masterGroupRef.value
+    // // 清除所有选中
+    if (val.length > 0) {
+      table.clearSelection()
+      nextTick(() => {
+        table.toggleRowSelection(row, true)
+        addSysUserDto.value.masterGroup = row
+        addSysUserDto.value.slaveGroupList = selectGroups.value.filter(
+          (item) => item.gid !== row.gid
+        )
+      })
+    }
+  }
+
+  const loadGroupListParams = ref<Api.Dto.GetGroupListDto>({
+    current: 1,
+    size: 10,
+    gid: 0,
+    groupName: '',
+    sort: '', // 排序的字段
+    orderBy: '' // 升序asc 还是降序 desc
+  })
+
+  const loadGroupDataList = async () => {
+    fetchGetGroupList(loadGroupListParams.value).then((res) => {
+      groupDataList.value = res
+    })
   }
 
   /**
@@ -98,14 +294,29 @@
    */
   const initFormData = () => {
     const isEdit = props.type === 'edit' && props.userData
-    const row = props.userData
+    currentStep.value = 0
+    loadGroupDataList()
+    if (!isEdit) {
+      initAddSysUserDtoFormData()
+    }
+  }
 
-    Object.assign(formData, {
-      username: isEdit && row ? row.userName || '' : '',
-      phone: isEdit && row ? row.userPhone || '' : '',
-      gender: isEdit && row ? row.userGender || '男' : '男',
-      role: isEdit && row ? (Array.isArray(row.userRoles) ? row.userRoles : []) : []
-    })
+  const initAddSysUserDtoFormData = () => {
+    addSysUserDto.value = {
+      userName: '',
+      userAlias: '',
+      userDesc: '',
+      password: '',
+      masterGroup: {
+        groupName: '',
+        groupAlias: '',
+        createTime: '',
+        groupDesc: '',
+        gid: 0,
+        totalPeople: 0
+      },
+      slaveGroupList: []
+    }
   }
 
   /**
@@ -125,19 +336,85 @@
     { immediate: true }
   )
 
+  watch(
+    () => currentStep.value,
+    (newValue) => {
+      if (newValue == 1) {
+        nextTick(() => {
+          let tmpGroupList = [...addSysUserDto.value.slaveGroupList]
+          if (addSysUserDto.value.masterGroup.groupName) {
+            tmpGroupList.push(addSysUserDto.value.masterGroup)
+          }
+          const table = selectGroupTableRef.value
+          table.clearSelection()
+          tmpGroupList.forEach((item) => {
+            table.toggleRowSelection(item, true)
+          })
+        })
+      } else if (newValue == 2) {
+        nextTick(() => {
+          let table = masterGroupRef.value
+          if (addSysUserDto.value.masterGroup.groupName) {
+            table.clearSelection()
+            table.toggleRowSelection(addSysUserDto.value.masterGroup, true)
+          }
+        })
+      }
+    }
+  )
+
+  // 下一步
+  const nextStep = () => {
+    // 提交表单信息
+    currentStep.value++
+    if (currentStep.value === 4) {
+      handleSubmit()
+      currentStep.value--
+    }
+  }
+
+  // 上一步
+  const prevStep = () => {
+    currentStep.value--
+  }
+
   /**
    * 提交表单
    * 验证通过后触发提交事件
    */
   const handleSubmit = async () => {
     if (!formRef.value) return
-
     await formRef.value.validate((valid) => {
       if (valid) {
-        ElMessage.success(dialogType.value === 'add' ? '添加成功' : '更新成功')
-        dialogVisible.value = false
-        emit('submit')
+        if (dialogType.value === 'add') {
+          let text = addSysUserDto.value.password
+          addSysUserDto.value.password = aesEncrypt(text)
+          fetchAddUser(addSysUserDto.value)
+            .then((res) => {
+              console.log(res)
+              dialogVisible.value = false
+            })
+            .catch(() => {
+              addSysUserDto.value.password = aseDecrypt(addSysUserDto.value.password)
+            })
+        }
       }
     })
   }
 </script>
+
+<style scoped>
+  :deep(#master-groups .el-table__header-wrapper .el-checkbox) {
+    display: none;
+  }
+
+  .form-box {
+    padding: 20px;
+  }
+
+  .form-item {
+    height: 20px;
+    display: flex;
+    align-items: center;
+  }
+</style>

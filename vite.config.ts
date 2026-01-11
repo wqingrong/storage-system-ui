@@ -41,6 +41,10 @@ export default ({ mode }: { mode: string }) => {
         '/storage': {
           target: 'http://127.0.0.1:9090',
           changeOrigin: true
+        },
+        '/user': {
+          target: 'http://127.0.0.1:9090',
+          changeOrigin: true
         }
       },
       host: true

@@ -22,9 +22,46 @@ declare namespace Api {
       vgName: string
       volumeName: string
     }
+
+    //  获取用户组列表的请求参数
+    interface GetGroupListDto {
+      current: number
+      size: number
+      gid: number
+      groupName: string
+      sort: string // 排序的字段
+      orderBy: string // 升序asc 还是降序 desc
+    }
+    // 添加用户组的参数信息
+    interface AddGroupDto {
+      groupName: string
+      groupAlias: string
+      groupDesc: string
+    }
+    // 修改用户组的参数信息
+    interface AddSysUserDto {
+      userName: string
+      userAlias: string
+      userDesc: string
+      password: string
+      masterGroup: Sys.SysGroup
+      slaveGroupList: Sys.SysGroup[]
+    }
   }
 
   namespace Sys {
+    interface SysUser {
+      userName: string
+      userAlias: string
+      uid: number
+      MasterGroup: Api.Sys.SysGroup
+      userDesc: string
+      shell: string
+      password: string
+      createTime: string
+      SlaveGroupList: Api.Sys.SysGroup[]
+    }
+
     interface SysGroup {
       groupName: string
       groupAlias: string
@@ -56,6 +93,12 @@ declare namespace Api {
       Api.Common.CommonSearchParams
 
     type OperationLoggerList = Api.Common.PaginatedResponse<OperationLogger>
+  }
+
+  // 接口返回值定义的数据类型
+  namespace result {
+    type GroupList = Api.Common.PaginatedResponse<Sys.SysGroup>
+    type GroupEntity = Api.Sys.SysGroup
   }
   /** 通用类型 */
   namespace Common {

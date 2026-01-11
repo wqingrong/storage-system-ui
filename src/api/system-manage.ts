@@ -98,3 +98,27 @@ export function fetchDestroyStorageSpace(data: Api.Dto.DestroyStorageSpace) {
     data
   })
 }
+
+// 获取用户组列表
+export function fetchGetGroupList(params: Api.Dto.GetGroupListDto) {
+  return request.get<Api.result.GroupList>({
+    url: 'user/getGroupList',
+    params
+  })
+}
+
+// 添加用户组
+export function fetchAddGroup(data: Api.Dto.AddGroupDto) {
+  return request.post<Api.result.GroupEntity>({
+    url: 'user/addGroup',
+    data
+  })
+}
+
+// 添加用户接口
+export function fetchAddUser(data: Api.Dto.AddSysUserDto) {
+  return request.post<Api.Sys.SysUser>({
+    url: 'user/addUser',
+    data
+  })
+}

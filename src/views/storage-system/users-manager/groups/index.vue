@@ -1,27 +1,16 @@
 <template>
   <div class="art-full-height">
     <div class="tree-container">
-      <div class="left-sidebar" style="width: 300px">
-        <ElCard class="art-table-card" shadow="never" style="margin-top: 0">
-          <template #header>
-            <b>用户组</b>
-          </template>
-          <ElScrollbar>
-            <group-list :groupList="groupsList" v-model:currentGroupItem="currentGroupItem" />
-          </ElScrollbar>
-        </ElCard>
-      </div>
-      <div class="right-content art-full-height">
-        <ElSpace wrap>
-          <ElButton @click="showGroupDialog('add')">新增用户组</ElButton>
-        </ElSpace>
+      <div class="right-content art-full-height" style="margin-bottom: 40px">
         <ElCard class="art-table-card" shadow="never">
           <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
             <template #left>
               <ElSpace wrap>
+                <ElButton @click="showGroupDialog('add')">新增用户组</ElButton>
                 <ElButton @click="handleDeleteGroup">删除用户组</ElButton>
-                <ElButton @click="handleEditGroup">编辑用户组</ElButton>
-                <ElButton @click="showAddUserDialog('add')" v-ripple>新增用户</ElButton>
+                <ElButton @click="handleEditGroup" :disabled="selectedGroupRows.length > 1"
+                  >编辑用户组</ElButton
+                >
               </ElSpace>
             </template>
           </ArtTableHeader>
@@ -30,6 +19,7 @@
             :data="data"
             :columns="columns"
             :pagination="pagination"
+            @selection-change="handleSelectionChange"
             @pagination:size-change="handleSizeChange"
             @pagination:current-change="handleCurrentChange"
           >
@@ -52,55 +42,24 @@
 
 <script setup lang="ts">
   import { useTable } from '@/composables/useTable'
-  import { fetchGetUserList } from '@/api/system-manage'
+  import { fetchAddGroup, fetchGetGroupList } from '@/api/system-manage'
   import UserDialog from './modules/user-dialog.vue'
   import UserListItem = Api.SystemManage.UserListItem
   import SysGroup = Api.Sys.SysGroup
-  import GroupList from '@views/storage-system/users-manager/groups/modules/group-list.vue'
   import GroupDialog from '@views/storage-system/users-manager/groups/modules/group-dialog.vue'
+  import { aesEncrypt, aseDecrypt } from '@utils/encryption'
 
   const dialogType = ref<Form.DialogType>('add')
   const dialogVisible = ref(false)
   const dialogAddGroupVisible = ref(false)
-  const currentGroupItem = ref<SysGroup>() // 与用户组列表双重绑定的变量
+  const currentGroupItem = ref<SysGroup>()
+  const selectedGroupRows = ref<SysGroup[]>([])
+
   // 当前选中的用户组选项
   defineOptions({ name: 'GroupsManager' })
 
   const groupsList = ref<Api.Sys.SysGroup[]>([])
-  groupsList.value = [
-    {
-      groupName: '用户组1',
-      groupAlias: '用户组1的描述',
-      groupDesc: '',
-      createTime: '',
-      gid: 1,
-      totalPeople: 10
-    },
-    {
-      groupName: '用户组2',
-      groupAlias: '用户组2的描述',
-      createTime: '',
-      groupDesc: '',
-      gid: 2,
-      totalPeople: 10
-    },
-    {
-      groupName: '用户组3',
-      groupAlias: '用户组3的描述',
-      createTime: '',
-      groupDesc: '',
-      gid: 3,
-      totalPeople: 10
-    },
-    {
-      groupName: '用户组4',
-      groupAlias: '用户组4的描述',
-      createTime: '',
-      groupDesc: '',
-      gid: 4,
-      totalPeople: 10
-    }
-  ]
+
   currentGroupItem.value = groupsList.value[0]
   /**
    * 显示用户弹窗
@@ -131,11 +90,15 @@
     }
   }
 
-  const handleAddGroupDialogSubmit = async (formData: Api.Sys.SysGroup) => {
+  // 添加用户组请求接口
+  const handleAddGroupDialogSubmit = async (formData: Api.Dto.AddGroupDto) => {
     try {
-      console.log('信息提交的表单信息>>>>', formData)
+      fetchAddGroup(formData).then((res) => {
+        // 触发刷新操作
+        refreshData()
+        console.log('添加用户组成功', res)
+      })
       dialogAddGroupVisible.value = false
-      // currentUserData.value = {}
     } catch (error) {
       console.error('提交失败:', error)
     }
@@ -162,6 +125,13 @@
     showGroupDialog('edit', currentGroupItem.value)
   }
 
+  onMounted(() => {
+    let aesEncrypt1 = aesEncrypt('wangqingrong')
+    console.log('aes加密结果', aesEncrypt1)
+    let s = aseDecrypt(aesEncrypt1)
+    console.log('aes解密结果', s)
+  })
+
   const {
     data,
     columns,
@@ -173,40 +143,44 @@
     handleCurrentChange
   } = useTable({
     core: {
-      apiFn: fetchGetUserList,
+      apiFn: fetchGetGroupList,
       apiParams: {
         current: 1,
         size: 20,
-        userName: '',
-        userPhone: '',
-        userEmail: ''
+        groupName: '',
+        gid: 0,
+        orderBy: '',
+        sort: ''
       },
       columnsFactory: () => [
+        { type: 'selection' }, // 勾选列
         {
-          prop: 'id',
-          label: 'ID'
+          prop: 'gid',
+          label: 'gid'
         },
         {
-          prop: 'nickName',
-          label: '昵称'
+          prop: 'groupName',
+          label: '组名'
         },
         {
-          prop: 'userGender',
-          label: '性别',
-          sortable: true,
-          formatter: (row) => row.userGender || '未知'
+          prop: 'groupAlias',
+          label: '组别名'
         },
         {
-          prop: 'userPhone',
-          label: '手机号'
-        },
-        {
-          prop: 'userEmail',
-          label: '邮箱'
+          prop: 'groupDesc',
+          label: '描述信息'
         }
       ]
     }
   })
+
+  /**
+   * 处理表格行选择变化
+   */
+  const handleSelectionChange = (selection: Api.Sys.SysGroup[]): void => {
+    selectedGroupRows.value = selection
+    console.log('选中行数据:', selectedGroupRows.value)
+  }
 </script>
 
 <style lang="scss" scoped>
