@@ -32,6 +32,16 @@ declare namespace Api {
       sort: string // 排序的字段
       orderBy: string // 升序asc 还是降序 desc
     }
+
+    interface QueryUserListDto {
+      userName: string
+      userAlias: string
+      current: number
+      size: number
+      orderBy: string
+      sort: string
+    }
+
     // 添加用户组的参数信息
     interface AddGroupDto {
       groupName: string
@@ -54,12 +64,12 @@ declare namespace Api {
       userName: string
       userAlias: string
       uid: number
-      MasterGroup: Api.Sys.SysGroup
+      masterGroup: Api.Sys.SysGroup
       userDesc: string
       shell: string
       password: string
       createTime: string
-      SlaveGroupList: Api.Sys.SysGroup[]
+      slaveGroupList: Api.Sys.SysGroup[]
     }
 
     interface SysGroup {
@@ -97,6 +107,7 @@ declare namespace Api {
 
   // 接口返回值定义的数据类型
   namespace result {
+    type UserList = Api.Common.PaginatedResponse<Sys.SysUser>
     type GroupList = Api.Common.PaginatedResponse<Sys.SysGroup>
     type GroupEntity = Api.Sys.SysGroup
   }

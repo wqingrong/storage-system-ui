@@ -122,3 +122,11 @@ export function fetchAddUser(data: Api.Dto.AddSysUserDto) {
     data
   })
 }
+
+// 查询用户列表接口
+export function fetchQueryUserList(params: Api.Dto.QueryUserListDto) {
+  return request.get<Api.result.UserList>({
+    url: 'user/queryUserList',
+    params
+  })
+}

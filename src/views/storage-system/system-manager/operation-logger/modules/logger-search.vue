@@ -34,7 +34,6 @@
     // userName: [{ required: true, message: '请输入用户名', trigger: 'blur' }]
   }
 
-
   // 表单配置
   const formItems = computed(() => [
     {
