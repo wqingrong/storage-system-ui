@@ -168,7 +168,7 @@
 
   interface Emits {
     (e: 'update:visible', value: boolean): void
-    (e: 'addUserSubmit', value: Api.Dto.AddSysUserDto): void
+    (e: 'refreshData'): void
   }
 
   const selectGroupTableRef = ref(ElTable)
@@ -390,9 +390,10 @@
           let text = addSysUserDto.value.password
           addSysUserDto.value.password = aesEncrypt(text)
           fetchAddUser(addSysUserDto.value)
-            .then((res) => {
-              console.log(res)
+            .then(() => {
               dialogVisible.value = false
+              //   刷新列表信息...
+              emit('refreshData')
             })
             .catch(() => {
               addSysUserDto.value.password = aseDecrypt(addSysUserDto.value.password)

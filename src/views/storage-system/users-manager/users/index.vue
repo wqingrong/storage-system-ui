@@ -35,7 +35,7 @@
         v-model:visible="dialogVisible"
         :type="dialogType"
         :user-data="currentUserData"
-        @submit="handleDialogSubmit"
+        @refresh-data="refreshData"
       />
     </ElCard>
   </div>
@@ -100,7 +100,7 @@
           prop: 'userName',
           label: '用户名'
         },
-        { prop: 'userAlias', label: '别名' },
+        { prop: 'userAlias', label: '用户别名' },
         {
           prop: 'masterGroup.groupName',
           label: '用户主组'
@@ -154,18 +154,6 @@
     }).then(() => {
       ElMessage.success('注销成功')
     })
-  }
-
-  /**
-   * 处理弹窗提交事件
-   */
-  const handleDialogSubmit = async () => {
-    try {
-      dialogVisible.value = false
-      currentUserData.value = {}
-    } catch (error) {
-      console.error('提交失败:', error)
-    }
   }
 
   /**

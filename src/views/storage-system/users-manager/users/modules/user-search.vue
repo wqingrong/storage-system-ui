@@ -65,36 +65,11 @@
       clearable: true
     },
     {
-      label: '手机号',
-      key: 'userPhone',
+      label: '用户别名',
+      key: 'userAlise',
       type: 'input',
-      props: { placeholder: '请输入手机号', maxlength: '11' }
-    },
-    {
-      label: '邮箱',
-      key: 'userEmail',
-      type: 'input',
-      props: { placeholder: '请输入邮箱' }
-    },
-    {
-      label: '状态',
-      key: 'status',
-      type: 'select',
-      props: {
-        placeholder: '请选择状态',
-        options: statusOptions.value
-      }
-    },
-    {
-      label: '性别',
-      key: 'userGender',
-      type: 'radiogroup',
-      props: {
-        options: [
-          { label: '男', value: '1' },
-          { label: '女', value: '2' }
-        ]
-      }
+      placeholder: '请输入用户名',
+      clearable: true
     }
   ])
 
@@ -107,6 +82,5 @@
   async function handleSearch() {
     await searchBarRef.value.validate()
     emit('search', formData.value)
-    console.log('表单数据', formData.value)
   }
 </script>
