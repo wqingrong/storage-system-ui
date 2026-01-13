@@ -34,27 +34,6 @@
     // userName: [{ required: true, message: '请输入用户名', trigger: 'blur' }]
   }
 
-  // 动态 options
-  const statusOptions = ref<{ label: string; value: string; disabled?: boolean }[]>([])
-
-  // 模拟接口返回状态数据
-  function fetchStatusOptions(): Promise<typeof statusOptions.value> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          { label: '在线', value: '1' },
-          { label: '离线', value: '2' },
-          { label: '异常', value: '3' },
-          { label: '注销', value: '4' }
-        ])
-      }, 1000)
-    })
-  }
-
-  onMounted(async () => {
-    statusOptions.value = await fetchStatusOptions()
-  })
-
   // 表单配置
   const formItems = computed(() => [
     {
@@ -66,7 +45,7 @@
     },
     {
       label: '用户别名',
-      key: 'userAlise',
+      key: 'userAlias',
       type: 'input',
       placeholder: '请输入用户名',
       clearable: true
