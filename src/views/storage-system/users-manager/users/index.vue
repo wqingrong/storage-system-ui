@@ -14,6 +14,9 @@
         <template #left>
           <ElSpace wrap>
             <ElButton @click="showDialog('add')" v-ripple>新增用户</ElButton>
+            <ElButton @click="deleteUsers" :disabled="selectedRows.length === 0" v-ripple
+              >删除用户</ElButton
+            >
           </ElSpace>
         </template>
       </ArtTableHeader>
@@ -44,7 +47,7 @@
 <script setup lang="ts">
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import { useTable } from '@/composables/useTable'
-  import { fetchQueryUserList } from '@/api/system-manage'
+  import { fetchDeleteUsers, fetchQueryUserList } from '@/api/system-manage'
   import UserSearch from './modules/user-search.vue'
   import UserDialog from './modules/user-dialog.vue'
   import { ElMessageBox } from 'element-plus'
@@ -149,7 +152,6 @@
    * 显示用户弹窗
    */
   const showDialog = (type: Form.DialogType, row?: UserListItem): void => {
-    console.log('打开弹窗:', { type, row })
     dialogType.value = type
     currentUserData.value = row || {}
     nextTick(() => {
@@ -160,14 +162,22 @@
   /**
    * 删除用户
    */
-  const deleteUser = (row: UserListItem): void => {
-    console.log('删除用户:', row)
-    ElMessageBox.confirm(`确定要注销该用户吗？`, '注销用户', {
+  const deleteUsers = (): void => {
+    const deleteUserDto = ref<Api.Dto.DeleteUserDto[]>([])
+    for (let index in selectedRows.value) {
+      deleteUserDto.value.push({
+        uid: selectedRows.value[index].uid,
+        userName: selectedRows.value[index].userName
+      })
+    }
+    ElMessageBox.confirm(`确定要删除选中的${deleteUserDto.value.length}条数据吗？`, '删除用户', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'error'
     }).then(() => {
-      ElMessage.success('注销成功')
+      fetchDeleteUsers(deleteUserDto.value).then(() => {
+        refreshData()
+      })
     })
   }
 
@@ -176,7 +186,6 @@
    */
   const handleSelectionChange = (selection: UserListItem[]): void => {
     selectedRows.value = selection
-    console.log('选中行数据:', selectedRows.value)
   }
 </script>
 

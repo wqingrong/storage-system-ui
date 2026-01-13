@@ -142,7 +142,7 @@ export function fetchEditUser(data: Api.Dto.SysUserFormDto) {
 // 删除用户
 export function fetchDeleteUsers(data: Api.Dto.DeleteUserDto[]) {
   return request.post<Api.Dto.DeleteUserDto>({
-    url: 'user/deleteUsers',
+    url: 'user/delUsers',
     data
   })
 }
