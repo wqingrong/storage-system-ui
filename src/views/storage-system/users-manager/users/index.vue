@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+  import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import { useTable } from '@/composables/useTable'
   import { fetchQueryUserList } from '@/api/system-manage'
   import UserSearch from './modules/user-search.vue'
@@ -50,7 +51,7 @@
 
   defineOptions({ name: 'UsersManager' })
 
-  type UserListItem = Api.SystemManage.UserListItem
+  type UserListItem = Api.Sys.SysUser
 
   // 弹窗相关
   const dialogType = ref<Form.DialogType>('add')
@@ -114,6 +115,20 @@
           prop: 'createTime',
           label: '创建日期',
           sortable: true
+        },
+        {
+          prop: 'operation',
+          label: '操作',
+          width: 120,
+          fixed: 'right', // 固定列
+          formatter: (row) =>
+            h('div', [
+              //   调用显示弹窗,对用户信息进行编辑操作
+              h(ArtButtonTable, {
+                type: 'edit',
+                onClick: () => showDialog('edit', row)
+              })
+            ])
         }
       ]
     }

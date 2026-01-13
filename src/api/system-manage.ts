@@ -116,7 +116,7 @@ export function fetchAddGroup(data: Api.Dto.AddGroupDto) {
 }
 
 // 添加用户接口
-export function fetchAddUser(data: Api.Dto.AddSysUserDto) {
+export function fetchAddUser(data: Api.Dto.SysUserFormDto) {
   return request.post<Api.Sys.SysUser>({
     url: 'user/addUser',
     data
@@ -128,5 +128,21 @@ export function fetchQueryUserList(params: Api.Dto.QueryUserListDto) {
   return request.get<Api.result.UserList>({
     url: 'user/queryUserList',
     params
+  })
+}
+
+// 编辑用户信息
+export function fetchEditUser(data: Api.Dto.SysUserFormDto) {
+  return request.post<Api.Sys.SysUser>({
+    url: 'user/editUser',
+    data
+  })
+}
+
+// 删除用户
+export function fetchDeleteUsers(data: Api.Dto.DeleteUserDto[]) {
+  return request.post<Api.Dto.DeleteUserDto>({
+    url: 'user/deleteUsers',
+    data
   })
 }

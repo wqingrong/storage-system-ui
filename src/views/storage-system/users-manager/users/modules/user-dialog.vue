@@ -6,24 +6,28 @@
     align-center
     class="dialog"
   >
-    <ElForm ref="formRef" :model="addSysUserDto" :rules="rules" label-width="80px">
+    <ElForm ref="formRef" :model="sysUserFormDto" :rules="rules" label-width="80px">
       <div v-if="currentStep == 0">
         <ElFormItem label="用户名" prop="userName">
-          <ElInput v-model="addSysUserDto.userName" placeholder="请输入用户名" />
+          <ElInput
+            v-model="sysUserFormDto.userName"
+            :disabled="props.type === 'edit'"
+            placeholder="请输入用户名"
+          />
         </ElFormItem>
         <ElFormItem label="别名" prop="userAlias">
-          <ElInput v-model="addSysUserDto.userAlias" placeholder="请输入用户别名" />
+          <ElInput v-model="sysUserFormDto.userAlias" placeholder="请输入用户别名" />
         </ElFormItem>
         <ElFormItem label="密码" prop="password">
           <ElInput
-            v-model="addSysUserDto.password"
+            v-model="sysUserFormDto.password"
             type="password"
             placeholder="请输入密码"
             :show-password="true"
           />
         </ElFormItem>
         <ElFormItem label="备注" prop="userDesc">
-          <ElInput v-model="addSysUserDto.userDesc" placeholder="请输入备注信息" />
+          <ElInput v-model="sysUserFormDto.userDesc" placeholder="请输入备注信息" />
         </ElFormItem>
       </div>
       <!--  选中用户组-->
@@ -68,6 +72,7 @@
             id="master-groups"
             ref="masterGroupRef"
             :data="selectGroups"
+            row-key="gid"
             @select="handleMasterGroupSelect"
             style="width: 100%"
           >
@@ -87,31 +92,31 @@
           <div>
             <div class="form-item">
               <div style="width: 50%">用户名</div>
-              <div style="width: 50%">{{ addSysUserDto.userName }}</div>
+              <div style="width: 50%">{{ sysUserFormDto.userName }}</div>
             </div>
             <el-divider style="margin: 12px 0" />
 
             <div class="form-item">
               <div style="width: 50%">用户别名</div>
-              <div style="width: 50%">{{ addSysUserDto.userAlias }}</div>
+              <div style="width: 50%">{{ sysUserFormDto.userAlias }}</div>
             </div>
             <el-divider style="margin: 12px 0" />
 
             <div class="form-item">
               <div style="width: 50%">密码</div>
-              <div style="width: 50%">{{ addSysUserDto.password }}</div>
+              <div style="width: 50%">{{ sysUserFormDto.password }}</div>
             </div>
             <el-divider style="margin: 12px 0" />
 
             <div class="form-item">
               <div style="width: 50%">主要组</div>
-              <div style="width: 50%">{{ addSysUserDto.masterGroup.groupName }}</div>
+              <div style="width: 50%">{{ sysUserFormDto.masterGroup.groupName }}</div>
             </div>
             <el-divider style="margin: 12px 0" />
 
             <div class="form-item">
               <div style="width: 50%">描述信息</div>
-              <div style="width: 50%">{{ addSysUserDto.userDesc }}</div>
+              <div style="width: 50%">{{ sysUserFormDto.userDesc }}</div>
             </div>
             <el-divider style="margin: 12px 0" />
             <div>
@@ -120,7 +125,7 @@
             <div style="max-height: 400px">
               <el-table
                 ref="masterGroupRef"
-                :data="addSysUserDto.slaveGroupList"
+                :data="sysUserFormDto.slaveGroupList"
                 row-key="gid"
                 style="width: 100%"
               >
@@ -157,13 +162,13 @@
 
 <script setup lang="ts">
   import { ElTable, FormInstance, FormRules } from 'element-plus'
-  import { fetchGetGroupList, fetchAddUser } from '@/api/system-manage'
+  import { fetchGetGroupList, fetchAddUser, fetchEditUser } from '@/api/system-manage'
   import { aesEncrypt, aseDecrypt } from '@utils/encryption'
 
   interface Props {
     visible: boolean
     type: string
-    userData?: Partial<Api.SystemManage.UserListItem>
+    userData?: Partial<Api.Sys.SysUser>
   }
 
   interface Emits {
@@ -175,7 +180,8 @@
   const masterGroupRef = ref(ElTable)
 
   //  初始化表单信息
-  const addSysUserDto = ref<Api.Dto.AddSysUserDto>({
+  const sysUserFormDto = ref<Api.Dto.SysUserFormDto>({
+    uid: 0,
     userName: '',
     userAlias: '',
     userDesc: '',
@@ -265,8 +271,10 @@
       table.clearSelection()
       nextTick(() => {
         table.toggleRowSelection(row, true)
-        addSysUserDto.value.masterGroup = row
-        addSysUserDto.value.slaveGroupList = selectGroups.value.filter(
+        sysUserFormDto.value.masterGroup = row
+        // 排除掉主要组
+        console.log('当前选中的主要组为...', row)
+        sysUserFormDto.value.slaveGroupList = selectGroups.value.filter(
           (item) => item.gid !== row.gid
         )
       })
@@ -298,11 +306,16 @@
     loadGroupDataList()
     if (!isEdit) {
       initAddSysUserDtoFormData()
+    } else {
+      //   反显用户信息
+      sysUserFormDto.value = { ...props.userData }
+      sysUserFormDto.value.password = aseDecrypt(sysUserFormDto.value.password)
     }
   }
 
   const initAddSysUserDtoFormData = () => {
-    addSysUserDto.value = {
+    sysUserFormDto.value = {
+      uid: 0,
       userName: '',
       userAlias: '',
       userDesc: '',
@@ -339,11 +352,12 @@
   watch(
     () => currentStep.value,
     (newValue) => {
+      // 反显选中的用户组信息
       if (newValue == 1) {
         nextTick(() => {
-          let tmpGroupList = [...addSysUserDto.value.slaveGroupList]
-          if (addSysUserDto.value.masterGroup.groupName) {
-            tmpGroupList.push(addSysUserDto.value.masterGroup)
+          let tmpGroupList = [...sysUserFormDto.value.slaveGroupList]
+          if (sysUserFormDto.value.masterGroup.groupName) {
+            tmpGroupList.push(sysUserFormDto.value.masterGroup)
           }
           const table = selectGroupTableRef.value
           table.clearSelection()
@@ -353,12 +367,21 @@
         })
       } else if (newValue == 2) {
         nextTick(() => {
+          sysUserFormDto.value.slaveGroupList = selectGroups.value
           let table = masterGroupRef.value
-          if (addSysUserDto.value.masterGroup.groupName) {
+          if (sysUserFormDto.value.masterGroup.groupName) {
             table.clearSelection()
-            table.toggleRowSelection(addSysUserDto.value.masterGroup, true)
+            table.toggleRowSelection(sysUserFormDto.value.masterGroup, true)
+            sysUserFormDto.value.slaveGroupList = sysUserFormDto.value.slaveGroupList.filter(
+              (item) => item.gid !== sysUserFormDto.value.masterGroup.gid
+            )
+            //触发选中的点击事件
           }
         })
+      } else if (newValue === 3) {
+        if (!sysUserFormDto.value.userAlias) {
+          sysUserFormDto.value.userAlias = sysUserFormDto.value.userName
+        }
       }
     }
   )
@@ -380,23 +403,32 @@
 
   /**
    * 提交表单
-   * 验证通过后触发提交事件
+   * 验证通过后触发新增或编辑提交事件
    */
   const handleSubmit = async () => {
     if (!formRef.value) return
     await formRef.value.validate((valid) => {
       if (valid) {
         if (dialogType.value === 'add') {
-          let text = addSysUserDto.value.password
-          addSysUserDto.value.password = aesEncrypt(text)
-          fetchAddUser(addSysUserDto.value)
+          let text = sysUserFormDto.value.password
+          sysUserFormDto.value.password = aesEncrypt(text)
+          fetchAddUser(sysUserFormDto.value)
             .then(() => {
               dialogVisible.value = false
-              //   刷新列表信息...
               emit('refreshData')
             })
             .catch(() => {
-              addSysUserDto.value.password = aseDecrypt(addSysUserDto.value.password)
+              sysUserFormDto.value.password = aseDecrypt(sysUserFormDto.value.password)
+            })
+        } else if (dialogType.value === 'edit') {
+          sysUserFormDto.value.password = aesEncrypt(sysUserFormDto.value.password)
+          fetchEditUser(sysUserFormDto.value)
+            .then(() => {
+              dialogVisible.value = false
+              emit('refreshData')
+            })
+            .catch(() => {
+              sysUserFormDto.value.password = aseDecrypt(sysUserFormDto.value.password)
             })
         }
       }

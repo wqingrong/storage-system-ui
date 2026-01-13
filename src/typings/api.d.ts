@@ -48,14 +48,21 @@ declare namespace Api {
       groupAlias: string
       groupDesc: string
     }
-    // 修改用户组的参数信息
-    interface AddSysUserDto {
+    // 系统用户的表单信息
+    interface SysUserFormDto {
+      uid: number
       userName: string
       userAlias: string
       userDesc: string
       password: string
       masterGroup: Sys.SysGroup
       slaveGroupList: Sys.SysGroup[]
+    }
+
+    // 删除用户信息的参数
+    interface DeleteUserDto {
+      uid: number
+      userName: string
     }
   }
 
