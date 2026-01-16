@@ -144,9 +144,9 @@
       </div>
     </ElForm>
     <template #footer>
-      <!--      <el-button v-if="currentStep == 1" style="float: left" @click="advancedSetup"-->
-      <!--        >高级设置</el-button-->
-      <!--      >-->
+      <el-button v-if="currentStep == 1" style="float: left" @click="addSysGroup"
+        >添加用户组</el-button
+      >
       <el-button
         v-if="currentStep <= 3 && currentStep != 0"
         @click="prevStep"
@@ -157,13 +157,25 @@
         {{ currentStep >= 3 ? '完成' : '下一步' }}
       </el-button>
     </template>
+    <group-dialog
+      type="add"
+      v-model:visible="groupDialogVisible"
+      @groupAddSubmit="handleAddGroupDialogSubmit"
+    />
   </ElDialog>
 </template>
 
 <script setup lang="ts">
+  import '../../groups/modules/group-dialog.vue'
   import { ElTable, FormInstance, FormRules } from 'element-plus'
-  import { fetchGetGroupList, fetchAddUser, fetchEditUser } from '@/api/system-manage'
+  import {
+    fetchGetGroupList,
+    fetchAddUser,
+    fetchEditUser,
+    fetchAddGroup
+  } from '@/api/system-manage'
   import { aesEncrypt, aseDecrypt } from '@utils/encryption'
+  import GroupDialog from '@views/storage-system/users-manager/groups/modules/group-dialog.vue'
 
   interface Props {
     visible: boolean
@@ -178,6 +190,23 @@
 
   const selectGroupTableRef = ref(ElTable)
   const masterGroupRef = ref(ElTable)
+  const groupDialogVisible = ref(false)
+  // 打开添加用户组弹窗..
+  const addSysGroup = () => {
+    groupDialogVisible.value = true
+  }
+
+  //  添加用户组的方法
+  const handleAddGroupDialogSubmit = async (formData: Api.Dto.AddGroupDto) => {
+    try {
+      fetchAddGroup(formData).then((res) => {
+        groupDataList.value.records.push(res)
+      })
+      groupDialogVisible.value = false
+    } catch (error) {
+      console.error('提交失败:', error)
+    }
+  }
 
   //  初始化表单信息
   const sysUserFormDto = ref<Api.Dto.SysUserFormDto>({
@@ -273,7 +302,6 @@
         table.toggleRowSelection(row, true)
         sysUserFormDto.value.masterGroup = row
         // 排除掉主要组
-        console.log('当前选中的主要组为...', row)
         sysUserFormDto.value.slaveGroupList = selectGroups.value.filter(
           (item) => item.gid !== row.gid
         )

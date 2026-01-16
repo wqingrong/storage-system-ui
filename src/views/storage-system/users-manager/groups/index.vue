@@ -169,6 +169,10 @@
         {
           prop: 'groupDesc',
           label: '描述信息'
+        },
+        {
+          prop: 'totalPeople',
+          label: '成员人数'
         }
       ]
     }
