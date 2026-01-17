@@ -43,7 +43,7 @@ declare namespace Api {
     }
 
     // 添加用户组的参数信息
-    interface AddGroupDto {
+    interface SysGroupDto {
       groupName: string
       groupAlias: string
       groupDesc: string
@@ -63,6 +63,12 @@ declare namespace Api {
     interface DeleteUserDto {
       uid: number
       userName: string
+    }
+
+    // 删除用户组参数信息
+    interface DeleteSysGroupDto {
+      gid: number
+      groupName: string
     }
   }
 

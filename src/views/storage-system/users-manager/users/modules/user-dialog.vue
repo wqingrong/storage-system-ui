@@ -197,7 +197,7 @@
   }
 
   //  添加用户组的方法
-  const handleAddGroupDialogSubmit = async (formData: Api.Dto.AddGroupDto) => {
+  const handleAddGroupDialogSubmit = async (formData: Api.Dto.SysGroupDto) => {
     try {
       fetchAddGroup(formData).then((res) => {
         groupDataList.value.records.push(res)

@@ -7,9 +7,8 @@
             <template #left>
               <ElSpace wrap>
                 <ElButton @click="showGroupDialog('add')">新增用户组</ElButton>
-                <ElButton @click="handleDeleteGroup">删除用户组</ElButton>
-                <ElButton @click="handleEditGroup" :disabled="selectedGroupRows.length > 1"
-                  >编辑用户组</ElButton
+                <ElButton @click="handleDeleteGroups"
+                  >删除用户组({{ selectedGroupRows.length }})</ElButton
                 >
               </ElSpace>
             </template>
@@ -42,40 +41,32 @@
 
 <script setup lang="ts">
   import { useTable } from '@/composables/useTable'
-  import { fetchAddGroup, fetchGetGroupList } from '@/api/system-manage'
+  import {
+    fetchAddGroup,
+    fetchDelGroups,
+    fetchEditGroup,
+    fetchGetGroupList
+  } from '@/api/system-manage'
   import UserDialog from './modules/user-dialog.vue'
-  import UserListItem = Api.SystemManage.UserListItem
   import SysGroup = Api.Sys.SysGroup
   import GroupDialog from '@views/storage-system/users-manager/groups/modules/group-dialog.vue'
-  import { aesEncrypt, aseDecrypt } from '@utils/encryption'
+  import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
 
   const dialogType = ref<Form.DialogType>('add')
   const dialogVisible = ref(false)
   const dialogAddGroupVisible = ref(false)
-  const currentGroupItem = ref<SysGroup>()
+  let currentGroupItem = ref<SysGroup>()
   const selectedGroupRows = ref<SysGroup[]>([])
 
   // 当前选中的用户组选项
   defineOptions({ name: 'GroupsManager' })
 
-  const groupsList = ref<Api.Sys.SysGroup[]>([])
-
-  currentGroupItem.value = groupsList.value[0]
-  /**
-   * 显示用户弹窗
-   */
-  const showAddUserDialog = (type: Form.DialogType, row?: UserListItem): void => {
-    console.log('打开弹窗:', { type, row })
-    dialogType.value = type
-    // currentUserData.value = row || {}
-    nextTick(() => {
-      dialogVisible.value = true
-    })
-  }
-
   const showGroupDialog = (type: Form.DialogType, row?: SysGroup): void => {
     dialogType.value = type
     dialogAddGroupVisible.value = true
+    if (type === 'edit') {
+      currentGroupItem.value = row
+    }
   }
 
   /**
@@ -91,46 +82,42 @@
   }
 
   // 添加用户组请求接口
-  const handleAddGroupDialogSubmit = async (formData: Api.Dto.AddGroupDto) => {
+  const handleAddGroupDialogSubmit = async (formData: Api.Dto.SysGroupDto) => {
+    fetchAddGroup(formData).then(() => {
+      // 触发刷新操作
+      refreshData()
+    })
+    dialogAddGroupVisible.value = false
+  }
+
+  // 编辑用户组信息接口
+  const handleEditGroupDialogSubmit = async (formData: Api.Dto.SysGroupDto) => {
     try {
-      fetchAddGroup(formData).then((res) => {
-        // 触发刷新操作
+      fetchEditGroup(formData).then(() => {
+        dialogAddGroupVisible.value = false
         refreshData()
-        console.log('添加用户组成功', res)
       })
-      dialogAddGroupVisible.value = false
     } catch (error) {
       console.error('提交失败:', error)
     }
   }
 
-  const handleEditGroupDialogSubmit = async (formData: Api.Sys.SysGroup) => {
-    try {
-      console.log('编辑提交的表单信息>>>>', formData)
-      dialogAddGroupVisible.value = false
-      // currentUserData.value = {}
-    } catch (error) {
-      console.error('提交失败:', error)
+  // 删除选中的用户组...
+  const handleDeleteGroups = () => {
+    console.log(selectedGroupRows.value)
+    let deleteGroupDtoList = ref<Api.Dto.DeleteSysGroupDto[]>([])
+    if (selectedGroupRows.value.length > 0) {
+      for (let i = 0; i < selectedGroupRows.value.length; i++) {
+        deleteGroupDtoList.value.push({
+          groupName: selectedGroupRows.value[i].groupName,
+          gid: selectedGroupRows.value[i].gid
+        })
+      }
+      fetchDelGroups(deleteGroupDtoList.value).then(() => {
+        refreshData()
+      })
     }
   }
-
-  const handleDeleteGroup = () => {
-    console.log('删除用户组')
-    console.log(currentGroupItem.value)
-  }
-
-  const handleEditGroup = () => {
-    console.log('编辑用户组')
-    console.log(currentGroupItem.value)
-    showGroupDialog('edit', currentGroupItem.value)
-  }
-
-  onMounted(() => {
-    let aesEncrypt1 = aesEncrypt('wangqingrong')
-    console.log('aes加密结果', aesEncrypt1)
-    let s = aseDecrypt(aesEncrypt1)
-    console.log('aes解密结果', s)
-  })
 
   const {
     data,
@@ -153,7 +140,9 @@
         sort: ''
       },
       columnsFactory: () => [
-        { type: 'selection' }, // 勾选列
+        {
+          type: 'selection'
+        },
         {
           prop: 'gid',
           label: 'gid'
@@ -173,6 +162,19 @@
         {
           prop: 'totalPeople',
           label: '成员人数'
+        },
+        {
+          prop: 'operation',
+          label: '操作',
+          width: 120,
+          fixed: 'right', // 固定列
+          formatter: (row) =>
+            h('div', [
+              h(ArtButtonTable, {
+                type: 'edit',
+                onClick: () => showGroupDialog('edit', row)
+              })
+            ])
         }
       ]
     }
@@ -183,7 +185,6 @@
    */
   const handleSelectionChange = (selection: Api.Sys.SysGroup[]): void => {
     selectedGroupRows.value = selection
-    console.log('选中行数据:', selectedGroupRows.value)
   }
 </script>
 

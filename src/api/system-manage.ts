@@ -108,7 +108,7 @@ export function fetchGetGroupList(params: Api.Dto.GetGroupListDto) {
 }
 
 // 添加用户组
-export function fetchAddGroup(data: Api.Dto.AddGroupDto) {
+export function fetchAddGroup(data: Api.Dto.SysGroupDto) {
   return request.post<Api.result.GroupEntity>({
     url: 'user/addGroup',
     data
@@ -143,6 +143,22 @@ export function fetchEditUser(data: Api.Dto.SysUserFormDto) {
 export function fetchDeleteUsers(data: Api.Dto.DeleteUserDto[]) {
   return request.post<Api.Dto.DeleteUserDto>({
     url: 'user/delUsers',
+    data
+  })
+}
+
+//  编辑用户组
+export function fetchEditGroup(data: Api.Dto.SysGroupDto) {
+  return request.post<Api.Dto.SysGroupDto>({
+    url: 'user/editGroup',
+    data
+  })
+}
+
+// 删除用户组
+export function fetchDelGroups(data: Api.Dto.DeleteSysGroupDto[]) {
+  return request.post<any>({
+    url: 'user/delGroups',
     data
   })
 }

@@ -7,7 +7,11 @@
   >
     <ElForm ref="formRef" :model="formData" :rules="rules" label-width="100px">
       <ElFormItem label="用户组名" prop="groupName">
-        <ElInput v-model="formData.groupName" placeholder="用户组名" />
+        <ElInput
+          v-model="formData.groupName"
+          placeholder="用户组名"
+          :disabled="props.type == 'edit'"
+        />
       </ElFormItem>
       <ElFormItem label="用户组别名" prop="groupAlias">
         <ElInput v-model="formData.groupAlias" placeholder="用户组别名" />
