@@ -95,7 +95,7 @@
       },
       columnsFactory: () => [
         { type: 'selection' }, // 勾选列
-        { type: 'index', width: 60, label: '序号' }, // 序号
+        { type: 'index', width: 80, label: '序号' }, // 序号
         {
           prop: 'uid',
           label: 'UID'
@@ -173,7 +173,7 @@
     ElMessageBox.confirm(`确定要删除选中的${deleteUserDto.value.length}条数据吗？`, '删除用户', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'error'
+      type: 'info'
     }).then(() => {
       fetchDeleteUsers(deleteUserDto.value).then(() => {
         refreshData()

@@ -40,7 +40,6 @@
         :pagination="pagination"
         :data="data"
         :columns="columns"
-        :height="computedTableHeight"
         empty-height="360px"
         @selection-change="handleSelectionChange"
         @row-click="handleRowClick"
@@ -61,7 +60,6 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue'
   import { Delete } from '@element-plus/icons-vue'
   import { ElMessageBox } from 'element-plus'
   import { useTable } from '@/composables/useTable'
@@ -93,17 +91,6 @@
   // 事件演示相关
   const eventDemoEnabled = ref(false)
   const eventLogs = ref<Array<{ type: string; message: string; time: string }>>([])
-
-  // 表格配置演示
-  const tableConfig = ref({
-    height: '100%',
-    fixedHeight: false // 新增：是否固定高度的开关
-  })
-
-  // 计算实际的表格高度
-  const computedTableHeight = computed(() => {
-    return tableConfig.value.fixedHeight ? '500px' : ''
-  })
 
   /**
    * 使用 useTable Hook 管理表格数据
@@ -182,34 +169,6 @@
       cacheTime: 5 * 60 * 1000, // 5分钟
       debounceTime: 300,
       maxCacheSize: 100
-    },
-
-    // 生命周期钩子
-    hooks: {
-      onSuccess: (data, response) => {
-        console.log('📊 响应详情:', response)
-        addCacheLog(`✅ 网络请求成功: ${data.length} 条数据`)
-        addCacheLog(
-          `📝 响应信息: total=${response.total}, current=${response.current}, size=${response.size}`
-        )
-      },
-      onError: (error) => {
-        console.error('❌ 数据加载失败:', error)
-        addCacheLog(`❌ 请求失败: ${error.message}`)
-        ElMessage.error(error.message)
-      },
-      onCacheHit: (data, response) => {
-        console.log('🎯 缓存命中:', data.length, '条')
-        console.log('🔑 缓存来源:', response)
-        addCacheLog(
-          `🎯 缓存命中: ${data.length} 条数据 (current=${response.current}, size=${response.size})`
-        )
-        ElMessage.info('数据来自缓存')
-      },
-      resetFormCallback: () => {
-        console.log('🔄 表单已重置')
-        addCacheLog('🔄 表单已重置')
-      }
     },
 
     // 调试配置

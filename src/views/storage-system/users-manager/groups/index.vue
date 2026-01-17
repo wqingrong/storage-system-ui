@@ -43,6 +43,7 @@
   import { useTable } from '@/composables/useTable'
   import {
     fetchAddGroup,
+    fetchDeleteUsers,
     fetchDelGroups,
     fetchEditGroup,
     fetchGetGroupList
@@ -51,6 +52,7 @@
   import SysGroup = Api.Sys.SysGroup
   import GroupDialog from '@views/storage-system/users-manager/groups/modules/group-dialog.vue'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
+  import { ElMessageBox } from 'element-plus'
 
   const dialogType = ref<Form.DialogType>('add')
   const dialogVisible = ref(false)
@@ -73,12 +75,7 @@
    * 处理弹窗提交事件
    */
   const handleDialogSubmit = async () => {
-    try {
-      dialogVisible.value = false
-      // currentUserData.value = {}
-    } catch (error) {
-      console.error('提交失败:', error)
-    }
+    dialogVisible.value = false
   }
 
   // 添加用户组请求接口
@@ -92,19 +89,14 @@
 
   // 编辑用户组信息接口
   const handleEditGroupDialogSubmit = async (formData: Api.Dto.SysGroupDto) => {
-    try {
-      fetchEditGroup(formData).then(() => {
-        dialogAddGroupVisible.value = false
-        refreshData()
-      })
-    } catch (error) {
-      console.error('提交失败:', error)
-    }
+    fetchEditGroup(formData).then(() => {
+      dialogAddGroupVisible.value = false
+      refreshData()
+    })
   }
 
   // 删除选中的用户组...
   const handleDeleteGroups = () => {
-    console.log(selectedGroupRows.value)
     let deleteGroupDtoList = ref<Api.Dto.DeleteSysGroupDto[]>([])
     if (selectedGroupRows.value.length > 0) {
       for (let i = 0; i < selectedGroupRows.value.length; i++) {
@@ -113,8 +105,19 @@
           gid: selectedGroupRows.value[i].gid
         })
       }
-      fetchDelGroups(deleteGroupDtoList.value).then(() => {
-        refreshData()
+
+      ElMessageBox.confirm(
+        `确定要删除选中的${deleteGroupDtoList.value.length}条数据吗？`,
+        '删除用户组',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'info'
+        }
+      ).then(() => {
+        fetchDelGroups(deleteGroupDtoList.value).then(() => {
+          refreshData()
+        })
       })
     }
   }
