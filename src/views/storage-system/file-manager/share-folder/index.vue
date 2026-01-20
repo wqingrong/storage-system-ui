@@ -1,232 +1,389 @@
 <template>
-  <div class="art-full-height">
-    <div class="tree-container">
-      <div class="right-content art-full-height" style="margin-bottom: 40px">
-        <ElCard class="art-table-card" shadow="never">
-          <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
-            <template #left>
-              <ElSpace wrap>
-                <ElButton @click="showGroupDialog('add')">新增用户组</ElButton>
-                <ElButton @click="handleDeleteGroups"
-                  >删除用户组({{ selectedGroupRows.length }})</ElButton
-                >
-              </ElSpace>
-            </template>
-          </ArtTableHeader>
-          <ArtTable
-            :loading="loading"
-            :data="data"
-            :columns="columns"
-            :pagination="pagination"
-            @selection-change="handleSelectionChange"
-            @pagination:size-change="handleSizeChange"
-            @pagination:current-change="handleCurrentChange"
-          >
-          </ArtTable>
-        </ElCard>
+  <div>
+    <div>
+      <div class="menu-container" style="margin-bottom: 10px">
+        <ElSpace wrap>
+          <ElButton>新增</ElButton>
+          <ElButton>编辑</ElButton>
+          <ElButton>删除</ElButton>
+        </ElSpace>
+      </div>
+      <div
+        v-for="item in shareFolderList"
+        :key="item.folderPath"
+        class="storage-info-container"
+        :style="currentShareFolder.folderPath === item.folderPath ? 'background: #e6f2fd;' : ''"
+      >
+        <!-- 标题区域 -->
+        <div
+          class="header-section"
+          @dblclick="toggleExpand(item)"
+          @click="handleCurrentShareFolder(item)"
+        >
+          <div class="title-with-icon">
+            <ThemeSvg :src="folder" style="width: 35px; height: 35px" />
+            <span class="main-title">{{ item.folderName }}</span>
+          </div>
+          <div class="header-actions">
+            <el-button
+              type="text"
+              :icon="item.isExpanded ? 'ArrowUp' : 'ArrowDown'"
+              @click="toggleExpand(item)"
+              class="expand-btn"
+            >
+              {{ item.isExpanded ? '收起' : '展开' }}
+            </el-button>
+          </div>
+        </div>
+        <!-- 信息卡片（可展开收起） -->
+        <el-collapse-transition>
+          <div v-show="item.isExpanded" class="info-grid-wrapper">
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">
+                  <span>描述：</span>
+                </div>
+                <div class="info-value">
+                  <span>{{ item.folderDesc }}</span>
+                </div>
+              </div>
+              <!--              共享路径-->
+              <div class="info-item" @click="handleItemClick('recycle-bin')">
+                <div class="info-label">
+                  <span>路径：</span>
+                </div>
+                <div class="info-value">
+                  <span>{{ item.folderPath }}</span>
+                </div>
+              </div>
+              <!-- 回收站 -->
+              <div class="info-item" @click="handleItemClick('recycle-bin')">
+                <div class="info-label">
+                  <span>回收站：</span>
+                </div>
+                <div class="info-value">
+                  <span>{{ item.recyclePath }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-collapse-transition>
       </div>
     </div>
-    <!-- 用户弹窗 -->
-    <UserDialog v-model:visible="dialogVisible" :type="dialogType" @submit="handleDialogSubmit" />
-    <!--    用户组弹出-->
-    <GroupDialog
-      v-model:visible="dialogAddGroupVisible"
-      :type="dialogType"
-      :groupData="currentGroupItem"
-      @groupAddSubmit="handleAddGroupDialogSubmit"
-      @groupEditSubmit="handleEditGroupDialogSubmit"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-  import { useTable } from '@/composables/useTable'
-  import {
-    fetchAddGroup,
-    fetchDeleteUsers,
-    fetchDelGroups,
-    fetchEditGroup,
-    fetchGetGroupList
-  } from '@/api/system-manage'
-  import UserDialog from './modules/user-dialog.vue'
-  import SysGroup = Api.Sys.SysGroup
-  import GroupDialog from '@views/storage-system/users-manager/groups/modules/group-dialog.vue'
-  import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
-  import { ElMessageBox } from 'element-plus'
+  import { ElCollapseTransition } from 'element-plus'
+  import folder from '@imgs/svg/folder.svg'
+  import ShareFolder = Api.Sys.ShareFolder
+  // 展开状态
+  const shareFolderList = ref<Api.Sys.ShareFolder[]>([])
+  const currentShareFolder = ref<Api.Sys.ShareFolder>({
+    id: -1,
+    folderName: '',
+    folderPath: '',
+    recyclePath: '',
+    folderDesc: '',
+    isExpanded: false
+  })
 
-  const dialogType = ref<Form.DialogType>('add')
-  const dialogVisible = ref(false)
-  const dialogAddGroupVisible = ref(false)
-  let currentGroupItem = ref<SysGroup>()
-  const selectedGroupRows = ref<SysGroup[]>([])
-
-  // 当前选中的用户组选项
-  defineOptions({ name: 'GroupsManager' })
-
-  const showGroupDialog = (type: Form.DialogType, row?: SysGroup): void => {
-    dialogType.value = type
-    dialogAddGroupVisible.value = true
-    if (type === 'edit') {
-      currentGroupItem.value = row
-    }
-  }
-
-  /**
-   * 处理弹窗提交事件
-   */
-  const handleDialogSubmit = async () => {
-    dialogVisible.value = false
-  }
-
-  // 添加用户组请求接口
-  const handleAddGroupDialogSubmit = async (formData: Api.Dto.SysGroupDto) => {
-    fetchAddGroup(formData).then(() => {
-      // 触发刷新操作
-      refreshData()
-    })
-    dialogAddGroupVisible.value = false
-  }
-
-  // 编辑用户组信息接口
-  const handleEditGroupDialogSubmit = async (formData: Api.Dto.SysGroupDto) => {
-    fetchEditGroup(formData).then(() => {
-      dialogAddGroupVisible.value = false
-      refreshData()
-    })
-  }
-
-  // 删除选中的用户组...
-  const handleDeleteGroups = () => {
-    let deleteGroupDtoList = ref<Api.Dto.DeleteSysGroupDto[]>([])
-    if (selectedGroupRows.value.length > 0) {
-      for (let i = 0; i < selectedGroupRows.value.length; i++) {
-        deleteGroupDtoList.value.push({
-          groupName: selectedGroupRows.value[i].groupName,
-          gid: selectedGroupRows.value[i].gid
-        })
-      }
-
-      ElMessageBox.confirm(
-        `确定要删除选中的${deleteGroupDtoList.value.length}条数据吗？`,
-        '删除用户组',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'info'
-        }
-      ).then(() => {
-        fetchDelGroups(deleteGroupDtoList.value).then(() => {
-          refreshData()
-        })
+  const initShareFolderList = () => {
+    for (let i = 0; i < 10; i++) {
+      shareFolderList.value.push({
+        id: i,
+        folderName: 'Folder' + i,
+        folderPath: '/volume1/Share/Folder' + i,
+        recyclePath: '/volume1/Share/#recycle',
+        folderDesc: '描述信息' + i,
+        isExpanded: false
       })
     }
   }
+  // 点击当前的共享目录
+  const handleCurrentShareFolder = (item: ShareFolder) => {
+    currentShareFolder.value = item
+    console.log('item>>>', item)
+  }
 
-  const {
-    data,
-    columns,
-    columnChecks,
-    loading,
-    pagination,
-    refreshData,
-    handleSizeChange,
-    handleCurrentChange
-  } = useTable({
-    core: {
-      apiFn: fetchGetGroupList,
-      apiParams: {
-        current: 1,
-        size: 20,
-        groupName: '',
-        gid: 0,
-        orderBy: '',
-        sort: ''
-      },
-      columnsFactory: () => [
-        {
-          type: 'selection'
-        },
-        {
-          prop: 'gid',
-          label: 'gid'
-        },
-        {
-          prop: 'groupName',
-          label: '组名'
-        },
-        {
-          prop: 'groupAlias',
-          label: '组别名'
-        },
-        {
-          prop: 'groupDesc',
-          label: '描述信息'
-        },
-        {
-          prop: 'totalPeople',
-          label: '成员人数'
-        },
-        {
-          prop: 'operation',
-          label: '操作',
-          width: 120,
-          fixed: 'right', // 固定列
-          formatter: (row) =>
-            h('div', [
-              h(ArtButtonTable, {
-                type: 'edit',
-                onClick: () => showGroupDialog('edit', row)
-              })
-            ])
-        }
-      ]
-    }
+  onMounted(() => {
+    initShareFolderList()
   })
 
-  /**
-   * 处理表格行选择变化
-   */
-  const handleSelectionChange = (selection: Api.Sys.SysGroup[]): void => {
-    selectedGroupRows.value = selection
+  // 切换展开/收起
+  const toggleExpand = (item: ShareFolder) => {
+    item.isExpanded = !item.isExpanded
   }
 </script>
 
-<style lang="scss" scoped>
-  .tree-container {
-    box-sizing: border-box;
+<style scoped lang="scss">
+  .storage-info-container {
+    margin-top: 10px;
+    background: #ffffff;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 10px;
+    max-width: 100%;
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    transition: all 0.3s ease;
+  }
+
+  // 头部样式
+  .header-section {
     display: flex;
-    gap: 16px;
-    height: 100%;
+    justify-content: space-between;
+    align-items: center;
+    height: 40px;
+  }
 
-    .left-sidebar {
-      flex-shrink: 0;
-      width: 230px;
-      height: 100%;
-    }
+  .title-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
-    .right-content {
-      flex-grow: 1;
-      min-width: 0;
-      height: 100%;
-    }
+  .title-icon {
+    color: #409eff;
+    font-size: 24px;
+  }
 
-    .art-table-card {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
+  .main-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #303133;
+    line-height: 1;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .expand-btn {
+    color: #909399;
+    font-size: 14px;
+
+    &:hover {
+      color: #409eff;
+      background-color: transparent;
     }
   }
 
-  @media screen and (max-width: $device-ipad) {
-    .tree-container {
-      display: block;
-      gap: 0;
-      height: auto;
+  // 描述区域
+  .description-section {
+    margin-bottom: 24px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #409eff;
+    transition: all 0.3s ease;
 
-      .left-sidebar {
+    &.collapsed {
+      margin-bottom: 0;
+      opacity: 0.8;
+    }
+  }
+
+  // 信息网格布局
+  .info-grid-wrapper {
+    overflow: hidden;
+  }
+
+  .info-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    padding: 8px 0;
+  }
+
+  // 信息项样式
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #e6f2fd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+
+    &:hover {
+      background: #f5f7fa;
+      border-color: #dcdfe6;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    &:active {
+      transform: translateY(0);
+      transition: transform 0.1s ease;
+    }
+  }
+
+  .info-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #606266;
+    font-weight: 500;
+    width: 50%;
+    .item-icon {
+      color: #909399;
+      font-size: 16px;
+    }
+  }
+
+  .info-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    width: 50%;
+    .status-icon {
+      font-size: 14px;
+    }
+  }
+
+  // 状态样式
+  .status-enabled {
+    color: #67c23a;
+
+    .status-icon {
+      color: #67c23a;
+    }
+  }
+
+  .status-disabled {
+    color: #f56c6c;
+
+    .status-icon {
+      color: #f56c6c;
+    }
+  }
+
+  .status-active {
+    color: #409eff;
+
+    .status-icon {
+      color: #409eff;
+    }
+  }
+
+  // 文件大小样式
+  .size-value {
+    color: #303133;
+    font-weight: 600;
+  }
+
+  .size-number {
+    font-size: 16px;
+  }
+
+  .size-unit {
+    font-size: 12px;
+    color: #909399;
+    margin-left: 2px;
+  }
+
+  // 额外操作区域
+  .additional-actions {
+    margin-top: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .actions-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #dcdfe6, transparent);
+    margin: 16px 0;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  // 动画效果
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // 展开/收起动画
+  .expand-enter-active,
+  .expand-leave-active {
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+
+  .expand-enter-from,
+  .expand-leave-to {
+    opacity: 0;
+    max-height: 0;
+  }
+
+  .expand-enter-to,
+  .expand-leave-from {
+    opacity: 1;
+    max-height: 500px;
+  }
+
+  // 响应式调整
+  @media (max-width: 768px) {
+    .storage-info-container {
+      padding: 16px;
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .header-section {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .header-actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .main-title {
+      font-size: 18px;
+    }
+
+    .action-buttons {
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .info-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .info-value {
+      align-self: flex-end;
+    }
+
+    .action-buttons {
+      flex-direction: column;
+
+      .el-button {
         width: 100%;
-        height: auto;
-        margin-bottom: 20px;
       }
     }
   }

@@ -71,8 +71,16 @@ declare namespace Api {
       groupName: string
     }
   }
-
   namespace Sys {
+    interface ShareFolder {
+      id: number
+      folderName: string
+      folderPath: string
+      recyclePath: string
+      folderDesc: string
+      shareProtocol: string
+      isExpanded: boolean
+    }
     interface SysUser {
       userName: string
       userAlias: string
