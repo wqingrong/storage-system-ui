@@ -120,5 +120,7 @@ declare namespace Disk {
     type StoragePoolList = Api.Common.PaginatedResponse<StoragePool>
 
     type StoragePoolSimpleList = Api.Common.PaginatedResponse<StoragePoolSimpleInfo>
+
+    type StorageSpaceList = Api.Common.PaginatedResponse<StorageSpace>
   }
 }

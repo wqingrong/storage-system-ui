@@ -3,16 +3,20 @@
     <div>
       <div class="menu-container" style="margin-bottom: 10px">
         <ElSpace wrap>
-          <ElButton>新增</ElButton>
+          <ElButton @click="handleNewShareClick">新增</ElButton>
           <ElButton>编辑</ElButton>
           <ElButton>删除</ElButton>
         </ElSpace>
       </div>
       <div
         v-for="item in shareFolderList"
-        :key="item.folderPath"
+        :key="item.folder.folderName"
         class="storage-info-container"
-        :style="currentShareFolder.folderPath === item.folderPath ? 'background: #e6f2fd;' : ''"
+        :style="
+          currentShareFolder?.folder.folderPath === item.folder.folderPath
+            ? 'background: #e6f2fd;'
+            : ''
+        "
       >
         <!-- 标题区域 -->
         <div
@@ -22,7 +26,7 @@
         >
           <div class="title-with-icon">
             <ThemeSvg :src="folder" style="width: 35px; height: 35px" />
-            <span class="main-title">{{ item.folderName }}</span>
+            <span class="main-title">{{ item.folder.folderName }}</span>
           </div>
           <div class="header-actions">
             <el-button
@@ -39,30 +43,31 @@
         <el-collapse-transition>
           <div v-show="item.isExpanded" class="info-grid-wrapper">
             <div class="info-grid">
+              <!--              存储空间-->
               <div class="info-item">
                 <div class="info-label">
-                  <span>描述：</span>
+                  <span>存储空间：</span>
                 </div>
                 <div class="info-value">
-                  <span>{{ item.folderDesc }}</span>
+                  <span>{{ item.storageSpace?.spaceName }}</span>
                 </div>
               </div>
               <!--              共享路径-->
-              <div class="info-item" @click="handleItemClick('recycle-bin')">
+              <div class="info-item">
                 <div class="info-label">
                   <span>路径：</span>
                 </div>
                 <div class="info-value">
-                  <span>{{ item.folderPath }}</span>
+                  <span>{{ item.folder?.folderPath }}</span>
                 </div>
               </div>
               <!-- 回收站 -->
-              <div class="info-item" @click="handleItemClick('recycle-bin')">
+              <div class="info-item">
                 <div class="info-label">
                   <span>回收站：</span>
                 </div>
                 <div class="info-value">
-                  <span>{{ item.recyclePath }}</span>
+                  <span>{{ item.sambaShareFolderConfig.recycle?.recyclePath }}</span>
                 </div>
               </div>
             </div>
@@ -70,40 +75,33 @@
         </el-collapse-transition>
       </div>
     </div>
+    <!--    弹窗-->
+    <new-share-folder-dialog v-model:visible="newShareDialogVisible" :type="newShareDialogType" />
   </div>
 </template>
 
 <script setup lang="ts">
   import { ElCollapseTransition } from 'element-plus'
   import folder from '@imgs/svg/folder.svg'
+  import newShareFolderDialog from './modules/new-share-folder-dialog.vue'
   import ShareFolder = Api.Sys.ShareFolder
+  import { fetchGetShareFolderList } from '@/api/share-folder'
+  const newShareDialogVisible = ref(false)
+  const newShareDialogType = ref('add')
   // 展开状态
   const shareFolderList = ref<Api.Sys.ShareFolder[]>([])
-  const currentShareFolder = ref<Api.Sys.ShareFolder>({
-    id: -1,
-    folderName: '',
-    folderPath: '',
-    recyclePath: '',
-    folderDesc: '',
-    isExpanded: false
-  })
+  const currentShareFolder = ref<Api.Sys.ShareFolder>()
 
   const initShareFolderList = () => {
-    for (let i = 0; i < 10; i++) {
-      shareFolderList.value.push({
-        id: i,
-        folderName: 'Folder' + i,
-        folderPath: '/volume1/Share/Folder' + i,
-        recyclePath: '/volume1/Share/#recycle',
-        folderDesc: '描述信息' + i,
-        isExpanded: false
-      })
-    }
+    fetchGetShareFolderList().then((res) => {
+      if (res.records) {
+        shareFolderList.value = res.records
+      }
+    })
   }
   // 点击当前的共享目录
   const handleCurrentShareFolder = (item: ShareFolder) => {
     currentShareFolder.value = item
-    console.log('item>>>', item)
   }
 
   onMounted(() => {
@@ -113,6 +111,12 @@
   // 切换展开/收起
   const toggleExpand = (item: ShareFolder) => {
     item.isExpanded = !item.isExpanded
+  }
+  // 点击了创建的的按钮
+  const handleNewShareClick = () => {
+    newShareDialogVisible.value = true
+    newShareDialogType.value = 'add'
+    console.log('ppppppppppppppp')
   }
 </script>
 

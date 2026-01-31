@@ -162,3 +162,10 @@ export function fetchDelGroups(data: Api.Dto.DeleteSysGroupDto[]) {
     data
   })
 }
+
+//  获取存储空间列表
+export function fetchGetStorageSpaceList() {
+  return request.get<Disk.Device.StorageSpaceList>({
+    url: 'storage/getStorageSpaceList'
+  })
+}

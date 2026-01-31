@@ -70,17 +70,46 @@ declare namespace Api {
       gid: number
       groupName: string
     }
-  }
-  namespace Sys {
-    interface ShareFolder {
-      id: number
+
+    // 创建共享目录的dto
+    interface NewShareFolderDto {
+      mountPath: string
       folderName: string
       folderPath: string
+    }
+  }
+  namespace Sys {
+    interface Folder {
+      folderName: string
+      folderPath: string
+      modifyTime: string
+      ownerUser: string
+      ownerGroup: string
+    }
+    interface SambaRecycle {
       recyclePath: string
+    }
+    interface SambaPermission {
+      writeUserList: string[]
+      writeGroupList: string[]
+      readUserList: string[]
+      readGroupList: string[]
+    }
+    interface SambaShareFolderConfig {
+      recycle: SambaRecycle
+      permission: SambaPermission
+    }
+    interface ShareFolder {
+      storageSpace: Disk.Device.StorageSpace
+      folder: Folder
+      sambaShareFolderConfig: SambaShareFolderConfig
       folderDesc: string
       shareProtocol: string
       isExpanded: boolean
     }
+
+    type ShareFolderList = Api.Common.PaginatedResponse<ShareFolder>
+
     interface SysUser {
       userName: string
       userAlias: string

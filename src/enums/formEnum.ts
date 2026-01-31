@@ -25,3 +25,8 @@ export enum RaidGrade {
 export enum ZFSPoolGrade {
   RAID_Z1 = 'RAID_Z1'
 }
+
+// 正则表达式的集合
+export const REGULAR = {
+  CREATE_DIR: /^[\u4e00-\u9fa5a-zA-Z0-9_.\- ]+$/
+} as const

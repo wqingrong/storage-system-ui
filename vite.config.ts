@@ -45,6 +45,10 @@ export default ({ mode }: { mode: string }) => {
         '/user': {
           target: 'http://127.0.0.1:9090',
           changeOrigin: true
+        },
+        '/shareFolder': {
+          target: 'http://127.0.0.1:9090',
+          changeOrigin: true
         }
       },
       host: true
