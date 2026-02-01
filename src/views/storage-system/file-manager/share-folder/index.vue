@@ -4,8 +4,12 @@
       <div class="menu-container" style="margin-bottom: 10px">
         <ElSpace wrap>
           <ElButton @click="handleNewShareClick">新增</ElButton>
-          <ElButton>编辑</ElButton>
-          <ElButton>删除</ElButton>
+          <ElButton @click="handleEditShareClick" :disabled="currentShareFolder === undefined"
+            >编辑</ElButton
+          >
+          <ElButton @click="handleDeleteShareClick" :disabled="currentShareFolder === undefined"
+            >删除</ElButton
+          >
         </ElSpace>
       </div>
       <div
@@ -76,7 +80,12 @@
       </div>
     </div>
     <!--    弹窗-->
-    <new-share-folder-dialog v-model:visible="newShareDialogVisible" :type="newShareDialogType" />
+    <new-share-folder-dialog
+      v-model:visible="newShareDialogVisible"
+      :type="newShareDialogType"
+      :share-folder="currentShareFolder"
+      @refreshData="refreshShareFolderList"
+    />
   </div>
 </template>
 
@@ -91,8 +100,7 @@
   // 展开状态
   const shareFolderList = ref<Api.Sys.ShareFolder[]>([])
   const currentShareFolder = ref<Api.Sys.ShareFolder>()
-
-  const initShareFolderList = () => {
+  const refreshShareFolderList = () => {
     fetchGetShareFolderList().then((res) => {
       if (res.records) {
         shareFolderList.value = res.records
@@ -105,7 +113,7 @@
   }
 
   onMounted(() => {
-    initShareFolderList()
+    refreshShareFolderList()
   })
 
   // 切换展开/收起
@@ -116,8 +124,14 @@
   const handleNewShareClick = () => {
     newShareDialogVisible.value = true
     newShareDialogType.value = 'add'
-    console.log('ppppppppppppppp')
   }
+
+  const handleEditShareClick = () => {
+    newShareDialogVisible.value = true
+    newShareDialogType.value = 'edit'
+  }
+
+  const handleDeleteShareClick = () => {}
 </script>
 
 <style scoped lang="scss">

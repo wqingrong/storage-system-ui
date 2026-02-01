@@ -79,7 +79,17 @@ declare namespace Api {
     }
   }
   namespace Sys {
+    // 基本权限
+    interface BasicPermission {
+      RO: string
+      RW: string
+      FB: string
+    }
+    // 自定权限
+    // interface CustomPermission {}
+
     interface Folder {
+      mountPath: string
       folderName: string
       folderPath: string
       modifyTime: string
@@ -96,7 +106,9 @@ declare namespace Api {
       readGroupList: string[]
     }
     interface SambaShareFolderConfig {
+      folderPath: string
       recycle: SambaRecycle
+      shareName: string
       permission: SambaPermission
     }
     interface ShareFolder {
@@ -120,6 +132,7 @@ declare namespace Api {
       password: string
       createTime: string
       slaveGroupList: Api.Sys.SysGroup[]
+      basicPermission: BasicPermission
     }
 
     interface SysGroup {
@@ -129,6 +142,7 @@ declare namespace Api {
       groupDesc: string
       gid: number
       totalPeople: number
+      basicPermission: BasicPermission
     }
     // 操作日志的基本格式
     interface OperationLogger {

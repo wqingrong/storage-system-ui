@@ -45,7 +45,7 @@
         <span style="font-size: 15px">协议设置</span>
         <!--     给一个多选框自己选择需要共享出来的协议-->
         <div style="margin-top: 10px; padding-left: 20px">
-          <el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
+          <el-tabs v-model="activeName" class="demo-tabs">
             <el-tab-pane label="Samba" name="Samba">
               <div>
                 <div>
@@ -87,9 +87,9 @@
             justify-content: space-between;
           "
         >
-          <el-select style="width: 150px">
+          <el-select v-model="tableType" style="width: 150px">
             <el-option label="用户列表" value="localUser" />
-            <el-option label="用户组列表" value="localUser" />
+            <el-option label="用户组列表" value="localGroup" />
           </el-select>
           <el-input
             style="width: 200px"
@@ -100,6 +100,57 @@
         </div>
         <div style="max-height: 400px">
           <el-table
+            v-if="tableType === 'localUser'"
+            ref="selectGroupTableRef"
+            :data="userDataList.records"
+            row-key="gid"
+            style="width: 100%"
+            :reserve-selection="true"
+          >
+            <el-table-column property="userName" label="用户名" align="center"></el-table-column>
+            <el-table-column property="userAlias" label="别名" align="center" />
+            <el-table-column property="write" label="禁止访问" align="center">
+              <template #default="scope">
+                <el-checkbox
+                  v-model="scope.row.basicPermission.FB"
+                  true-value="FB"
+                  false-label=""
+                  @change="handleUserCheckboxChange(scope.row, 'FB')"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column property="write" label="可读写" align="center">
+              <template #default="scope">
+                <el-checkbox
+                  v-model="scope.row.basicPermission.RW"
+                  true-value="RW"
+                  false-label=""
+                  @change="handleUserCheckboxChange(scope.row, 'RW')"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column property="readOnly" label="只读" align="center">
+              <template #default="scope">
+                <el-checkbox
+                  v-model="scope.row.basicPermission.RO"
+                  true-value="RO"
+                  false-label=""
+                  @change="handleUserCheckboxChange(scope.row, 'RO')"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column property="custom" label="自定义" align="center">
+              <template #default="scope">
+                <el-checkbox
+                  :disabled="true"
+                  @change="handleUserCheckboxChange(scope.row, 'custom')"
+                />
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <el-table
+            v-if="tableType === 'localGroup'"
             ref="selectGroupTableRef"
             :data="groupDataList.records"
             row-key="gid"
@@ -111,129 +162,69 @@
             <el-table-column property="write" label="禁止访问" align="center">
               <template #default="scope">
                 <el-checkbox
-                  v-model="scope.row.checked"
-                  @change="handleCheckboxChange(scope.row)"
+                  v-model="scope.row.basicPermission.FB"
+                  true-value="FB"
+                  false-label=""
+                  @change="handleGroupCheckboxChange(scope.row, 'FB')"
                 />
               </template>
             </el-table-column>
             <el-table-column property="write" label="可读写" align="center">
               <template #default="scope">
                 <el-checkbox
-                  v-model="scope.row.checked"
-                  @change="handleCheckboxChange(scope.row)"
+                  v-model="scope.row.basicPermission.RW"
+                  true-value="RW"
+                  false-label=""
+                  @change="handleGroupCheckboxChange(scope.row, 'RW')"
                 />
               </template>
             </el-table-column>
             <el-table-column property="readOnly" label="只读" align="center">
               <template #default="scope">
                 <el-checkbox
-                  v-model="scope.row.checked"
-                  @change="handleCheckboxChange(scope.row)"
+                  v-model="scope.row.basicPermission.RO"
+                  true-value="RO"
+                  false-label=""
+                  @change="handleGroupCheckboxChange(scope.row, 'RO')"
                 />
               </template>
             </el-table-column>
             <el-table-column property="custom" label="自定义" align="center">
               <template #default="scope">
                 <el-checkbox
-                  v-model="scope.row.checked"
-                  @change="handleCheckboxChange(scope.row)"
+                  :disabled="true"
+                  @change="handleGroupCheckboxChange(scope.row, 'custom')"
                 />
               </template>
             </el-table-column>
           </el-table>
         </div>
         <el-pagination
-          v-if="groupDataList.total > 0"
+          v-if="groupDataList.total > 0 && tableType === 'localUser'"
+          background
+          :page-sizes="[10, 20, 40, 60]"
+          layout="prev, pager, next"
+          :total="userDataList.total"
+          :current-page="userDataList.current"
+          :page-size="userDataList.size"
+          @current-change="handleUserPageChange"
+          @size-change="handleUserSizeChange"
+          :hide-on-single-page="true"
+          style="display: flex !important; justify-content: center !important"
+        />
+        <el-pagination
+          v-if="groupDataList.total > 0 && tableType === 'localGroup'"
           background
           :page-sizes="[10, 20, 40, 60]"
           layout="prev, pager, next"
           :total="groupDataList.total"
           :current-page="groupDataList.current"
           :page-size="groupDataList.size"
-          @current-change="handlePageChange"
-          @size-change="handleSizeChange"
+          @current-change="handleGroupPageChange"
+          @size-change="handleGroupSizeChange"
           :hide-on-single-page="true"
           style="display: flex !important; justify-content: center !important"
         />
-      </div>
-
-      <!--  选中用户主组-->
-      <!--      <div v-if="currentStep == 2">-->
-      <!--        <span style="font-size: 15px; margin-bottom: 10px">请选择用户主要组</span>-->
-      <!--        <div style="max-height: 400px">-->
-      <!--          <el-table-->
-      <!--            id="master-groups"-->
-      <!--            ref="masterGroupRef"-->
-      <!--            :data="selectGroups"-->
-      <!--            row-key="gid"-->
-      <!--            @select="handleMasterGroupSelect"-->
-      <!--            style="width: 100%"-->
-      <!--          >-->
-      <!--            <el-table-column type="selection" width="55" />-->
-      <!--            <el-table-column property="groupName" label="用户组" align="center"></el-table-column>-->
-      <!--            <el-table-column property="groupAlias" label="用户组别名" align="center" />-->
-      <!--            <el-table-column property="groupDesc" label="描述信息" align="left" />-->
-      <!--            <el-table-column property="totalPeople" label="成员数" align="center" />-->
-      <!--          </el-table>-->
-      <!--        </div>-->
-      <!--      </div>-->
-      <!--  信息展示-->
-      <div v-if="currentStep == 3">
-        <span style="font-size: 15px; margin-bottom: 10px">用户信息</span>
-
-        <div class="form-box">
-          <div>
-            <div class="form-item">
-              <div style="width: 50%">用户名</div>
-              <div style="width: 50%">{{ sysUserFormDto.userName }}</div>
-            </div>
-            <el-divider style="margin: 12px 0" />
-
-            <div class="form-item">
-              <div style="width: 50%">用户别名</div>
-              <div style="width: 50%">{{ sysUserFormDto.userAlias }}</div>
-            </div>
-            <el-divider style="margin: 12px 0" />
-
-            <div class="form-item">
-              <div style="width: 50%">密码</div>
-              <div style="width: 50%">{{ sysUserFormDto.password }}</div>
-            </div>
-            <el-divider style="margin: 12px 0" />
-
-            <div class="form-item">
-              <div style="width: 50%">主要组</div>
-              <div style="width: 50%">{{ sysUserFormDto.masterGroup.groupName }}</div>
-            </div>
-            <el-divider style="margin: 12px 0" />
-
-            <div class="form-item">
-              <div style="width: 50%">描述信息</div>
-              <div style="width: 50%">{{ sysUserFormDto.userDesc }}</div>
-            </div>
-            <el-divider style="margin: 12px 0" />
-            <div>
-              <span>附属组</span>
-            </div>
-            <div style="max-height: 400px">
-              <el-table
-                ref="masterGroupRef"
-                :data="sysUserFormDto.slaveGroupList"
-                row-key="gid"
-                style="width: 100%"
-              >
-                <el-table-column
-                  property="groupName"
-                  label="用户组"
-                  align="center"
-                ></el-table-column>
-                <el-table-column property="groupAlias" label="用户组别名" align="center" />
-                <el-table-column property="groupDesc" label="描述信息" align="left" />
-                <el-table-column property="totalPeople" label="成员数" align="center" />
-              </el-table>
-            </div>
-          </div>
-        </div>
       </div>
     </ElForm>
     <template #footer>
@@ -252,9 +243,17 @@
 </template>
 
 <script setup lang="ts">
-  import { ElTable, FormInstance, FormRules, TabsPaneContext } from 'element-plus'
-  import { fetchGetGroupList, fetchGetStorageSpaceList } from '@/api/system-manage'
-  import { fetchNewShareFolder } from '@/api/share-folder'
+  import { ElTable, FormInstance, FormRules } from 'element-plus'
+  import {
+    fetchGetGroupList,
+    fetchGetStorageSpaceList,
+    fetchQueryUserList
+  } from '@/api/system-manage'
+  import {
+    fetchEditSambaShare,
+    fetchGetSambaShareConfig,
+    fetchNewShareFolder
+  } from '@/api/share-folder'
   import { Search } from '@element-plus/icons-vue'
   import { Disk } from '@/typings/disk'
   import { REGULAR } from '@/enums/formEnum'
@@ -264,7 +263,7 @@
   interface Props {
     visible: boolean
     type: string
-    userData?: Partial<Api.Sys.SysUser>
+    shareFolder?: Partial<Api.Sys.ShareFolder>
   }
 
   interface Emits {
@@ -273,26 +272,26 @@
   }
 
   const selectGroupTableRef = ref(ElTable)
-  const masterGroupRef = ref(ElTable)
   const groupDialogVisible = ref(false)
+  const tableType = ref('localUser')
 
   // 作为表单参数的变量用，可以修改的
   const sambaShareFolderConfig = ref<Api.Sys.SambaShareFolderConfig>({
-    recycle: { recyclePath: '#recycle' },
+    folderPath: '',
+    shareName: '',
+    recycle: { recyclePath: '' },
     permission: { writeGroupList: [], writeUserList: [], readGroupList: [], readUserList: [] }
   })
 
   // 这个是只读的配置信息，用来判断两个变量直接是否发生了变化
   const roSambaShareFolderConfig = ref<Api.Sys.SambaShareFolderConfig>({
-    recycle: { recyclePath: '#recycle' },
+    folderPath: '',
+    shareName: '',
+    recycle: { recyclePath: '' },
     permission: { writeGroupList: [], writeUserList: [], readGroupList: [], readUserList: [] }
   })
 
   const activeName = ref('Samba')
-
-  const handleClick = () => {
-    console.log('>>>', activeName.value)
-  }
 
   // 获取当前按钮显示的文字
   const getButtonTxt = () => {
@@ -308,17 +307,142 @@
       case 2:
         if (activeName.value === 'Samba') {
           if (deepEqual(sambaShareFolderConfig.value, roSambaShareFolderConfig.value)) {
-            return '下一步'
+            return '完成'
           } else {
             return '保存'
           }
         } else {
-          return '下一步'
+          return '完成'
         }
       case 3:
         return '完成'
       default:
         return '' // 或者返回一个默认值
+    }
+  }
+
+  const handleUserCheckboxChange = (item: Api.Sys.SysUser, type: string) => {
+    if (type === 'FB') {
+      item.basicPermission.FB = 'FB'
+      item.basicPermission.RW = ''
+      item.basicPermission.RO = ''
+      sambaShareFolderConfig.value.permission.readUserList =
+        sambaShareFolderConfig.value.permission.readUserList.filter(
+          (userName) => userName !== item.userName
+        )
+      sambaShareFolderConfig.value.permission.writeUserList =
+        sambaShareFolderConfig.value.permission.writeUserList.filter(
+          (userName) => userName !== item.userName
+        )
+    }
+    if (type === 'RW') {
+      item.basicPermission.FB = ''
+      item.basicPermission.RO = ''
+      if (item.basicPermission.RW) {
+        sambaShareFolderConfig.value.permission.readUserList =
+          sambaShareFolderConfig.value.permission.readUserList.filter(
+            (userName) => userName !== item.userName
+          )
+        if (!sambaShareFolderConfig.value.permission.writeUserList.includes(item.userName)) {
+          sambaShareFolderConfig.value.permission.writeUserList.push(item.userName)
+        }
+      } else {
+        item.basicPermission.FB = 'FB'
+        sambaShareFolderConfig.value.permission.readUserList =
+          sambaShareFolderConfig.value.permission.readUserList.filter(
+            (userName) => userName !== item.userName
+          )
+        sambaShareFolderConfig.value.permission.writeUserList =
+          sambaShareFolderConfig.value.permission.writeUserList.filter(
+            (userName) => userName !== item.userName
+          )
+      }
+    }
+    if (type === 'RO') {
+      item.basicPermission.RW = ''
+      item.basicPermission.FB = ''
+      if (item.basicPermission.RO) {
+        sambaShareFolderConfig.value.permission.writeUserList =
+          sambaShareFolderConfig.value.permission.writeUserList.filter(
+            (userName) => userName !== item.userName
+          )
+        if (!sambaShareFolderConfig.value.permission.readUserList.includes(item.userName)) {
+          sambaShareFolderConfig.value.permission.readUserList.push(item.userName)
+        }
+      } else {
+        item.basicPermission.FB = 'FB'
+        sambaShareFolderConfig.value.permission.readUserList =
+          sambaShareFolderConfig.value.permission.readUserList.filter(
+            (userName) => userName !== item.userName
+          )
+        sambaShareFolderConfig.value.permission.writeUserList =
+          sambaShareFolderConfig.value.permission.writeUserList.filter(
+            (userName) => userName !== item.userName
+          )
+      }
+    }
+  }
+
+  // 用户组信息权限的变化
+  const handleGroupCheckboxChange = (item: Api.Sys.SysGroup, type: string) => {
+    if (type === 'FB') {
+      item.basicPermission.FB = 'FB'
+      item.basicPermission.RW = ''
+      item.basicPermission.RO = ''
+      sambaShareFolderConfig.value.permission.readGroupList =
+        sambaShareFolderConfig.value.permission.readGroupList.filter(
+          (groupName) => groupName !== item.groupName
+        )
+      sambaShareFolderConfig.value.permission.writeGroupList =
+        sambaShareFolderConfig.value.permission.writeGroupList.filter(
+          (groupName) => groupName !== item.groupName
+        )
+    }
+    if (type === 'RW') {
+      item.basicPermission.FB = ''
+      item.basicPermission.RO = ''
+      if (item.basicPermission.RW) {
+        sambaShareFolderConfig.value.permission.readGroupList =
+          sambaShareFolderConfig.value.permission.readGroupList.filter(
+            (groupName) => groupName !== item.groupName
+          )
+        if (!sambaShareFolderConfig.value.permission.writeGroupList.includes(item.groupName)) {
+          sambaShareFolderConfig.value.permission.writeGroupList.push(item.groupName)
+        }
+      } else {
+        item.basicPermission.FB = 'FB'
+        sambaShareFolderConfig.value.permission.readGroupList =
+          sambaShareFolderConfig.value.permission.readGroupList.filter(
+            (groupName) => groupName !== item.groupName
+          )
+        sambaShareFolderConfig.value.permission.writeGroupList =
+          sambaShareFolderConfig.value.permission.writeGroupList.filter(
+            (groupName) => groupName !== item.groupName
+          )
+      }
+    }
+    if (type === 'RO') {
+      item.basicPermission.RW = ''
+      item.basicPermission.FB = ''
+      if (item.basicPermission.RO) {
+        sambaShareFolderConfig.value.permission.writeGroupList =
+          sambaShareFolderConfig.value.permission.writeGroupList.filter(
+            (groupName) => groupName !== item.groupName
+          )
+        if (!sambaShareFolderConfig.value.permission.readGroupList.includes(item.groupName)) {
+          sambaShareFolderConfig.value.permission.readGroupList.push(item.groupName)
+        }
+      } else {
+        item.basicPermission.FB = 'FB'
+        sambaShareFolderConfig.value.permission.readGroupList =
+          sambaShareFolderConfig.value.permission.readGroupList.filter(
+            (groupName) => groupName !== item.groupName
+          )
+        sambaShareFolderConfig.value.permission.writeGroupList =
+          sambaShareFolderConfig.value.permission.writeGroupList.filter(
+            (groupName) => groupName !== item.groupName
+          )
+      }
     }
   }
 
@@ -369,34 +493,35 @@
     records: []
   })
 
-  const handlePageChange = (page: number) => {
+  //  返回的用户列表
+  const userDataList = ref<Api.result.UserList>({
+    current: 0,
+    size: 0,
+    total: 0,
+    records: []
+  })
+
+  const handleGroupPageChange = (page: number) => {
     loadGroupListParams.value.current = page
     loadGroupDataList()
   }
 
-  const handleSizeChange = (size: number) => {
+  const handleGroupSizeChange = (size: number) => {
     loadGroupListParams.value.size = size
     loadGroupDataList()
   }
 
+  const handleUserPageChange = (page: number) => {
+    loadUserListParams.value.current = page
+    loadLocalUserList()
+  }
+
+  const handleUserSizeChange = (size: number) => {
+    loadUserListParams.value.size = size
+    loadLocalUserList()
+  }
+
   // 当前选中的用户组选项
-  const selectGroups = ref<Api.Sys.SysGroup[]>([])
-
-  const selectGroupChange = (value: any) => {
-    selectGroups.value = value
-  }
-
-  const handleMasterGroupSelect = (val: any, row: any) => {
-    // 获取表格实例
-    const table = masterGroupRef.value
-    // // 清除所有选中
-    if (val.length > 0) {
-      table.clearSelection()
-      nextTick(() => {
-        console.log('当前选中的行...')
-      })
-    }
-  }
 
   const storageSpaceList = ref<Disk.Device.StorageSpaceList>({
     records: [],
@@ -430,10 +555,87 @@
     orderBy: '' // 升序asc 还是降序 desc
   })
 
+  const loadUserListParams = ref<Api.Dto.QueryUserListDto>({
+    userName: '',
+    userAlias: '',
+    orderBy: 'desc',
+    sort: 'create_time',
+    current: 1,
+    size: 50
+  })
+
+  // 加载用户组列表
   const loadGroupDataList = async () => {
     fetchGetGroupList(loadGroupListParams.value).then((res) => {
       groupDataList.value = res
+      if (activeName.value === 'Samba') {
+        groupDataList.value.records.forEach((item) => {
+          // 默认全部都是禁止运行的
+          item.basicPermission.FB = 'FB'
+          if (sambaShareFolderConfig.value.permission.writeGroupList.includes(item.groupName)) {
+            item.basicPermission.RW = 'RW'
+            item.basicPermission.FB = ''
+            item.basicPermission.RO = ''
+          }
+          if (sambaShareFolderConfig.value.permission.readGroupList.includes(item.groupName)) {
+            item.basicPermission.RO = 'RO'
+            item.basicPermission.FB = ''
+            item.basicPermission.RW = ''
+          }
+        })
+      }
     })
+  }
+
+  // 加载用户列表
+  const loadLocalUserList = () => {
+    fetchQueryUserList(loadUserListParams.value).then((res) => {
+      userDataList.value = res
+      // 加载samba配置的权限信息
+      if (activeName.value === 'Samba') {
+        userDataList.value.records.forEach((item) => {
+          // 默认全部都是禁止运行的
+          item.basicPermission.FB = 'FB'
+          if (sambaShareFolderConfig.value.permission.writeUserList.includes(item.userName)) {
+            item.basicPermission.RW = 'RW'
+            item.basicPermission.FB = ''
+            item.basicPermission.RO = ''
+          }
+          if (sambaShareFolderConfig.value.permission.readUserList.includes(item.userName)) {
+            item.basicPermission.RO = 'RO'
+            item.basicPermission.FB = ''
+            item.basicPermission.RW = ''
+          }
+        })
+      }
+    })
+  }
+
+  const loadProtocolConfig = (protocol: string) => {
+    switch (protocol) {
+      case 'Samba':
+        fetchGetSambaShareConfig({ path: sysShareFolderFormDto.value.folderPath }).then((res) => {
+          sambaShareFolderConfig.value = JSON.parse(JSON.stringify(res))
+          roSambaShareFolderConfig.value = JSON.parse(JSON.stringify(res))
+        })
+        return
+      case 'Webdav':
+        ElMessage.error('Webdav 未对接')
+        return
+      case 'Rsync':
+        console.log('Rsync')
+        ElMessage.error('Rsync 未对接')
+        return
+      case 'NFS':
+        console.log('NFS')
+        ElMessage.error('NFS 未对接')
+        return
+      case 'FTP':
+        ElMessage.error('FTP 未对接')
+        break
+      default:
+        console.log('default')
+    }
   }
 
   /**
@@ -441,16 +643,24 @@
    * 根据对话框类型（新增/编辑）填充表单
    */
   const initFormData = () => {
-    const isEdit = props.type === 'edit' && props.userData
+    const isEdit = props.type === 'edit' && props.shareFolder
     currentStep.value = 0
     if (isEdit) {
-      console.log('edit>>')
+      sysShareFolderFormDto.value.folderPath = props.shareFolder.folder?.folderPath
+        ? props.shareFolder.folder?.folderPath
+        : ''
+      sysShareFolderFormDto.value.mountPath = props.shareFolder.storageSpace?.mountPath
+        ? props.shareFolder.storageSpace?.mountPath
+        : ''
+      sysShareFolderFormDto.value.folderName = props.shareFolder.folder?.folderName
+        ? props.shareFolder.folder?.folderName
+        : ''
+      loadProtocolConfig(activeName.value)
     } else {
-      sysShareFolderFormDto.value.folderPath = '/volume1/share/share_3'
-      sysShareFolderFormDto.value.mountPath = '/volume1'
-      sysShareFolderFormDto.value.folderName = 'share_3'
+      sysShareFolderFormDto.value.folderPath = ''
+      sysShareFolderFormDto.value.mountPath = ''
+      sysShareFolderFormDto.value.folderName = ''
     }
-    loadGroupDataList()
     loadStorageSpaceList()
   }
 
@@ -459,7 +669,7 @@
    * 当对话框打开时初始化表单数据并清除验证状态
    */
   watch(
-    () => [props.visible, props.type, props.userData],
+    () => [props.visible, props.type, props.shareFolder],
     ([visible]) => {
       if (visible) {
         initFormData()
@@ -471,26 +681,48 @@
     { immediate: true }
   )
 
+  // 监听表格类型的变化,渲染对应的表格
+  watch(tableType, () => {
+    if (tableType.value === 'localUser') {
+      loadLocalUserList()
+    }
+    if (tableType.value === 'localGroup') {
+      loadGroupDataList()
+    }
+  })
+
+  watch(
+    () => activeName.value,
+    () => {
+      loadProtocolConfig(activeName.value)
+    }
+  )
+
   watch(
     () => currentStep.value,
     (newValue) => {
-      // 反显选中的用户组信息
-      if (newValue == 1) {
+      if (newValue == 2) {
         nextTick(() => {
-          console.log('currentStep>>', currentStep.value)
-          console.log('protocol>>>', activeName.value)
+          if (activeName.value === 'Samba') {
+            if (tableType.value === 'localUser') {
+              loadLocalUserList()
+            }
+            if (tableType.value === 'localGroup') {
+              loadGroupDataList()
+            }
+          }
         })
-      } else if (newValue == 2) {
-        nextTick(() => {
-          console.log('可以将文件夹给创建出来了')
-          // 判断参数是否正确
-          console.log('currentStep>>', currentStep.value)
-        })
-      } else if (newValue === 3) {
-        console.log('currentStep>>', currentStep.value)
       }
     }
   )
+
+  // 保存samba的配置
+  const saveSambaShareConfig = () => {
+    fetchEditSambaShare(sambaShareFolderConfig.value).then((res) => {
+      sambaShareFolderConfig.value = JSON.parse(JSON.stringify(res))
+      roSambaShareFolderConfig.value = JSON.parse(JSON.stringify(res))
+    })
+  }
 
   // 下一步
   const nextStep = () => {
@@ -500,6 +732,7 @@
         if (valid) {
           fetchNewShareFolder(sysShareFolderFormDto.value).then((res) => {
             sysShareFolderFormDto.value = res
+            loadProtocolConfig(activeName.value)
             currentStep.value++
           })
         }
@@ -513,43 +746,28 @@
       currentStep.value++
       return
     }
-    if (activeName.value === 'samba') {
+    if (activeName.value === 'Samba') {
       if (
         currentStep.value === 2 &&
         !deepEqual(sambaShareFolderConfig.value, roSambaShareFolderConfig.value)
       ) {
-        console.log('请求保持接口>>', sambaShareFolderConfig.value)
+        saveSambaShareConfig()
       } else if (
         currentStep.value === 2 &&
         deepEqual(sambaShareFolderConfig.value, roSambaShareFolderConfig.value)
       ) {
-        currentStep.value++
+        if (props.type === 'add') {
+          emit('refreshData')
+        }
+        dialogVisible.value = false
       }
       return
-    }
-
-    if (currentStep.value === 4) {
-      handleSubmit()
-      currentStep.value--
     }
   }
 
   // 上一步
   const prevStep = () => {
     currentStep.value--
-  }
-
-  /**
-   * 提交表单
-   * 验证通过后触发新增或编辑提交事件
-   */
-  const handleSubmit = async () => {
-    if (!formRef.value) return
-    await formRef.value.validate((valid) => {
-      if (valid) {
-        console.log('校验通过...>>>')
-      }
-    })
   }
 </script>
 
