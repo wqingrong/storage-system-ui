@@ -14,7 +14,7 @@ export const watchStatusRoutes: AppRouteRecord = {
       //  全部的监控状态
       path: 'watch-network',
       name: 'WatchNetwork',
-      component: '/storage-system/basic-message/console',
+      component: '/storage-system/watch-status/console',
       meta: {
         title: '网络监控',
         keepAlive: false,
@@ -24,7 +24,7 @@ export const watchStatusRoutes: AppRouteRecord = {
     {
       path: 'watch-disk',
       name: 'WatchDisk',
-      component: '/storage-system/basic-message/analysis',
+      component: '/storage-system/watch-status/analysis',
       meta: {
         title: '硬盘监控',
         keepAlive: false
@@ -33,7 +33,7 @@ export const watchStatusRoutes: AppRouteRecord = {
     {
       path: 'watch-storagePool',
       name: 'WatchStoragePool',
-      component: '/storage-system/basic-message/ecommerce',
+      component: '/storage-system/watch-status/ecommerce',
       meta: {
         title: '存储池监控',
         keepAlive: false
@@ -42,7 +42,7 @@ export const watchStatusRoutes: AppRouteRecord = {
     {
       path: 'watch-process',
       name: 'watchProcess',
-      component: '/storage-system/basic-message/ecommerce',
+      component: '/storage-system/watch-status/ecommerce',
       meta: {
         title: '进程监控',
         keepAlive: false
@@ -51,7 +51,7 @@ export const watchStatusRoutes: AppRouteRecord = {
     {
       path: 'watch-memory',
       name: 'watchMemory',
-      component: '/storage-system/basic-message/ecommerce',
+      component: '/storage-system/watch-status/ecommerce',
       meta: {
         title: '内存监控',
         keepAlive: false
@@ -60,7 +60,7 @@ export const watchStatusRoutes: AppRouteRecord = {
     {
       path: 'watch-CPU',
       name: 'watchCPU',
-      component: '/storage-system/basic-message/ecommerce',
+      component: '/storage-system/watch-status/cpu-monitor',
       meta: {
         title: 'CPU监控',
         keepAlive: false
