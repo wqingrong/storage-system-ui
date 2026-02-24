@@ -26,3 +26,10 @@ export function fetchEditSambaShare(data: Api.Sys.SambaShareFolderConfig) {
     data
   })
 }
+
+export function fetchDeleteShare(data: Api.Sys.ShareFolder) {
+  return request.post<Api.Sys.ShareFolder>({
+    url: '/shareFolder/delShareFolder',
+    data
+  })
+}

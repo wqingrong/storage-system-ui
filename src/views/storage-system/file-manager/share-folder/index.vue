@@ -90,11 +90,11 @@
 </template>
 
 <script setup lang="ts">
-  import { ElCollapseTransition } from 'element-plus'
+  import { ElCollapseTransition, ElMessageBox } from 'element-plus'
   import folder from '@imgs/svg/folder.svg'
   import newShareFolderDialog from './modules/new-share-folder-dialog.vue'
   import ShareFolder = Api.Sys.ShareFolder
-  import { fetchGetShareFolderList } from '@/api/share-folder'
+  import { fetchDeleteShare, fetchGetShareFolderList } from '@/api/share-folder'
   const newShareDialogVisible = ref(false)
   const newShareDialogType = ref('add')
   // 展开状态
@@ -131,7 +131,27 @@
     newShareDialogType.value = 'edit'
   }
 
-  const handleDeleteShareClick = () => {}
+  //  点击删除按钮的回调...
+  const handleDeleteShareClick = () => {
+    if (currentShareFolder.value) {
+      ElMessageBox.confirm(
+        `您是否确认将${currentShareFolder.value?.folder.folderName}文件夹删除?`,
+        '删除警告',
+        {
+          confirmButtonText: '确认',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+        .then(() => {
+          fetchDeleteShare(currentShareFolder.value).then(() => {
+            currentShareFolder.value = undefined
+            refreshShareFolderList()
+          })
+        })
+        .catch(() => {})
+    }
+  }
 </script>
 
 <style scoped lang="scss">

@@ -1,7 +1,7 @@
 <template>
   <ElDialog
     v-model="dialogVisible"
-    :title="dialogType === 'add' ? '新建共享目录' : '编辑编辑共享目录'"
+    :title="dialogType === 'add' ? '新建共享目录' : '编辑共享目录'"
     width="30%"
     align-center
     class="dialog"
