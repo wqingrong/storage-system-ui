@@ -124,14 +124,9 @@
   // 初始化动画数据
   const initAnimationData = () => {
     if (isMultipleData.value) {
-      const multiData = props.data as LineDataItem[]
-      return multiData.map((item) => ({
-        ...item,
-        data: new Array(item.data.length).fill(0)
-      }))
+      return props.data as LineDataItem[]
     } else {
-      const singleData = props.data as number[]
-      return new Array(singleData.length).fill(0)
+      return props.data as LineDataItem[]
     }
   }
 

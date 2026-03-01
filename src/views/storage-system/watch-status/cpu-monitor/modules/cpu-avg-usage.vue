@@ -1,7 +1,7 @@
 <template>
   <div class="custom-card art-custom-card customer-satisfaction">
     <div class="custom-card-header">
-      <span class="title">客户满意度</span>
+      <span class="title">CPU平均利用率 {{ props.cpuStatusInfo.avgUsageRate }} %</span>
     </div>
     <div class="custom-card-body">
       <ArtLineChart
@@ -19,34 +19,47 @@
 
 <script setup lang="ts">
   import type { LineDataItem } from '@/types/component/chart'
-
+  interface Props {
+    cpuStatusInfo?: Partial<Api.Monitor.CPUStatusInfo>
+  }
+  /**
+   */
   const AREA_STYLE_CONFIG = {
     startOpacity: 0.08,
     endOpacity: 0
   } as const
 
-  /**
-   * X 轴数据配置
-   * 表示一周的天数（周一到周日）
-   */
-  const xAxisData = ['1', '2', '3', '4', '5', '6', '7']
-
-  /**
-   * 客户满意度图表数据
-   * 对比上个月和本月的满意度趋势
-   */
-  const chartData = computed<LineDataItem[]>(() => [
+  const chartData = ref<LineDataItem[]>([
     {
-      name: '上个月',
-      data: [65, 72, 68, 75, 82, 78, 85],
-      areaStyle: AREA_STYLE_CONFIG
-    },
-    {
-      name: '本月',
-      data: [78, 85, 82, 88, 92, 89, 95],
+      name: 'cpu平均利用率%',
+      data: [],
       areaStyle: AREA_STYLE_CONFIG
     }
   ])
+
+  const props = defineProps<Props>()
+  /**
+   */
+  const xAxisData = ref<string[]>([])
+  const updateData = () => {
+    if (props.cpuStatusInfo?.currentTime) {
+      xAxisData.value.push(props.cpuStatusInfo.currentTime)
+    }
+    if (props.cpuStatusInfo?.avgUsageRate) {
+      chartData.value[0].data.push(props.cpuStatusInfo.avgUsageRate)
+    }
+  }
+  // 监听 props 变化，当父组件传入新数据时更新
+  watch(
+    () => props.cpuStatusInfo,
+    () => {
+      updateData()
+    },
+    {
+      deep: true, // 深度监听对象内部变化
+      immediate: true // 立即执行一次
+    }
+  )
 </script>
 
 <style lang="scss" scoped>

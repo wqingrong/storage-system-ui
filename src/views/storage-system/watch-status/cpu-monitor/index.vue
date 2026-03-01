@@ -1,51 +1,59 @@
 <template>
   <div class="analysis-dashboard">
-    <ElRow :gutter="20">
-      <ElCol :xl="14" :lg="15" :xs="24">
-        <TodaySales />
-      </ElCol>
-      <ElCol :xl="10" :lg="9" :xs="24">
-        <VisitorInsights />
-      </ElCol>
-    </ElRow>
-
     <ElRow :gutter="20" class="mt-20">
-      <ElCol :xl="10" :lg="10" :xs="24">
-        <TotalRevenue />
+      <ElCol :span="12">
+        <CpuAvgUsage :cpuStatusInfo="CPUStatusInfo" />
       </ElCol>
-      <ElCol :xl="7" :lg="7" :xs="24">
-        <CustomerSatisfaction />
-      </ElCol>
-      <ElCol :xl="7" :lg="7" :xs="24">
-        <TargetVsReality />
-      </ElCol>
-    </ElRow>
 
-    <ElRow :gutter="20" class="mt-20">
-      <ElCol :xl="10" :lg="10" :xs="24">
-        <TopProducts />
-      </ElCol>
-      <ElCol :xl="7" :lg="7" :xs="24">
-        <SalesMappingByCountry />
-      </ElCol>
-      <ElCol :xl="7" :lg="7" :xs="24">
-        <VolumeServiceLevel />
+      <ElCol :span="12">
+        <CpuItemStatus :cpuStatusInfo="CPUStatusInfo" />
       </ElCol>
     </ElRow>
   </div>
 </template>
 
 <script setup lang="ts">
-  import TodaySales from './modules/today-sales.vue'
-  import VisitorInsights from './modules/visitor-insights.vue'
-  import TotalRevenue from './modules/total-revenue.vue'
-  import CustomerSatisfaction from './modules/customer-satisfaction.vue'
-  import TargetVsReality from './modules/target-vs-reality.vue'
-  import TopProducts from './modules/top-products.vue'
-  import SalesMappingByCountry from './modules/sales-mapping-by-country.vue'
-  import VolumeServiceLevel from './modules/volume-service-level.vue'
-
+  import CpuItemStatus from './modules/cpu-item-status.vue'
+  import CpuAvgUsage from './modules/cpu-avg-usage.vue'
+  import { fetchGetCPUStatusInfo } from '@/api/monitor-manager'
   defineOptions({ name: 'BasicAnalysis' })
+  const CPUStatusInfo = ref<Api.Monitor.CPUStatusInfo>({
+    avgUsageRate: 0,
+    avgIdle: 0,
+    currentTime: '0',
+    cpuItemStatusInfoList: []
+  })
+  const loadingCpuStatusInfo = () => {
+    fetchGetCPUStatusInfo().then((res) => {
+      CPUStatusInfo.value = res
+    })
+  }
+  const timoutPlan = () => {
+    loadingCpuStatusInfo()
+  }
+  let timer = null
+  const startTimer = () => {
+    if (timer) {
+      return
+    }
+    timer = setInterval(() => {
+      timoutPlan()
+    }, 5000)
+  }
+  const stopTimer = () => {
+    if (timer) {
+      clearInterval(timer)
+      timer = null
+    }
+  }
+  onMounted(() => {
+    loadingCpuStatusInfo()
+    startTimer()
+  })
+
+  onUnmounted(() => {
+    stopTimer()
+  })
 </script>
 
 <style lang="scss" scoped>

@@ -43,7 +43,6 @@
   import { useTable } from '@/composables/useTable'
   import {
     fetchAddGroup,
-    fetchDeleteUsers,
     fetchDelGroups,
     fetchEditGroup,
     fetchGetGroupList

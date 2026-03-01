@@ -49,6 +49,10 @@ export default ({ mode }: { mode: string }) => {
         '/shareFolder': {
           target: 'http://127.0.0.1:9090',
           changeOrigin: true
+        },
+        '/monitor': {
+          target: 'http://127.0.0.1:9090',
+          changeOrigin: true
         }
       },
       host: true

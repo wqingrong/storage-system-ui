@@ -8,30 +8,6 @@
         <VisitorInsights />
       </ElCol>
     </ElRow>
-
-    <ElRow :gutter="20" class="mt-20">
-      <ElCol :xl="10" :lg="10" :xs="24">
-        <TotalRevenue />
-      </ElCol>
-      <ElCol :xl="7" :lg="7" :xs="24">
-        <CustomerSatisfaction />
-      </ElCol>
-      <ElCol :xl="7" :lg="7" :xs="24">
-        <TargetVsReality />
-      </ElCol>
-    </ElRow>
-
-    <ElRow :gutter="20" class="mt-20">
-      <ElCol :xl="10" :lg="10" :xs="24">
-        <TopProducts />
-      </ElCol>
-      <ElCol :xl="7" :lg="7" :xs="24">
-        <SalesMappingByCountry />
-      </ElCol>
-      <ElCol :xl="7" :lg="7" :xs="24">
-        <VolumeServiceLevel />
-      </ElCol>
-    </ElRow>
   </div>
 </template>
 

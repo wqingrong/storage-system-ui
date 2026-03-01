@@ -168,7 +168,22 @@ declare namespace Api {
 
     type OperationLoggerList = Api.Common.PaginatedResponse<OperationLogger>
   }
-
+  // 监控信息
+  namespace Monitor {
+    interface CPUItemStatusInfo {
+      usageRate: number
+      idleRate: number
+      cpuIndex: string
+      currentTime: string
+    }
+    // cpu监控信息
+    interface CPUStatusInfo {
+      avgUsageRate: number
+      avgIdle: number
+      currentTime: string
+      cpuItemStatusInfoList: CPUItemStatusInfo[]
+    }
+  }
   // 接口返回值定义的数据类型
   namespace result {
     type UserList = Api.Common.PaginatedResponse<Sys.SysUser>
