@@ -9,13 +9,19 @@
         <CpuItemStatus :cpuStatusInfo="CPUStatusInfo" />
       </ElCol>
     </ElRow>
+    <ElRow :gutter="20" class="mt-20">
+      <ElCol :span="12">
+        <MemoryMonitor :memoryInfo="memoryInfo" />
+      </ElCol>
+    </ElRow>
   </div>
 </template>
 
 <script setup lang="ts">
   import CpuItemStatus from './modules/cpu-item-status.vue'
   import CpuAvgUsage from './modules/cpu-avg-usage.vue'
-  import { fetchGetCPUStatusInfo } from '@/api/monitor-manager'
+  import MemoryMonitor from './modules/memory-monitor.vue'
+  import { fetchGetCPUStatusInfo, fetchGetMemoryInfo } from '@/api/monitor-manager'
   defineOptions({ name: 'BasicAnalysis' })
   const CPUStatusInfo = ref<Api.Monitor.CPUStatusInfo>({
     avgUsageRate: 0,
@@ -23,13 +29,38 @@
     currentTime: '0',
     cpuItemStatusInfoList: []
   })
+
+  const memoryInfo = ref<Api.Monitor.MemoryInfo>({
+    totalSize: '',
+    usedSize: '',
+    freeSize: '',
+    availableSize: '',
+    usageRate: 0,
+    currentTime: '',
+    swapeMemoryInfo: {
+      totalSize: '',
+      usedSize: '',
+      freeSize: '',
+      availableSize: '',
+      usageRate: 0,
+      currentTime: ''
+    }
+  })
   const loadingCpuStatusInfo = () => {
     fetchGetCPUStatusInfo().then((res) => {
       CPUStatusInfo.value = res
     })
   }
+
+  const loadingMemoryInfo = () => {
+    fetchGetMemoryInfo().then((res) => {
+      memoryInfo.value = res
+    })
+  }
+
   const timoutPlan = () => {
     loadingCpuStatusInfo()
+    loadingMemoryInfo()
   }
   let timer = null
   const startTimer = () => {
@@ -48,6 +79,7 @@
   }
   onMounted(() => {
     loadingCpuStatusInfo()
+    loadingMemoryInfo()
     startTimer()
   })
 

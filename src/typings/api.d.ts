@@ -183,6 +183,23 @@ declare namespace Api {
       currentTime: string
       cpuItemStatusInfoList: CPUItemStatusInfo[]
     }
+    interface SwapMemoryInfo {
+      totalSize: string
+      usedSize: string
+      freeSize: string
+      availableSize: string
+      usageRate: number
+      currentTime: string
+    }
+    interface MemoryInfo {
+      totalSize: string
+      usedSize: string
+      freeSize: string
+      availableSize: string
+      usageRate: number
+      currentTime: string
+      swapeMemoryInfo: SwapMemoryInfo
+    }
   }
   // 接口返回值定义的数据类型
   namespace result {

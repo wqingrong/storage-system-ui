@@ -49,20 +49,11 @@ export const watchStatusRoutes: AppRouteRecord = {
       }
     },
     {
-      path: 'watch-memory',
-      name: 'watchMemory',
-      component: '/storage-system/watch-status/ecommerce',
-      meta: {
-        title: '内存监控',
-        keepAlive: false
-      }
-    },
-    {
-      path: 'watch-CPU',
+      path: 'watch-CPU-memory',
       name: 'watchCPU',
-      component: '/storage-system/watch-status/cpu-monitor',
+      component: '/storage-system/watch-status/cpu-memory-monitor',
       meta: {
-        title: 'CPU监控',
+        title: 'CPU/内存监控',
         keepAlive: false
       }
     }

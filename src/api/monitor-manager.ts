@@ -4,3 +4,9 @@ export function fetchGetCPUStatusInfo() {
     url: '/monitor/getCpuStatusInfo'
   })
 }
+
+export function fetchGetMemoryInfo() {
+  return request.get<Api.Monitor.MemoryInfo>({
+    url: '/monitor/getMemoryInfo'
+  })
+}
