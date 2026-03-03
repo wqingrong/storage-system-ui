@@ -11,6 +11,7 @@
         :showLegend="true"
         :showAxisLabel="true"
         :showAxisLine="false"
+        :showXAxisLabel="false"
         :showSplitLine="true"
       />
     </div>
@@ -48,8 +49,6 @@
     if (props.cpuStatusInfo?.avgUsageRate) {
       chartData.value[0].data.push(props.cpuStatusInfo.avgUsageRate)
     }
-    console.log('xAxisData.value.length', xAxisData.value.length)
-    console.log('数组长度---chartData.value[0].data.length》', chartData.value[0].data.length)
   }
   // 监听 props 变化，当父组件传入新数据时更新
   watch(

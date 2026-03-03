@@ -38,7 +38,7 @@
     showAxisLabel: true,
     showAxisLine: true,
     showSplitLine: true,
-
+    showXAxisLabel: true,
     // 交互配置
     showTooltip: true,
     showLegend: false,
@@ -240,7 +240,7 @@
         data: props.xAxisData,
         axisTick: getAxisTickStyle(),
         axisLine: getAxisLineStyle(props.showAxisLine),
-        axisLabel: getAxisLabelStyle(props.showAxisLabel)
+        axisLabel: getAxisLabelStyle(props.showXAxisLabel)
       },
       yAxis: {
         type: 'value',

@@ -58,6 +58,8 @@ export interface AxisDisplayProps {
   showAxisLine?: boolean
   /** 是否显示分割线 */
   showSplitLine?: boolean
+  showXAxisLabel?: boolean
+  showYAxisLabel?: boolean
 }
 
 // 交互显示控制接口 - 统一交互相关配置

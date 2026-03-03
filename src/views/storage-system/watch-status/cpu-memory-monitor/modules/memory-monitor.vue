@@ -12,6 +12,7 @@
         :showAxisLabel="true"
         :showAxisLine="false"
         :showSplitLine="true"
+        :showXAxisLabel="false"
       />
     </div>
     <div style="width: 100%">

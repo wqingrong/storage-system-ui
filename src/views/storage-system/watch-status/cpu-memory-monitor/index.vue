@@ -26,7 +26,7 @@
   const CPUStatusInfo = ref<Api.Monitor.CPUStatusInfo>({
     avgUsageRate: 0,
     avgIdle: 0,
-    currentTime: '0',
+    currentTime: '',
     cpuItemStatusInfoList: []
   })
 
