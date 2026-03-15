@@ -20,11 +20,11 @@ import { fileManager } from '@/router/modules/file-manager'
  * 导出所有模块化路由
  */
 export const routeModules: AppRouteRecord[] = [
-  basicMessageRoutes,
+  watchStatusRoutes,
+  // basicMessageRoutes,
   usersManager,
   storageManager,
   fileManager,
-  watchStatusRoutes,
   systemManagerRoutes,
   dashboardRoutes,
   templateRoutes,

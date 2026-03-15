@@ -1,4 +1,5 @@
 import request from '@utils/http'
+import { Api } from '@/typings/api'
 
 export function fetchGetShareFolderList() {
   return request.get<Api.Sys.ShareFolderList>({

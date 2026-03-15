@@ -4,6 +4,7 @@
  * 所有接口相关类型定义
  * 在.vue文件使用会报错，需要在 eslint.config.mjs 中配置 globals: { Api: 'readonly' }
  */
+import * as buffer from 'node:buffer'
 
 declare namespace Api {
   //  接口参数实体类型的包装
@@ -167,6 +168,16 @@ declare namespace Api {
       Api.Common.CommonSearchParams
 
     type OperationLoggerList = Api.Common.PaginatedResponse<OperationLogger>
+
+    interface NFSServerConfig {
+      running: boolean
+      enabled: boolean
+      threads: number
+      supportVersion: string
+      lockPort: number
+      mountedPort: number
+      statPort: number
+    }
   }
   // 监控信息
   namespace Monitor {

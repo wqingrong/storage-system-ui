@@ -53,6 +53,10 @@ export default ({ mode }: { mode: string }) => {
         '/monitor': {
           target: 'http://127.0.0.1:9090',
           changeOrigin: true
+        },
+        '/protocolService': {
+          target: 'http://127.0.0.1:9090',
+          changeOrigin: true
         }
       },
       host: true
