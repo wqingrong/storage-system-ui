@@ -1,6 +1,7 @@
 import request from '@/utils/http'
 import { AppRouteRecord } from '@/types/router'
 import { Disk } from '@/typings/disk'
+import { Api } from '@/typings/api'
 
 // 获取用户列表
 export function fetchGetUserList(params: Api.SystemManage.UserSearchParams) {

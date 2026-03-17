@@ -78,6 +78,21 @@ declare namespace Api {
       folderName: string
       folderPath: string
     }
+
+    interface ReloadSoftRaidDto {
+      UUID: string
+      devicePath: string
+      diskDeviceList: Disk.Device.DiskDeviceDetail[]
+    }
+    interface StopSoftRaidDto {
+      UUID: string
+      devicePath: string
+    }
+    interface DestroySoftRaidDto {
+      UUID: string
+      devicePath: string
+      diskDeviceList: Disk.Device.DiskDeviceDetail[]
+    }
   }
   namespace Sys {
     // 基本权限

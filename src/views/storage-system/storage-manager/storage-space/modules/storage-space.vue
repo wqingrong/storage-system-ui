@@ -247,6 +247,12 @@
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
   import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'
   import { MoreFilled } from '@element-plus/icons-vue'
+  import {
+    fetchDestroySoftRaid,
+    fetchReloadSoftRaid,
+    fetchStopSoftRaid
+  } from '@/api/storage-service'
+  import { Api } from '@/typings/api'
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
   const getStoragePoolStatusImage = (status: string) => {
@@ -348,16 +354,35 @@
    */
   const handleSelect = (item: MenuItemType) => {
     lastAction.value = `${item.label} (${item.key})`
-    console.log('当前菜单绑定的数据为：', menuItemData.value)
     switch (item.key) {
       case 'raid_mount':
-        console.log('raid挂载')
+        var dto: Api.Dto.ReloadSoftRaidDto = {
+          UUID: menuItemData.value.raidDetailInfo.UUID,
+          devicePath: menuItemData.value.raidDetailInfo.devicePath,
+          diskDeviceList: menuItemData.value.raidDetailInfo.diskDeviceList
+        }
+        fetchReloadSoftRaid(dto).then(() => {
+          refreshStorageSpaceData()
+        })
         break
       case 'raid_umount':
-        console.log('raid卸载')
+        var dto: Api.Dto.StopSoftRaidDto = {
+          UUID: menuItemData.value.raidDetailInfo.UUID,
+          devicePath: menuItemData.value.raidDetailInfo.devicePath
+        }
+        fetchStopSoftRaid(dto).then(() => {
+          refreshStorageSpaceData()
+        })
         break
       case 'raid_destroy':
-        console.log('raid销毁')
+        var dto: Api.Dto.DestroySoftRaidDto = {
+          UUID: menuItemData.value.raidDetailInfo.UUID,
+          devicePath: menuItemData.value.raidDetailInfo.devicePath,
+          diskDeviceList: menuItemData.value.raidDetailInfo.diskDeviceList
+        }
+        fetchDestroySoftRaid(dto).then(() => {
+          refreshStorageSpaceData()
+        })
         break
       case 'space_mount':
         storageSpaceMount(menuItemData.value)

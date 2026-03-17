@@ -60,6 +60,7 @@ declare namespace Disk {
       device: string
       chunkSize: string
       grade: string
+      UUID: string
       diskDeviceList: Device.DiskDeviceDetail[]
     }
 
