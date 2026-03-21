@@ -60,6 +60,13 @@ export function fetchCreateStoragePool(data: Disk.Device.CreateStoragePoolDto) {
   })
 }
 
+export function fetchCreateZPool(data: Disk.Device.CreateZPoolDto) {
+  return request.post<Disk.Device.CreateZPoolSuccessResponse>({
+    url: 'storage/createZpool',
+    data
+  })
+}
+
 export function fetchGetStoragePoolList() {
   return request.get<Disk.Device.StoragePoolList>({
     url: 'storage/getStoragePoolList'

@@ -37,6 +37,13 @@ declare namespace Disk {
       chunkSize: string
     }
 
+    interface CreateZPoolDto {
+      grade: RaidGrade
+      diskDeviceList: Device.DeviceMessage[]
+      storagePoolDesc: string
+      chunkSize: string
+    }
+
     interface RaidStatusInfo {
       status: string
       devicePath: string
@@ -51,6 +58,13 @@ declare namespace Disk {
       poolSize: string
       poolName: string
       vgName: string
+      storagePoolDesc: string
+    }
+
+    interface CreateZPoolSuccessResponse {
+      zpoolStatusInfo: RaidStatusInfo
+      poolSize: string
+      poolName: string
       storagePoolDesc: string
     }
 

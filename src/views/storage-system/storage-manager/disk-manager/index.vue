@@ -5,20 +5,27 @@
       <ElSpace wrap>
         <ElButton>状态信息</ElButton>
         <ElButton @click="handleCreateStoragePool">创建存储池</ElButton>
+        <ElButton @click="handleCreateZpool">创建Zpool</ElButton>
       </ElSpace>
     </div>
     <DiskDetail />
     <CreateStoragePoll v-model:visible="createPollDialogVisible" />
+    <CreateZPool v-model:visible="createZPoolDialogVisible" />
   </div>
 </template>
 
 <script setup lang="ts">
   import DiskDetail from './modules/disk-detail.vue'
   import CreateStoragePoll from './modules/create-storage-poll.vue'
+  import CreateZPool from './modules/create-zpool.vue'
   const createPollDialogVisible = ref(false)
+  const createZPoolDialogVisible = ref(false)
   const handleCreateStoragePool = () => {
-    console.log('创建存储池')
     createPollDialogVisible.value = true
+  }
+
+  const handleCreateZpool = () => {
+    createZPoolDialogVisible.value = true
   }
 </script>
 

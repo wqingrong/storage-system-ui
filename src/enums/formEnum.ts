@@ -18,7 +18,12 @@ export enum RaidGrade {
   RAID_0 = 'RAID_0',
   RAID_1 = 'RAID_1',
   RAID_5 = 'RAID_5',
-  RAID_6 = 'RAID_6'
+  RAID_6 = 'RAID_6',
+  RAID_Stripe = 'RAID_Stripe',
+  RAID_Mirror = 'RAID_Mirror',
+  RAID_Z1 = 'RAID_Z1',
+  RAID_Z2 = 'RAID_Z2',
+  RAID_Z3 = 'RAID_Z3'
 }
 
 // ZFSPool 存储池的等级
