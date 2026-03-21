@@ -30,7 +30,10 @@
               <div style="display: flex; justify-self: flex-start; width: 100%">
                 <div style="width: 60%">
                   <span
-                    v-if="item.poolStatus === PoolStatus.POOL_STATUS_ACTIVE"
+                    v-if="
+                      item.poolStatus === PoolStatus.POOL_STATUS_ACTIVE ||
+                      item.poolStatus === PoolStatus.POOL_STATUS_ONLINE
+                    "
                     style="color: #4caf50"
                     >良好</span
                   >
@@ -127,7 +130,8 @@
               <el-table-column property="serialNumber" label="序列号" />
               <el-table-column property="totalSize" label="容量" />
               <el-table-column property="use" label="用途" />
-              <el-table-column property="healthStatus" label="硬盘状态" />
+              <el-table-column property="healthStatus" label="健康状态" />
+              <el-table-column property="diskStatus" label="硬盘状态" />
             </el-table>
           </div>
         </div>
@@ -256,7 +260,7 @@
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
   const getStoragePoolStatusImage = (status: string) => {
-    if (status === PoolStatus.POOL_STATUS_ACTIVE) {
+    if (status === PoolStatus.POOL_STATUS_ACTIVE || status === PoolStatus.POOL_STATUS_ONLINE) {
       return new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href
     } else if (status === PoolStatus.POOL_STATUS_STOP) {
       return new URL('/src/assets/img/storage/storage-pool-waring.png', import.meta.url).href

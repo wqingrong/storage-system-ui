@@ -62,7 +62,7 @@
           </div>
           <div class="detail-item">
             <div class="detail-label">
-              <span>硬盘状态:</span>
+              <span>健康状态:</span>
             </div>
             <div class="detail-value">
               <span v-if="item.healthStatus === HealthStatus.OK" class="detail-value status-good"
