@@ -204,6 +204,14 @@
                 <span>{{ spaceItem.fileSystem }}</span>
               </div>
             </div>
+            <div v-if="spaceItem.fileSystem === 'ZFS'" class="detail-item">
+              <div class="detail-label">
+                <span>数据集:</span>
+              </div>
+              <div class="detail-value">
+                <span>{{ spaceItem.volumeName }}</span>
+              </div>
+            </div>
             <div class="detail-item">
               <div class="detail-label">
                 <span>挂载点:</span>
@@ -253,8 +261,11 @@
   import { MoreFilled } from '@element-plus/icons-vue'
   import {
     fetchDestroySoftRaid,
+    fetchDestroyZPool,
+    fetchImportZPool,
     fetchReloadSoftRaid,
-    fetchStopSoftRaid
+    fetchStopSoftRaid,
+    fetchStopZPool
   } from '@/api/storage-service'
   import { Api } from '@/typings/api'
 
@@ -304,7 +315,7 @@
   const menuRef = ref<InstanceType<typeof ArtMenuRight>>()
   const lastAction = ref('')
   const menuContainer = ref('')
-  const menuItemData = ref(null)
+  const menuItemData = ref<Disk.Device.StoragePool>({} as Disk.Device.StoragePool)
   /**
    * 右键菜单选项配置
    */
@@ -358,47 +369,82 @@
    */
   const handleSelect = (item: MenuItemType) => {
     lastAction.value = `${item.label} (${item.key})`
-    switch (item.key) {
-      case 'raid_mount':
-        var dto: Api.Dto.ReloadSoftRaidDto = {
-          UUID: menuItemData.value.raidDetailInfo.UUID,
-          devicePath: menuItemData.value.raidDetailInfo.devicePath,
-          diskDeviceList: menuItemData.value.raidDetailInfo.diskDeviceList
-        }
-        fetchReloadSoftRaid(dto).then(() => {
-          refreshStorageSpaceData()
-        })
-        break
-      case 'raid_umount':
-        var dto: Api.Dto.StopSoftRaidDto = {
-          UUID: menuItemData.value.raidDetailInfo.UUID,
-          devicePath: menuItemData.value.raidDetailInfo.devicePath
-        }
-        fetchStopSoftRaid(dto).then(() => {
-          refreshStorageSpaceData()
-        })
-        break
-      case 'raid_destroy':
-        var dto: Api.Dto.DestroySoftRaidDto = {
-          UUID: menuItemData.value.raidDetailInfo.UUID,
-          devicePath: menuItemData.value.raidDetailInfo.devicePath,
-          diskDeviceList: menuItemData.value.raidDetailInfo.diskDeviceList
-        }
-        fetchDestroySoftRaid(dto).then(() => {
-          refreshStorageSpaceData()
-        })
-        break
-      case 'space_mount':
-        storageSpaceMount(menuItemData.value)
-        break
-      case 'space_umount':
-        storageSpaceUmount(menuItemData.value)
-        break
-      case 'space_destroy':
-        destroyStorageSpace(menuItemData.value)
-        break
-      default:
-        break
+    if (menuItemData.value) {
+      switch (item.key) {
+        case 'raid_mount':
+          if (menuItemData.value.poolType === 'ZFS') {
+            let dto: Api.Dto.ImportZPoolDto = {
+              UUID: menuItemData.value.UUID,
+              poolName: menuItemData.value.poolName,
+              devicePath: menuItemData.value.vgName
+            }
+            fetchImportZPool(dto).then(() => {
+              refreshStorageSpaceData()
+            })
+          } else {
+            let dto: Api.Dto.ReloadSoftRaidDto = {
+              UUID: menuItemData.value.raidDetailInfo.UUID,
+              devicePath: menuItemData.value.raidDetailInfo.devicePath,
+              diskDeviceList: menuItemData.value.raidDetailInfo.diskDeviceList
+            }
+            fetchReloadSoftRaid(dto).then(() => {
+              refreshStorageSpaceData()
+            })
+          }
+          break
+        case 'raid_umount':
+          if (menuItemData.value.poolType === 'ZFS') {
+            let dto: Api.Dto.StopZPool = {
+              UUID: menuItemData.value.UUID,
+              poolName: menuItemData.value.poolName,
+              devicePath: menuItemData.value.vgName
+            }
+            fetchStopZPool(dto).then(() => {
+              refreshStorageSpaceData()
+            })
+          } else {
+            let dto: Api.Dto.StopSoftRaidDto = {
+              UUID: menuItemData.value.raidDetailInfo.UUID,
+              devicePath: menuItemData.value.raidDetailInfo.devicePath
+            }
+            fetchStopSoftRaid(dto).then(() => {
+              refreshStorageSpaceData()
+            })
+          }
+          break
+        case 'raid_destroy':
+          if (menuItemData.value.poolType === 'ZFS') {
+            let dto: Api.Dto.DestroyZPool = {
+              UUID: menuItemData.value.UUID,
+              poolName: menuItemData.value.poolName,
+              devicePath: menuItemData.value.vgName
+            }
+            fetchDestroyZPool(dto).then(() => {
+              refreshStorageSpaceData()
+            })
+          } else {
+            let dto: Api.Dto.DestroySoftRaidDto = {
+              UUID: menuItemData.value.raidDetailInfo.UUID,
+              devicePath: menuItemData.value.raidDetailInfo.devicePath,
+              diskDeviceList: menuItemData.value.raidDetailInfo.diskDeviceList
+            }
+            fetchDestroySoftRaid(dto).then(() => {
+              refreshStorageSpaceData()
+            })
+          }
+          break
+        case 'space_mount':
+          storageSpaceMount(menuItemData.value)
+          break
+        case 'space_umount':
+          storageSpaceUmount(menuItemData.value)
+          break
+        case 'space_destroy':
+          destroyStorageSpace(menuItemData.value)
+          break
+        default:
+          break
+      }
     }
   }
 

@@ -84,6 +84,24 @@ declare namespace Api {
       devicePath: string
       diskDeviceList: Disk.Device.DiskDeviceDetail[]
     }
+    interface ImportZPoolDto {
+      UUID: string
+      devicePath: string
+      poolName: string
+    }
+
+    interface StopZPool {
+      UUID: string
+      devicePath: string
+      poolName: string
+    }
+
+    interface DestroyZPool {
+      UUID: string
+      devicePath: string
+      poolName: string
+    }
+
     interface StopSoftRaidDto {
       UUID: string
       devicePath: string

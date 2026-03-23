@@ -1,6 +1,6 @@
 <template>
   <!--  菜单选项结构-->
-  <div class="art-full-height">
+  <div class="disk-manager">
     <div class="menu-container">
       <ElSpace wrap>
         <ElButton>状态信息</ElButton>

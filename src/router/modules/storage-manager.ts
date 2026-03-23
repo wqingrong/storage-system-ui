@@ -16,7 +16,7 @@ export const storageManager: AppRouteRecord = {
       component: '/storage-system/storage-manager/storage-space',
       meta: {
         title: '存储空间',
-        keepAlive: true
+        keepAlive: false
       }
     },
     {
@@ -25,7 +25,7 @@ export const storageManager: AppRouteRecord = {
       component: '/storage-system/storage-manager/disk-message',
       meta: {
         title: '硬盘信息',
-        keepAlive: true
+        keepAlive: false
       }
     },
     {
@@ -34,7 +34,7 @@ export const storageManager: AppRouteRecord = {
       component: '/storage-system/storage-manager/disk-manager',
       meta: {
         title: '硬盘管理',
-        keepAlive: true
+        keepAlive: false
       }
     }
   ]

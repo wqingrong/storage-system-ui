@@ -21,3 +21,24 @@ export function fetchDestroySoftRaid(data: Api.Dto.DestroySoftRaidDto) {
     data
   })
 }
+
+export function fetchImportZPool(data: Api.Dto.ImportZPoolDto) {
+  return request.post<any>({
+    url: 'storage/importZPool',
+    data
+  })
+}
+
+export function fetchStopZPool(data: Api.Dto.StopZPool) {
+  return request.post<any>({
+    url: 'storage/stopZPool',
+    data
+  })
+}
+
+export function fetchDestroyZPool(data: Api.Dto.DestroyZPool) {
+  return request.post<any>({
+    url: 'storage/destroyZPool',
+    data
+  })
+}

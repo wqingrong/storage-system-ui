@@ -92,6 +92,7 @@ declare namespace Disk {
     }
 
     interface StoragePool {
+      UUID: string
       poolType: string
       poolName: string
       poolStatus: string
