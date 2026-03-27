@@ -58,7 +58,7 @@
       <div class="form-box">
         <el-radio-group v-model="createStorageSpaceFormData.fileSystem" class="radio-group">
           <div v-for="fileSystem in fileSystemList" :key="fileSystem.value" class="radio-item">
-            <el-radio class="radio-button" :value="fileSystem.value"
+            <el-radio class="radio-button" :value="fileSystem.value" :disabled="fileSystem.disable"
               >{{ fileSystem.label }}
             </el-radio>
             <div style="font-size: 14px !important">
@@ -169,6 +169,7 @@
   import { ref, reactive, watch } from 'vue'
   import { fetchGetStoragePoolSimpleList, fetchNewtStorageSpace } from '@/api/system-manage'
   import { Disk } from '@/typings/disk'
+  import { PoolType } from '@/enums/appEnum'
 
   interface Props {
     visible: boolean
@@ -176,6 +177,7 @@
   // 创建存储空间的表单信息
   const createStorageSpaceFormData = reactive<Disk.Device.StorageSpaceFormData>({
     storagePoolName: '',
+    poolType: '',
     vgName: '',
     descTxt: '',
     spaceSize: '',
@@ -190,19 +192,29 @@
 
   const fileSystemList = [
     {
+      label: 'zfs',
+      value: 'zfs',
+      descTxt:
+        '高可靠、强安全、易管理、超大规模于一体的现代文件系统，核心优势在于数据永不静默损坏、写时复制保障一致性、存储池化管理、内置 RAID 与快照 / 克隆 / 压缩 / 去重',
+      disable: false
+    },
+    {
       label: 'btrfs',
       value: 'btrfs',
-      descTxt: '支持快照 / 克隆、空间配额、数据校验，适合需要高级数据管理的场景。'
+      descTxt: '支持快照 / 克隆、空间配额、数据校验，适合需要高级数据管理的场景。',
+      disable: false
     },
     {
       label: 'ext4',
       value: 'ext4',
-      descTxt: '兼容性强（适配旧系统）、稳定性高，是 Linux 系统的基础选择。'
+      descTxt: '兼容性强（适配旧系统）、稳定性高，是 Linux 系统的基础选择。',
+      disable: false
     },
     {
       label: 'xfs ',
       value: 'xfs ',
-      descTxt: '读写性能出色，支持超大容量存储，适合高负载的大文件场景。'
+      descTxt: '读写性能出色，支持超大容量存储，适合高负载的大文件场景。',
+      disable: false
     }
   ]
 
@@ -240,6 +252,18 @@
       if (item) {
         createStorageSpaceFormData.storagePoolName = item.poolName
         createStorageSpaceFormData.unit = item.unit
+        createStorageSpaceFormData.poolType = item.poolType
+        if (createStorageSpaceFormData.poolType === PoolType.POOL_TYPE_ZFS) {
+          createStorageSpaceFormData.fileSystem = 'zfs'
+          fileSystemList.forEach((item) => {
+            item.disable = item.label !== 'zfs'
+          })
+        } else {
+          createStorageSpaceFormData.fileSystem = 'btrfs'
+          fileSystemList.forEach((item) => {
+            item.disable = item.label === 'zfs'
+          })
+        }
       }
     }
   )

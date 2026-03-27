@@ -79,3 +79,7 @@ export enum PoolStatus {
   POOL_STATUS_WARRING = 'WARRING',
   POOL_STATUS_UNKNOWN = 'UNKNOWN'
 }
+export enum PoolType {
+  POOL_TYPE_ZFS = 'ZFS',
+  POOL_TYPE_SOFT_LVM = 'SOFT_LVM'
+}

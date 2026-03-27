@@ -107,6 +107,7 @@ declare namespace Disk {
 
     interface StoragePoolSimpleInfo {
       poolName: string
+      poolType: string
       vgName: string
       storageSize: string
       freeSize: string
@@ -116,6 +117,7 @@ declare namespace Disk {
 
     interface StorageSpaceFormData {
       storagePoolName: string
+      poolType: string
       vgName: string
       descTxt: string
       spaceSize: string
