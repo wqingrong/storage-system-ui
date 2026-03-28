@@ -451,6 +451,7 @@
   //  存储空间的挂载
   const storageSpaceMount = (menuItemData: any) => {
     const mountDto = ref<Api.Dto.MountStorageSpaceDto>({
+      fileSystem: menuItemData.fileSystem,
       vgName: menuItemData?.vgName,
       volumeName: menuItemData?.volumeName
     })
@@ -466,6 +467,7 @@
   // 存储空间的卸载
   const storageSpaceUmount = (menuItemData: any) => {
     const mountDto = ref<Api.Dto.UmountStorageSpaceDto>({
+      fileSystem: menuItemData.fileSystem,
       vgName: menuItemData?.vgName,
       volumeName: menuItemData?.volumeName
     })
@@ -483,6 +485,7 @@
   // 存储空间的卸载
   const destroyStorageSpace = (menuItemData: any) => {
     const paramsDto = ref<Api.Dto.DestroyStorageSpace>({
+      fileSystem: menuItemData.fileSystem,
       vgName: menuItemData?.vgName,
       volumeName: menuItemData?.volumeName
     })

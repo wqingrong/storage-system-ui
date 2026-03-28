@@ -4,22 +4,23 @@
  * 所有接口相关类型定义
  * 在.vue文件使用会报错，需要在 eslint.config.mjs 中配置 globals: { Api: 'readonly' }
  */
-import * as buffer from 'node:buffer'
-
 declare namespace Api {
   //  接口参数实体类型的包装
   namespace Dto {
     interface MountStorageSpaceDto {
+      fileSystem: string
       vgName: string
       volumeName: string
     }
 
     interface UmountStorageSpaceDto {
+      fileSystem: string
       vgName: string
       volumeName: string
     }
 
     interface DestroyStorageSpace {
+      fileSystem: string
       vgName: string
       volumeName: string
     }
