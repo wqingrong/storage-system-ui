@@ -5,7 +5,7 @@
         <template #title>
           <div style="display: flex; flex-direction: row; align-items: center">
             <img
-              style="width: 70px; height: 70px"
+              style="width: 50px; height: 50px; margin-left: 10px; margin-right: 10px"
               :src="getStoragePoolStatusImage(item.poolStatus)"
             />
             <div
@@ -274,7 +274,7 @@
     if (status === PoolStatus.POOL_STATUS_ACTIVE || status === PoolStatus.POOL_STATUS_ONLINE) {
       return new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href
     } else if (status === PoolStatus.POOL_STATUS_STOP) {
-      return new URL('/src/assets/img/storage/storage-pool-waring.png', import.meta.url).href
+      return new URL('/src/assets/img/storage/storage-pool-warring.png', import.meta.url).href
     } else {
       return new URL('/src/assets/img/storage/storage-pool-error.png', import.meta.url).href
     }

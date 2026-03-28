@@ -8,7 +8,7 @@
         <template #title>
           <div style="display: flex; flex-direction: row; align-items: center">
             <img
-              style="width: 80px; height: 80px"
+              style="width: 60px; height: 60px; margin: 10px"
               :src="getDiskHealthStatusImage(item.healthStatus)"
             />
             <div
@@ -123,8 +123,6 @@
   const getDiskHealthStatusImage = (status: string) => {
     if (status === HealthStatus.OK) {
       return new URL('/src/assets/img/disk-img/disk-ok.png', import.meta.url).href
-    } else if (status === HealthStatus.WARNING) {
-      return new URL('/src/assets/img/disk-img/disk-waring.png', import.meta.url).href
     } else {
       return new URL('/src/assets/img/disk-img/disk-error.png', import.meta.url).href
     }
