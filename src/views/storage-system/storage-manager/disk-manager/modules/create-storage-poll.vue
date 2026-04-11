@@ -51,7 +51,16 @@
           style="width: 100%"
           @selectionChange="handleSelectionChange"
         >
-          <el-table-column type="selection" width="55" />
+          <el-table-column
+            type="selection"
+            width="55"
+            :selectable="
+              (row) =>
+                !createStoragePoolFormData.spareDeviceList.some(
+                  (target) => target.device === row.device
+                )
+            "
+          />
           <el-table-column property="device" label="盘符" width="120" />
           <el-table-column property="model" label="型号" width="250" />
           <el-table-column property="totalSize" label="容量" />
@@ -203,6 +212,11 @@
         {{ currentStep >= 2 ? '完成' : '下一步' }}
       </el-button>
     </template>
+    <softraid-advanced-setup
+      v-model:advancedSetupVisible="advancedSetupVisible"
+      v-model:disk-device-list="diskDeviceList"
+      v-model:softRiadFormData="createStoragePoolFormData"
+    ></softraid-advanced-setup>
   </el-dialog>
 </template>
 
@@ -212,14 +226,16 @@
   import { fetchGetFreeDiscDeviceList, fetchCreateStoragePool } from '@/api/system-manage'
   import { Disk } from '@/typings/disk'
   import { TableInstance } from 'element-plus'
-
+  import SoftraidAdvancedSetup from '@views/storage-system/storage-manager/disk-manager/modules/softraid-advanced-setup.vue'
   interface Props {
     visible: boolean
   }
-
-  const createStoragePoolFormData = reactive<Disk.Device.CreateStoragePoolDto>({
+  // 高级设置显示弹窗
+  const advancedSetupVisible = ref(false)
+  const createStoragePoolFormData = ref<Disk.Device.CreateStoragePoolDto>({
     grade: RaidGrade.RAID_0,
     diskDeviceList: [],
+    spareDeviceList: [],
     storagePoolDesc: '',
     chunkSize: '64k'
   })
@@ -327,6 +343,17 @@
       }
     }
   )
+
+  watch(
+    () => createStoragePoolFormData.value,
+    (newData) => {
+      console.log('表单发生变化》', newData)
+    },
+    {
+      deep: true
+    }
+  )
+
   // 加载磁盘列表
   const diskDeviceList = ref<Disk.Device.DeviceMessage[]>([])
   const loadingDiskDeviceList = () => {
@@ -335,7 +362,7 @@
     })
   }
   const handleSelectionChange = (val: Disk.Device.DeviceMessage[]) => {
-    createStoragePoolFormData.diskDeviceList = val
+    createStoragePoolFormData.value.diskDeviceList = val
   }
 
   const autoSelectDisks = async () => {
@@ -344,7 +371,7 @@
     }
     await nextTick()
     // 遍历磁盘列表，自动勾选符合条件的磁盘
-    createStoragePoolFormData.diskDeviceList.forEach((disk) => {
+    createStoragePoolFormData.value.diskDeviceList.forEach((disk) => {
       multipleTableRef.value.toggleRowSelection(disk, true)
     })
   }
@@ -352,10 +379,11 @@
   // 重置步骤和表单
   const resetSteps = () => {
     currentStep.value = 0
-    createStoragePoolFormData.grade = RaidGrade.RAID_0
-    createStoragePoolFormData.diskDeviceList = []
-    createStoragePoolFormData.storagePoolDesc = ''
-    createStoragePoolFormData.chunkSize = '64k'
+    createStoragePoolFormData.value.grade = RaidGrade.RAID_0
+    createStoragePoolFormData.value.diskDeviceList = []
+    createStoragePoolFormData.value.spareDeviceList = []
+    createStoragePoolFormData.value.storagePoolDesc = ''
+    createStoragePoolFormData.value.chunkSize = '64k'
   }
 
   // 关闭弹窗
@@ -371,8 +399,8 @@
       // 保证磁盘数量至少大于等于选中的等级至少需要的数量
       autoSelectDisks()
       return !(
-        createStoragePoolFormData.diskDeviceList.length >=
-        diskNumber(createStoragePoolFormData.grade)
+        createStoragePoolFormData.value.diskDeviceList.length >=
+        diskNumber(createStoragePoolFormData.value.grade)
       )
     }
     return false
@@ -388,10 +416,11 @@
     } else {
       currentStep.value++
     }
+    console.log('当前表单信息>>', createStoragePoolFormData)
   }
 
   const submitStoragePoolFormData = () => {
-    fetchCreateStoragePool(createStoragePoolFormData)
+    fetchCreateStoragePool(createStoragePoolFormData.value)
       .then((res) => {
         createStoragePoolSuccessResponse.value = res
         currentStep.value++
@@ -407,7 +436,7 @@
   }
 
   const advancedSetup = () => {
-    console.log('高级设置')
+    advancedSetupVisible.value = true
   }
 </script>
 

@@ -32,15 +32,21 @@
                   <span
                     v-if="
                       item.poolStatus === PoolStatus.POOL_STATUS_ACTIVE ||
-                      item.poolStatus === PoolStatus.POOL_STATUS_ONLINE
+                      item.poolStatus === PoolStatus.POOL_STATUS_ONLINE ||
+                      item.poolStatus === PoolStatus.POOL_STATUS_CLEAN
                     "
                     style="color: #4caf50"
-                    >良好</span
+                    >正常</span
                   >
                   <span
                     v-else-if="item.poolStatus === PoolStatus.POOL_STATUS_STOP"
                     style="color: #ec6f30"
                     >异常</span
+                  >
+                  <span
+                    v-else-if="item.poolStatus === PoolStatus.POOL_STATUS_DEGRADED"
+                    style="color: #ec6f30"
+                    >降级</span
                   >
                   <span v-else style="color: #e80536">损坏</span>
                 </div>
@@ -271,9 +277,16 @@
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
   const getStoragePoolStatusImage = (status: string) => {
-    if (status === PoolStatus.POOL_STATUS_ACTIVE || status === PoolStatus.POOL_STATUS_ONLINE) {
+    if (
+      status === PoolStatus.POOL_STATUS_ACTIVE ||
+      status === PoolStatus.POOL_STATUS_ONLINE ||
+      status === PoolStatus.POOL_STATUS_CLEAN
+    ) {
       return new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href
-    } else if (status === PoolStatus.POOL_STATUS_STOP) {
+    } else if (
+      status === PoolStatus.POOL_STATUS_STOP ||
+      status === PoolStatus.POOL_STATUS_DEGRADED
+    ) {
       return new URL('/src/assets/img/storage/storage-pool-warring.png', import.meta.url).href
     } else {
       return new URL('/src/assets/img/storage/storage-pool-error.png', import.meta.url).href

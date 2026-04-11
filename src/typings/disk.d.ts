@@ -32,7 +32,8 @@ declare namespace Disk {
     // 创建存储池的请求参数
     interface CreateStoragePoolDto {
       grade: RaidGrade
-      diskDeviceList: Device.DeviceMessage[]
+      diskDeviceList: Device.DeviceMessage[] // 创建raid的磁盘列表
+      spareDeviceList: Device.DeviceMessage[] // 热备盘磁盘列表
       storagePoolDesc: string
       chunkSize: string
     }
