@@ -6,7 +6,7 @@
           <div style="display: flex; flex-direction: row; align-items: center">
             <img
               style="width: 50px; height: 50px; margin-left: 10px; margin-right: 10px"
-              :src="getStoragePoolStatusImage(item.poolStatus)"
+              :src="getStoragePoolStatus(item.poolStatus).imageUrl"
             />
             <div
               style="
@@ -29,26 +29,9 @@
               <!--              第二行-->
               <div style="display: flex; justify-self: flex-start; width: 100%">
                 <div style="width: 60%">
-                  <span
-                    v-if="
-                      item.poolStatus === PoolStatus.POOL_STATUS_ACTIVE ||
-                      item.poolStatus === PoolStatus.POOL_STATUS_ONLINE ||
-                      item.poolStatus === PoolStatus.POOL_STATUS_CLEAN
-                    "
-                    style="color: #4caf50"
-                    >正常</span
-                  >
-                  <span
-                    v-else-if="item.poolStatus === PoolStatus.POOL_STATUS_STOP"
-                    style="color: #ec6f30"
-                    >异常</span
-                  >
-                  <span
-                    v-else-if="item.poolStatus === PoolStatus.POOL_STATUS_DEGRADED"
-                    style="color: #ec6f30"
-                    >降级</span
-                  >
-                  <span v-else style="color: #e80536">损坏</span>
+                  <span :style="{ color: getStoragePoolStatus(item.poolStatus).color }">{{
+                    getStoragePoolStatus(item.poolStatus).statusTxt
+                  }}</span>
                 </div>
                 <div style="width: 40%">
                   <span style="color: #2b8dfa">{{ item.storageSize }} </span>
@@ -274,24 +257,9 @@
     fetchStopZPool
   } from '@/api/storage-service'
   import { Api } from '@/typings/api'
+  import { getStoragePoolStatus } from '@utils/tools'
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
-  const getStoragePoolStatusImage = (status: string) => {
-    if (
-      status === PoolStatus.POOL_STATUS_ACTIVE ||
-      status === PoolStatus.POOL_STATUS_ONLINE ||
-      status === PoolStatus.POOL_STATUS_CLEAN
-    ) {
-      return new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href
-    } else if (
-      status === PoolStatus.POOL_STATUS_STOP ||
-      status === PoolStatus.POOL_STATUS_DEGRADED
-    ) {
-      return new URL('/src/assets/img/storage/storage-pool-warring.png', import.meta.url).href
-    } else {
-      return new URL('/src/assets/img/storage/storage-pool-error.png', import.meta.url).href
-    }
-  }
 
   const getStorageSpaceStatusImage = (status: string) => {
     if (status) {

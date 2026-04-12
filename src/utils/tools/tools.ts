@@ -1,3 +1,5 @@
+import { PoolStatus } from '@/enums/appEnum'
+
 /**
  * 深度对比两个对象的所有字段值是否完全相同（支持嵌套/数组/特殊值）
  * @param {*} obj1 - 第一个值（对象/数组/基本类型）
@@ -55,4 +57,43 @@ export function deepEqual(obj1: any, obj2: any) {
 
   // 其他情况（如不同类型的对象）
   return false
+}
+
+// 返回存储池的状态信息
+export function getStoragePoolStatus(status: string) {
+  if (
+    status === PoolStatus.POOL_STATUS_ACTIVE ||
+    status === PoolStatus.POOL_STATUS_ONLINE ||
+    status === PoolStatus.POOL_STATUS_CLEAN
+  ) {
+    return {
+      imageUrl: new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href,
+      statusTxt: '正常',
+      color: '#4caf50'
+    }
+  } else if (status === PoolStatus.POOL_STATUS_SYNC) {
+    return {
+      imageUrl: new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href,
+      statusTxt: '同步',
+      color: '#4caf50'
+    }
+  } else if (status === PoolStatus.POOL_STATUS_STOP) {
+    return {
+      imageUrl: new URL('/src/assets/img/storage/storage-pool-warring.png', import.meta.url).href,
+      statusTxt: '停止运行',
+      color: '#ec6f30'
+    }
+  } else if (status === PoolStatus.POOL_STATUS_DEGRADED) {
+    return {
+      imageUrl: new URL('/src/assets/img/storage/storage-pool-warring.png', import.meta.url).href,
+      statusTxt: '降级',
+      color: '#ec6f30'
+    }
+  } else {
+    return {
+      imageUrl: new URL('/src/assets/img/storage/storage-pool-error.png', import.meta.url).href,
+      statusTxt: '损坏',
+      color: '#e80536'
+    }
+  }
 }
