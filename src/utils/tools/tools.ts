@@ -77,6 +77,12 @@ export function getStoragePoolStatus(status: string) {
       statusTxt: '同步',
       color: '#4caf50'
     }
+  } else if (status === PoolStatus.POOL_STATUS_RECOVER) {
+    return {
+      imageUrl: new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href,
+      statusTxt: '重建',
+      color: '#4caf50'
+    }
   } else if (status === PoolStatus.POOL_STATUS_STOP) {
     return {
       imageUrl: new URL('/src/assets/img/storage/storage-pool-warring.png', import.meta.url).href,
