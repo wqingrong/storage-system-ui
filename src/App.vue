@@ -12,10 +12,11 @@
 
   import { setThemeTransitionClass } from './utils/theme/animation'
   import { checkStorageCompatibility } from './utils/storage'
+  import { websocketStore } from '@/store/modules/websocket'
 
   const userStore = useUserStore()
   const { language } = storeToRefs(userStore)
-
+  const ws = websocketStore()
   const locales = {
     zh: zh,
     en: en
@@ -28,6 +29,7 @@
   onMounted(() => {
     // 检查存储兼容性
     checkStorageCompatibility()
+    ws.initGlobalWS()
     // 提升暗黑主题下页面刷新视觉体验
     setThemeTransitionClass(false)
     // 系统升级
