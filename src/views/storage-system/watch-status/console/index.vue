@@ -22,7 +22,7 @@
     <!--        <TodoList />-->
     <!--      </ElCol>-->
     <!--    </ElRow>-->
-    <chat-room v-model:user-id="userId" v-model:room-id="roomId" v-model:user-name="userName" />
+    <chat-room v-model:user-id="userId" v-model:room-id="roomId" v-model:user-name="username" />
     <!--    <AboutProject />-->
   </div>
 </template>
@@ -41,7 +41,7 @@
   defineOptions({ name: 'BasicConsole' })
   const userId = ref('1234')
   const roomId = ref('56990')
-  const userName = ref('wwqr')
+  const username = ref('wqr')
   useCommon().scrollToTop()
 </script>
 

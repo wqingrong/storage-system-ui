@@ -93,7 +93,7 @@
   // WebSocket Daemon
   const { isConnected, connectionStatus, error, queueSize, send, on, off, reset, disconnect } =
     useWebSocketDaemon({
-      url: `ws://localhost:9090/ws/ws?id=${props.userId}&room=${props.roomId || 'default'}`,
+      url: `ws://localhost:9090/ws/ws?userId=${props.userId}&username=${props.userName || 'default'}`,
       reconnect: true,
       reconnectInterval: 3000,
       reconnectAttempts: 10,
