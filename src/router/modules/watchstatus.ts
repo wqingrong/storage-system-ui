@@ -24,7 +24,7 @@ export const watchStatusRoutes: AppRouteRecord = {
     {
       path: 'watch-disk',
       name: 'WatchDisk',
-      component: '/storage-system/watch-status/analysis',
+      component: '/storage-system/watch-status/watch-disk',
       meta: {
         title: '硬盘监控',
         keepAlive: false
