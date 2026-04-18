@@ -243,7 +243,6 @@
     fetchMountStorageSpace,
     fetchUmountStorageSpace
   } from '@/api/system-manage'
-  import { PoolStatus } from '@/enums/appEnum'
   import { Disk } from '@/typings/disk'
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
   import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'

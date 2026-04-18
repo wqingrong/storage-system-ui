@@ -136,7 +136,6 @@
     }
   }
   onMounted(() => {
-    console.log('>>>页面挂载...')
     fetchGetDiscDeviceDetailList().then((res) => {
       if (res) {
         diskDeviceList.value = res.records

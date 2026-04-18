@@ -1,5 +1,4 @@
 <template>
-  <!--  菜单选项结构-->
   <div class="disk-manager">
     <div class="menu-container">
       <ElSpace wrap>
@@ -18,6 +17,7 @@
   import DiskDetail from './modules/disk-detail.vue'
   import CreateStoragePoll from './modules/create-storage-poll.vue'
   import CreateZPool from './modules/create-zpool.vue'
+  defineOptions({ name: 'DiskManager' })
   const createPollDialogVisible = ref(false)
   const createZPoolDialogVisible = ref(false)
   const handleCreateStoragePool = () => {
