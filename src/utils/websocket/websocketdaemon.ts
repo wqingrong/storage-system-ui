@@ -125,7 +125,7 @@ class WebSocketDaemon {
 
           try {
             data = JSON.parse(event.data)
-            console.log('接收到的心跳响应信息>>', data)
+            console.log('接收到的响应信息>>', data)
             // 处理心跳
             if (this.autoPong && data.type === 'ping') {
               this.send({ type: 'pong', timestamp: Date.now() })

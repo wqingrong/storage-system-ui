@@ -103,3 +103,24 @@ export function getStoragePoolStatus(status: string) {
     }
   }
 }
+
+export function kbConvertAdapter(kb_number: number): string {
+  // 空值/负数处理
+  if (isNaN(kb_number) || kb_number < 0) {
+    return '0 B'
+  }
+
+  // 单位数组（1024 进制，Linux/计算机标准）
+  const units = ['KB', 'MB', 'GB', 'TB', 'PB']
+  let value = kb_number
+  let unitIndex = 0
+
+  // 自动进位：>= 1024 就进一级单位
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex++
+  }
+
+  // 保留 2 位小数 + 单位
+  return `${value.toFixed(2)} ${units[unitIndex]}`
+}

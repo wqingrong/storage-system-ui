@@ -8,16 +8,22 @@ import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import ElementPlus from 'unplugin-element-plus/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-// import { visualizer } from 'rollup-plugin-visualizer'
 
 export default ({ mode }: { mode: string }) => {
   const root = process.cwd()
   const env = loadEnv(mode, root)
-  const { VITE_VERSION, VITE_PORT, VITE_BASE_URL, VITE_API_URL, VITE_API_PROXY_URL } = env
+  const {
+    VITE_VERSION,
+    VITE_PORT,
+    VITE_BASE_URL,
+    VITE_API_URL,
+    VITE_API_PROXY_URL,
+    VITE_SERVER_IP
+  } = env
 
   console.log(`🚀 API_URL = ${VITE_API_URL}`)
   console.log(`🚀 VERSION = ${VITE_VERSION}`)
-
+  console.log('SERVER_IP = ', VITE_SERVER_IP)
   return defineConfig({
     define: {
       __APP_VERSION__: JSON.stringify(VITE_VERSION)
@@ -31,31 +37,36 @@ export default ({ mode }: { mode: string }) => {
           changeOrigin: true
         },
         '/system': {
-          target: 'http://127.0.0.1:9090',
+          target: `http://${VITE_SERVER_IP}:9090`,
           changeOrigin: true
         },
         '/disk': {
-          target: 'http://127.0.0.1:9090',
+          target: `http://${VITE_SERVER_IP}:9090`,
           changeOrigin: true
         },
         '/storage': {
-          target: 'http://127.0.0.1:9090',
+          target: `http://${VITE_SERVER_IP}:9090`,
           changeOrigin: true
         },
         '/user': {
-          target: 'http://127.0.0.1:9090',
+          target: `http://${VITE_SERVER_IP}:9090`,
           changeOrigin: true
         },
         '/shareFolder': {
-          target: 'http://127.0.0.1:9090',
+          target: `http://${VITE_SERVER_IP}:9090`,
           changeOrigin: true
         },
         '/monitor': {
-          target: 'http://127.0.0.1:9090',
+          target: `http://${VITE_SERVER_IP}:9090`,
           changeOrigin: true
         },
         '/protocolService': {
-          target: 'http://127.0.0.1:9090',
+          target: `http://${VITE_SERVER_IP}:9090`,
+          changeOrigin: true
+        },
+        '/ws': {
+          target: `http://${VITE_SERVER_IP}:9090`, // 重点：ws:// 开头
+          ws: true,
           changeOrigin: true
         }
       },

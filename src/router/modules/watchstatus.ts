@@ -14,7 +14,7 @@ export const watchStatusRoutes: AppRouteRecord = {
       //  全部的监控状态
       path: 'watch-network',
       name: 'WatchNetwork',
-      component: '/storage-system/watch-status/console',
+      component: '/storage-system/watch-status/watch-network',
       meta: {
         title: '网络监控',
         keepAlive: false,

@@ -1,5 +1,5 @@
 <template>
-  <div class="analysis-dashboard">
+  <div>
     <DiskIoStatWatch></DiskIoStatWatch>
   </div>
 </template>

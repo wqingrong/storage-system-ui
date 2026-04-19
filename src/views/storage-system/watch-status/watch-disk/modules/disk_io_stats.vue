@@ -145,7 +145,7 @@
 
 <style lang="scss" scss>
   .customer-satisfaction {
-    height: 400px;
+    height: auto;
 
     .custom-card-body {
       height: calc(100% - 50px);

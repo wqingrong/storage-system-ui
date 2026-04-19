@@ -16,7 +16,7 @@ export const websocketStore = defineStore('websocket', {
 
       // 你原来的代码 👇 完全不变
       const ws = useWebSocketDaemon({
-        url: `ws://localhost:9090/ws/ws?userId=${userId}&username=${username}`,
+        url: `/ws/ws?userId=${userId}&username=${username}`,
         reconnect: true,
         reconnectInterval: 3000,
         reconnectAttempts: 10,
