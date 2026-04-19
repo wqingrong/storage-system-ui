@@ -23,6 +23,7 @@ export default ({ mode }: { mode: string }) => {
 
   console.log(`🚀 API_URL = ${VITE_API_URL}`)
   console.log(`🚀 VERSION = ${VITE_VERSION}`)
+  console.log(`🚀 VERSION = ${VITE_API_PROXY_URL}`)
   console.log('SERVER_IP = ', VITE_SERVER_IP)
   return defineConfig({
     define: {
