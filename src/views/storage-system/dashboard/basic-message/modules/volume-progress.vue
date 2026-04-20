@@ -3,13 +3,13 @@
     <!-- 标题 -->
     <div class="card-header">
       <div class="title">{{ volumeName }}</div>
-      <div class="percent-text">{{ percent }}%</div>
+      <div class="percent-text">{{ precent }}%</div>
     </div>
 
     <!-- 进度条主体 -->
     <div class="progress-box">
       <el-progress
-        :percentage="percent"
+        :percentage="precent"
         :color="progressColor"
         :stroke-width="12"
         :show-text="false"
@@ -23,11 +23,7 @@
         <span>{{ totalSize }}</span>
       </div>
       <div class="info-item">
-        <span>已用：</span>
-        <span>{{ usedSize }}</span>
-      </div>
-      <div class="info-item">
-        <span>剩余：</span>
+        <span>可用：</span>
         <span>{{ freeSize }}</span>
       </div>
     </div>
@@ -41,30 +37,16 @@
     // LV卷名称
     volumeName: string
     // 总容量 单位G
-    total: number
-    // 已用容量 单位G
-    used: number
+    precent: number
+    totalSize: string
+    freeSize: string
   }
 
   const props = defineProps<Props>()
 
-  // 计算使用率百分比
-  const percent = computed(() => {
-    if (props.total === 0) return 0
-    return Math.round((props.used / props.total) * 100)
-  })
-
-  // 剩余容量
-  const free = computed(() => props.total - props.used)
-
-  // 容量格式化显示 G/GB
-  const totalSize = computed(() => `${props.total} GB`)
-  const usedSize = computed(() => `${props.used} GB`)
-  const freeSize = computed(() => `${free.value} GB`)
-
   // 进度条颜色自适应（绿-黄-红 告警分级，贴合你系统告警组件）
   const progressColor = computed(() => {
-    const val = percent.value
+    const val = props.precent
     if (val < 70) return '#67c23a' // 正常 绿色
     if (val < 90) return '#e6a23c' // 警告 黄色
     return '#f56c6c' // 爆满 红色

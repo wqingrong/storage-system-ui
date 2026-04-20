@@ -3,41 +3,34 @@
     <div class="card-header">
       <p class="title">阵列信息</p>
     </div>
-    <ElRow :gutter="20">
+    <ElRow v-for="(item, index) in storagePoolList" :key="index" :gutter="20">
       <ElCol :sm="24" :md="24" :lg="12" class="center-card">
         <!-- 让这个容器自动居中包裹所有内容 -->
         <div class="card-content-wrapper">
           <ArtRingChart
             :data="[
-              { value: 30, name: '电子产品' },
-              { value: 55, name: '服装鞋包' },
-              { value: 36, name: '家居用品' }
+              { value: 100 - item.useRatio, name: '未分配' },
+              { value: item.useRatio, name: '已分配' }
             ]"
-            :color="['#4C87F3', '#EDF2FF', '#8BD8FC']"
+            :colors="['#EDF2FF', '#4C87F3']"
             :radius="['70%', '80%']"
             height="16.5rem"
             :showLabel="false"
             :borderRadius="0"
-            centerText="78%"
+            :centerText="item.poolName"
           />
 
           <div class="icon-text-widget">
             <div class="item">
-              <div class="icon">
-                <i class="iconfont-sys">&#xe718;</i>
-              </div>
               <div class="content">
-                <p>447023GB</p>
+                <p>{{ item.storageSize }}</p>
                 <span>总容量</span>
               </div>
             </div>
             <div class="item">
-              <div class="icon">
-                <i class="iconfont-sys">&#xe70c;</i>
-              </div>
               <div class="content">
-                <p>352028GB</p>
-                <span>已用容量</span>
+                <p>{{ item.freeSize }}</p>
+                <span>可用容量</span>
               </div>
             </div>
           </div>
@@ -46,16 +39,13 @@
       <ElCol :sm="24" :md="24" :lg="12">
         <div style="height: 100%">
           <volumeProgress
+            v-for="(volume, index) in item.storageSpaceList"
+            :key="index"
             style="margin-bottom: 10px"
-            volume-name="存储空间1"
-            :total="200"
-            :used="199"
-          />
-          <volumeProgress
-            style="margin-bottom: 10px"
-            volume-name="存储空间2"
-            :total="200"
-            :used="86"
+            :volume-name="volume.spaceName"
+            :free-size="volume.freeSize"
+            :total-size="volume.spaceSize"
+            :precent="volume.useRatio"
           />
         </div>
       </ElCol>
@@ -64,6 +54,21 @@
 </template>
 <script setup lang="ts">
   import volumeProgress from './volume-progress.vue'
+  import { ref } from 'vue'
+  import { Disk } from '@/typings/disk'
+  import { fetchGetStoragePoolList } from '@/api/system-manage'
+  const storagePoolList = ref<Disk.Device.StoragePool[]>([])
+
+  onMounted(() => {
+    refreshStorageSpaceData()
+  })
+  const refreshStorageSpaceData = () => {
+    fetchGetStoragePoolList().then((res) => {
+      if (res) {
+        storagePoolList.value = res.records
+      }
+    })
+  }
 </script>
 <style scoped>
   /* 让卡片内部整体垂直 + 水平居中 */
