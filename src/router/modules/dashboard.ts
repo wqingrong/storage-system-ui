@@ -5,36 +5,36 @@ export const dashboardRoutes: AppRouteRecord = {
   path: '/dashboard',
   component: '/index/index',
   meta: {
-    title: 'menus.dashboard.title',
+    title: '仪表盘',
     icon: '&#xe721;',
     roles: ['R_SUPER', 'R_ADMIN']
   },
   children: [
     {
-      path: 'console',
-      name: 'Console',
-      component: '/dashboard/console',
+      path: 'basic-message',
+      name: 'BasicMessage',
+      component: '/storage-system/dashboard/basic-message',
       meta: {
-        title: 'menus.dashboard.console',
+        title: '基本信息',
+        keepAlive: false
+      }
+    },
+    {
+      path: 'basic-console',
+      name: 'BasicConsole',
+      component: '/storage-system/dashboard/console',
+      meta: {
+        title: '设备信息',
         keepAlive: false,
         fixedTab: true
       }
     },
     {
-      path: 'analysis',
-      name: 'Analysis',
-      component: '/dashboard/analysis',
+      path: 'basic-analysis',
+      name: 'BasicAnalysis',
+      component: '/storage-system/dashboard/analysis',
       meta: {
         title: 'menus.dashboard.analysis',
-        keepAlive: false
-      }
-    },
-    {
-      path: 'ecommerce',
-      name: 'Ecommerce',
-      component: '/dashboard/ecommerce',
-      meta: {
-        title: 'menus.dashboard.ecommerce',
         keepAlive: false
       }
     }
