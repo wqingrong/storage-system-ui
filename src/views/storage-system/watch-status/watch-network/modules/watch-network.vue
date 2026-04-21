@@ -8,8 +8,8 @@
     <div class="custom-card-body">
       <div class="custom-card-header" style="display: flex; justify-content: start">
         <div class="title_net">网口: {{ value }}</div>
-        <div class="title_net">上行速度: {{ kbConvertAdapter(lastData.rx) }}</div>
-        <div class="title_net">下行速度: {{ kbConvertAdapter(lastData.tx) }}</div>
+        <div class="title_net">上行速度: {{ kbConvertAdapter(lastData.get(value)?.tx || 0) }}</div>
+        <div class="title_net">下行速度: {{ kbConvertAdapter(lastData.get(value)?.rx || 0) }}</div>
       </div>
       <ArtLineChart
         label="value"
@@ -44,7 +44,7 @@
     public unit: string = ''
     public time: string = ''
   }
-  const lastData = ref<NetworkSpeedStats>(new NetworkSpeedStats())
+  const lastData = ref<Map<string, NetworkSpeedStats>>(new Map<string, NetworkSpeedStats>())
   // 图表数据结构
   class WatchNetworkData {
     public device: string = ''
@@ -65,16 +65,16 @@
         data.data.forEach((item: any) => {
           const device = new NetworkSpeedStats()
           Object.assign(device, item)
-          lastData.value = device
+          lastData.value.set(device.device, device)
           if (!netDeviceList.value.includes(device.device)) {
             netDeviceList.value.push(device.device)
           }
           if (netDeviceMap.value.has(device.device)) {
             // ============== 更新已有磁盘 ==============
             const fieldsMap = new Map([
-              ['rx 下行', 'rx'],
-              ['tx 上行', 'tx'],
-              ['unit 单位', 'unit']
+              ['rx 下行 KB/S', 'rx'],
+              ['tx 上行 KB/S', 'tx'],
+              ['unit 单位', 'KB/S']
             ])
 
             const target = netDeviceMap.value.get(device.device)
@@ -92,8 +92,8 @@
             const watchData = new WatchNetworkData()
             watchData.device = device.device
             watchData.chartData.push(
-              { name: 'rx 下行', data: [device.rx] },
-              { name: 'tx 上行', data: [device.tx] }
+              { name: 'rx 下行 KB/S', data: [device.rx] },
+              { name: 'tx 上行 KB/S', data: [device.tx] }
             )
 
             watchData.xAxiosData.push(device.time)
