@@ -30,7 +30,7 @@
             <div class="item">
               <div class="content">
                 <p>{{ item.freeSize }}</p>
-                <span>可用容量</span>
+                <span>未分配</span>
               </div>
             </div>
           </div>

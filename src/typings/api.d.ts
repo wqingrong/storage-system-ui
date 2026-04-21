@@ -1,3 +1,5 @@
+import GeneralView from '@views/storage-system/dashboard/basic-message/modules/general-view .vue'
+
 /**
  * namespace: Api
  *
@@ -244,6 +246,15 @@ declare namespace Api {
       usageRate: number
       currentTime: string
       swapeMemoryInfo: SwapMemoryInfo
+    }
+  }
+  // 仪表盘模块相关变量
+  namespace Dashboard {
+    interface GeneralView {
+      systemRunTime: string
+      diskNumber: number
+      raidNumber: number
+      volumeNumber: number
     }
   }
   // 接口返回值定义的数据类型

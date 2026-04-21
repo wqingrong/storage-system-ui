@@ -6,7 +6,7 @@
           <i class="el-icon-menu"></i>
         </div>
         <div class="item-content">
-          <div class="item-number">运行时长：2天12小时</div>
+          <div class="item-number">{{ generalView?.systemRunTime || '' }}</div>
           <div class="item-label"></div>
         </div>
       </div>
@@ -19,7 +19,7 @@
           <i class="el-icon-menu"></i>
         </div>
         <div class="item-content">
-          <div class="item-number">2</div>
+          <div class="item-number">{{ generalView?.raidNumber || 0 }}</div>
           <div class="item-label">阵列</div>
         </div>
       </div>
@@ -30,7 +30,7 @@
           <i class="el-icon-hdd"></i>
         </div>
         <div class="item-content">
-          <div class="item-number">48</div>
+          <div class="item-number">{{ generalView?.diskNumber || 0 }}</div>
           <div class="item-label">硬盘</div>
         </div>
       </div>
@@ -41,7 +41,7 @@
           <i class="el-icon-data-line"></i>
         </div>
         <div class="item-content">
-          <div class="item-number">2</div>
+          <div class="item-number">{{ generalView?.raidNumber || 0 }}</div>
           <div class="item-label">存储池</div>
         </div>
       </div>
@@ -52,7 +52,7 @@
           <i class="el-icon-box"></i>
         </div>
         <div class="item-content">
-          <div class="item-number">2</div>
+          <div class="item-number">{{ generalView?.volumeNumber }}</div>
           <div class="item-label">存储卷</div>
         </div>
       </div>
@@ -62,6 +62,13 @@
 
 <script setup lang="ts">
   // 无逻辑，纯展示组件
+  import { fetchGetGeneralView } from '@/api/dashboard-service'
+  import { Api } from '@/typings/api'
+  const generalView = ref<Api.Dashboard.GeneralView>()
+  fetchGetGeneralView().then((res) => {
+    console.log('>>', res)
+    generalView.value = res
+  })
 </script>
 
 <style scoped>
