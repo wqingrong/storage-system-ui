@@ -42,7 +42,9 @@
     // 交互配置
     showTooltip: true,
     showLegend: false,
-    legendPosition: 'bottom'
+    legendPosition: 'bottom',
+    yAxisUnit: '',
+    toolTipUnit: ''
   })
 
   // 使用基础的 useChart hook
@@ -231,22 +233,58 @@
       grid: getGridWithLegend(props.showLegend && isMultipleData.value, props.legendPosition, {
         top: 15,
         right: 15,
-        left: 0
+        left: 15
       }),
-      tooltip: props.showTooltip ? getTooltipStyle() : undefined,
+      tooltip: props.showTooltip
+        ? getTooltipStyle('axis', {
+            // 👇 核心：悬浮框自动单位换算（KB/MB/GB）
+            formatter: (params: any) => {
+              let html = ``
+              params.forEach((item: any) => {
+                // 数值单位自动换算 KB → MB → GB
+                let val = item.value
+                let unit = ''
+                if (props.toolTipUnit === 'KB') {
+                  if (val >= 1024 * 1024) {
+                    val = (val / (1024 * 1024)).toFixed(1)
+                    unit = 'GB'
+                  } else if (val >= 1024) {
+                    val = (val / 1024).toFixed(1)
+                    unit = 'MB'
+                  } else {
+                    unit = 'KB'
+                  }
+                } else {
+                  // 普通单位
+                  unit = props.toolTipUnit || ''
+                }
+                html += `
+            <div style="display:flex;align-items:center;margin-top:4px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color};margin-right:6px"></span>
+              <span style="flex:1">${item.seriesName}</span>
+              <span style="font-weight:bold">${val}${unit}</span>
+            </div>
+          `
+              })
+              return html
+            }
+          })
+        : undefined,
       xAxis: {
         type: 'category',
         boundaryGap: false,
         data: props.xAxisData,
         axisTick: getAxisTickStyle(),
         axisLine: getAxisLineStyle(props.showAxisLine),
-        axisLabel: getAxisLabelStyle(props.showXAxisLabel)
+        axisLabel: getAxisLabelStyle(props.showXAxisLabel, '')
       },
       yAxis: {
         type: 'value',
         min: 0,
         max: maxValue.value,
-        axisLabel: getAxisLabelStyle(props.showAxisLabel),
+        splitNumber: 10,
+        scale: true,
+        axisLabel: getAxisLabelStyle(props.showAxisLabel, props.yAxisUnit),
         axisLine: getAxisLineStyle(props.showAxisLine),
         splitLine: getSplitLineStyle(props.showSplitLine)
       }

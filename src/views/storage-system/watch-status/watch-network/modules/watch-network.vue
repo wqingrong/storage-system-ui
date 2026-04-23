@@ -20,6 +20,8 @@
         :showAxisLine="false"
         :showXAxisLabel="false"
         :showSplitLine="true"
+        :y-axis-unit="'KB'"
+        :tool-tip-unit="'KB'"
         :colors="colors"
       />
     </div>
@@ -72,9 +74,8 @@
           if (netDeviceMap.value.has(device.device)) {
             // ============== 更新已有磁盘 ==============
             const fieldsMap = new Map([
-              ['rx 下行 KB/S', 'rx'],
-              ['tx 上行 KB/S', 'tx'],
-              ['unit 单位', 'KB/S']
+              ['rx 下行', 'rx'],
+              ['tx 上行', 'tx']
             ])
 
             const target = netDeviceMap.value.get(device.device)
@@ -92,8 +93,8 @@
             const watchData = new WatchNetworkData()
             watchData.device = device.device
             watchData.chartData.push(
-              { name: 'rx 下行 KB/S', data: [device.rx] },
-              { name: 'tx 上行 KB/S', data: [device.tx] }
+              { name: 'rx 下行', data: [device.rx] },
+              { name: 'tx 上行', data: [device.tx] }
             )
 
             watchData.xAxiosData.push(device.time)

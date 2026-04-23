@@ -140,12 +140,29 @@ export function useChart(options: UseChartOptions = {}) {
   })
 
   // 坐标轴标签样式
-  const getAxisLabelStyle = (show: boolean = true) => {
+  const getAxisLabelStyle = (show: boolean = true, unitType: string) => {
     const { fontColor, fontSize } = useChartOps()
     return {
       show,
       color: fontColor,
-      fontSize
+      fontSize,
+      formatter: (value: number) => {
+        if (!unitType) return value // 无单位，直接返回
+
+        // 字节单位自动换算 B → KB → MB → GB
+        if (unitType === 'KB') {
+          if (value >= 1024 * 1024) return (value / (1024 * 1024)).toFixed(1) + 'GB'
+          if (value >= 1024) return (value / 1024).toFixed(1) + 'MB'
+          return value + 'KB'
+        }
+
+        // 普通数字单位（万/亿）
+        if (unitType === '%') {
+          return value + '%'
+        }
+
+        return value
+      }
     }
   }
 
