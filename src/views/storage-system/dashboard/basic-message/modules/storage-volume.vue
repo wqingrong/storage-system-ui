@@ -9,8 +9,8 @@
         <div class="card-content-wrapper">
           <ArtRingChart
             :data="[
-              { value: 100 - item.useRatio, name: '未分配' },
-              { value: item.useRatio, name: '已分配' }
+              { value: 100 - item.useRatio, name: '未分配', label: item.freeSize },
+              { value: item.useRatio, name: '已分配', label: item.useSize }
             ]"
             :colors="['#EDF2FF', '#4C87F3']"
             :radius="['70%', '80%']"

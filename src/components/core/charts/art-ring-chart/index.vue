@@ -66,7 +66,9 @@
         const option: EChartsOption = {
           tooltip: props.showTooltip
             ? getTooltipStyle('item', {
-                formatter: '{b}: {c} ({d}%)'
+                formatter: (params: any) => {
+                  return `${params.data.name}:${params.data.label} (${params.data.value}%)`
+                }
               })
             : undefined,
           legend: props.showLegend ? getLegendStyle(props.legendPosition) : undefined,

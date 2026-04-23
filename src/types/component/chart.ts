@@ -167,6 +167,8 @@ export interface PieDataItem {
   value: number
   /** 数据名称 */
   name: string
+
+  label: string
 }
 
 // 环形图 Props 接口 - 统一环形图配置
