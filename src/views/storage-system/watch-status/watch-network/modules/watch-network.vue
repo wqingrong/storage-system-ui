@@ -36,7 +36,7 @@
   defineOptions({ name: 'DiskIoStatWatch' })
 
   const wsStore = websocketStore()
-  const { on } = wsStore.getWS()
+  const { on, send } = wsStore.getWS()
   const diskList = ref<string[]>([])
   // 磁盘 IO 数据结构
   class NetworkSpeedStats {
@@ -60,54 +60,59 @@
     '#2ECC71', // 绿
     '#3f47e8' // 蓝
   ]
-
-  on('message', (data: any) => {
-    switch (data.type) {
-      case 'net_speed':
-        data.data.forEach((item: any) => {
-          const device = new NetworkSpeedStats()
-          Object.assign(device, item)
-          lastData.value.set(device.device, device)
-          if (!netDeviceList.value.includes(device.device)) {
-            netDeviceList.value.push(device.device)
-          }
-          if (netDeviceMap.value.has(device.device)) {
-            // ============== 更新已有磁盘 ==============
-            const fieldsMap = new Map([
-              ['rx 下行', 'rx'],
-              ['tx 上行', 'tx']
-            ])
-
-            const target = netDeviceMap.value.get(device.device)
-            if (!target) return
-            target.chartData.forEach((chartItem) => {
-              if (fieldsMap.has(chartItem.name)) {
-                chartItem.data.push(
-                  device[fieldsMap.get(chartItem.name) as keyof NetworkSpeedStats] as number
-                )
-              }
-            })
-
-            target.xAxiosData.push(device.time)
-          } else {
-            const watchData = new WatchNetworkData()
-            watchData.device = device.device
-            watchData.chartData.push(
-              { name: 'rx 下行', data: [device.rx] },
-              { name: 'tx 上行', data: [device.tx] }
-            )
-
-            watchData.xAxiosData.push(device.time)
-            netDeviceMap.value.set(device.device, watchData)
-            if (!diskList.value.includes(device.device)) {
-              diskList.value.push(device.device)
+  onMounted(() => {
+    send({ type: 'witch_net_speed', timestamp: Date.now() })
+    on('message', (data: any) => {
+      switch (data.type) {
+        case 'net_speed':
+          data.data.forEach((item: any) => {
+            const device = new NetworkSpeedStats()
+            Object.assign(device, item)
+            lastData.value.set(device.device, device)
+            if (!netDeviceList.value.includes(device.device)) {
+              netDeviceList.value.push(device.device)
             }
-          }
-        })
-        break
-      default:
-        break
-    }
+            if (netDeviceMap.value.has(device.device)) {
+              // ============== 更新已有磁盘 ==============
+              const fieldsMap = new Map([
+                ['rx 下行', 'rx'],
+                ['tx 上行', 'tx']
+              ])
+
+              const target = netDeviceMap.value.get(device.device)
+              if (!target) return
+              target.chartData.forEach((chartItem) => {
+                if (fieldsMap.has(chartItem.name)) {
+                  chartItem.data.push(
+                    device[fieldsMap.get(chartItem.name) as keyof NetworkSpeedStats] as number
+                  )
+                }
+              })
+
+              target.xAxiosData.push(device.time)
+            } else {
+              const watchData = new WatchNetworkData()
+              watchData.device = device.device
+              watchData.chartData.push(
+                { name: 'rx 下行', data: [device.rx] },
+                { name: 'tx 上行', data: [device.tx] }
+              )
+
+              watchData.xAxiosData.push(device.time)
+              netDeviceMap.value.set(device.device, watchData)
+              if (!diskList.value.includes(device.device)) {
+                diskList.value.push(device.device)
+              }
+            }
+          })
+          break
+        default:
+          break
+      }
+    })
+  })
+  onUnmounted(() => {
+    send({ type: 'close_net_speed', timestamp: Date.now() })
   })
 </script>
 
