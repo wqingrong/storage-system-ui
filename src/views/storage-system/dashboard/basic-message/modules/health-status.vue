@@ -1,34 +1,20 @@
 <template>
   <div class="system-alarm-container">
     <!-- 模块标题 -->
-    <div class="alarm-title">系统警报</div>
+    <div class="alarm-title">系统状态</div>
 
     <!-- 内容布局容器 -->
     <div class="alarm-content">
       <!-- 警告项 -->
       <div class="alarm-item">
-        <div class="alarm-icon warning-icon">
-          <!-- 警告三角图标 -->
-          <svg viewBox="0 0 1024 1024" width="64" height="64">
-            <path d="M512 64L64 896h896L512 64zm0 192l128 448H384l128-448z" fill="#868686" />
-            <path d="M480 448h64v128h-64zm0 160h64v64h-64z" fill="#ffffff" />
-          </svg>
-        </div>
+        <div class="alarm-icon warning-icon"> </div>
         <div class="alarm-label">警告</div>
         <div class="alarm-count">{{ warningCount }}</div>
       </div>
 
       <!-- 异常项 -->
       <div class="alarm-item">
-        <div class="alarm-icon error-icon">
-          <!-- 异常八边形禁止图标 -->
-          <svg viewBox="0 0 1024 1024" width="64" height="64">
-            <path
-              d="M742.4 64H281.6L64 281.6v460.8L281.6 960h460.8L960 742.4V281.6L742.4 64zM512 640h-64V384h64v256z"
-              fill="#868686"
-            />
-          </svg>
-        </div>
+        <div class="alarm-icon error-icon"> </div>
         <div class="alarm-label">异常</div>
         <div class="alarm-count">{{ errorCount }}</div>
       </div>
@@ -42,7 +28,7 @@
     // 警告数量，默认值对应截图 2
     warningCount: {
       type: Number,
-      default: 2
+      default: 0
     },
     // 异常数量，默认值对应截图 0
     errorCount: {
@@ -67,7 +53,6 @@
     font-size: 20px;
     font-weight: 500;
     color: #666666;
-    margin-bottom: 48px;
   }
 
   /* 两个卡片横向布局容器 */

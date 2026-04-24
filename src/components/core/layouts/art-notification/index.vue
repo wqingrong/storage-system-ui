@@ -92,14 +92,6 @@
   import { useI18n } from 'vue-i18n'
   import AppConfig from '@/config'
 
-  // 导入头像图片
-  import avatar1 from '@/assets/img/avatar/avatar1.webp'
-  import avatar2 from '@/assets/img/avatar/avatar2.webp'
-  import avatar3 from '@/assets/img/avatar/avatar3.webp'
-  import avatar4 from '@/assets/img/avatar/avatar4.webp'
-  import avatar5 from '@/assets/img/avatar/avatar5.webp'
-  import avatar6 from '@/assets/img/avatar/avatar6.webp'
-
   defineOptions({ name: 'ArtNotification' })
 
   interface NoticeItem {
@@ -143,7 +135,7 @@
     backgroundColor: string
   }
 
-  type NoticeType = 'email' | 'message' | 'collection' | 'user' | 'notice'
+  type NoticeType = 'warning' | 'error' | 'success' | 'notice'
 
   const { t } = useI18n()
 
@@ -158,71 +150,31 @@
   const useNotificationData = () => {
     // 通知数据
     const noticeList = ref<NoticeItem[]>([
+      // 容量不足（最常见）
       {
-        title: '新增国际化',
-        time: '2024-6-13 0:10',
+        title: '存储空间 5 容量不足（剩余 3.2%），请及时清理或扩容！',
+        time: '2025-05-19 00:10',
+        type: 'warning'
+      },
+      {
+        title: '存储空间 5 容量不足（剩余 3.2%），请及时清理或扩容！',
+        time: '2025-05-19 00:10',
+        type: 'success'
+      },
+      {
+        title: '存储空间 5 容量不足（剩余 3.2%），请及时清理或扩容！',
+        time: '2025-05-19 00:10',
         type: 'notice'
       },
       {
-        title: '冷月呆呆给你发了一条消息',
-        time: '2024-4-21 8:05',
-        type: 'message'
-      },
-      {
-        title: '小肥猪关注了你',
-        time: '2020-3-17 21:12',
-        type: 'collection'
-      },
-      {
-        title: '新增使用文档',
-        time: '2024-02-14 0:20',
-        type: 'notice'
-      },
-      {
-        title: '小肥猪给你发了一封邮件',
-        time: '2024-1-20 0:15',
-        type: 'email'
-      },
-      {
-        title: '菜单mock本地真实数据',
-        time: '2024-1-17 22:06',
-        type: 'notice'
+        title: '存储空间 5 容量不足（剩余 3.2%），请及时清理或扩容！',
+        time: '2025-05-19 00:10',
+        type: 'error'
       }
     ])
 
     // 消息数据
-    const msgList = ref<MessageItem[]>([
-      {
-        title: '池不胖 关注了你',
-        time: '2021-2-26 23:50',
-        avatar: avatar1
-      },
-      {
-        title: '唐不苦 关注了你',
-        time: '2021-2-21 8:05',
-        avatar: avatar2
-      },
-      {
-        title: '中小鱼 关注了你',
-        time: '2020-1-17 21:12',
-        avatar: avatar3
-      },
-      {
-        title: '何小荷 关注了你',
-        time: '2021-01-14 0:20',
-        avatar: avatar4
-      },
-      {
-        title: '誶誶淰 关注了你',
-        time: '2020-12-20 0:15',
-        avatar: avatar5
-      },
-      {
-        title: '冷月呆呆 关注了你',
-        time: '2020-12-17 22:06',
-        avatar: avatar6
-      }
-    ])
+    const msgList = ref<MessageItem[]>([])
 
     // 待办数据
     const pendingList = ref<PendingItem[]>([])
@@ -254,30 +206,28 @@
   // 样式管理
   const useNotificationStyles = () => {
     const noticeStyleMap: Record<NoticeType, NoticeStyle> = {
-      email: {
-        icon: '&#xe72e;',
-        iconColor: 'rgb(var(--art-warning))',
-        backgroundColor: 'rgb(var(--art-bg-warning))'
-      },
-      message: {
-        icon: '&#xe747;',
+      success: {
+        icon: '&#xe688;',
         iconColor: 'rgb(var(--art-success))',
         backgroundColor: 'rgb(var(--art-bg-success))'
       },
-      collection: {
-        icon: '&#xe714;',
+      // 错误 - 红色叉号/故障（NAS掉盘、存储池离线用）
+      error: {
+        icon: '&#xe858;',
         iconColor: 'rgb(var(--art-danger))',
         backgroundColor: 'rgb(var(--art-bg-danger))'
       },
-      user: {
-        icon: '&#xe608;',
+      // 警告 - 黄色感叹号（容量不足、高温、阵列降级用）
+      warning: {
+        icon: '&#xe857;',
+        iconColor: 'rgb(var(--art-warning))',
+        backgroundColor: 'rgb(var(--art-bg-warning))'
+      },
+      // 普通通知 - 信息/铃铛（日常系统提示）
+      notice: {
+        icon: '&#xe747;',
         iconColor: 'rgb(var(--art-info))',
         backgroundColor: 'rgb(var(--art-bg-info))'
-      },
-      notice: {
-        icon: '&#xe6c2;',
-        iconColor: 'rgb(var(--art-primary))',
-        backgroundColor: 'rgb(var(--art-bg-primary))'
       }
     }
 

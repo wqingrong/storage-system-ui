@@ -71,58 +71,6 @@
             <span class="count notice-btn"></span>
           </div>
         </div>
-        <!-- 聊天 -->
-        <div class="btn-box chat-btn" v-if="shouldShowChat" @click="openChat">
-          <div class="btn chat-button">
-            <i class="iconfont-sys">&#xe89a;</i>
-            <span class="dot"></span>
-          </div>
-        </div>
-        <!-- 语言 -->
-        <div class="btn-box" v-if="shouldShowLanguage">
-          <ElDropdown @command="changeLanguage" popper-class="langDropDownStyle">
-            <div class="btn language-btn">
-              <i class="iconfont-sys">&#xe611;</i>
-            </div>
-            <template #dropdown>
-              <ElDropdownMenu>
-                <div v-for="item in languageOptions" :key="item.value" class="lang-btn-item">
-                  <ElDropdownItem
-                    :command="item.value"
-                    :class="{ 'is-selected': locale === item.value }"
-                  >
-                    <span class="menu-txt">{{ item.label }}</span>
-                    <i v-if="locale === item.value" class="iconfont-sys">&#xe621;</i>
-                  </ElDropdownItem>
-                </div>
-              </ElDropdownMenu>
-            </template>
-          </ElDropdown>
-        </div>
-        <!-- 设置 -->
-        <div class="btn-box" v-if="shouldShowSettings" @click="openSetting">
-          <ElPopover :visible="showSettingGuide" placement="bottom-start" :width="190" :offset="0">
-            <template #reference>
-              <div class="btn setting-btn">
-                <i class="iconfont-sys">&#xe6d0;</i>
-              </div>
-            </template>
-            <template #default>
-              <p
-                >{{ $t('topBar.guide.title')
-                }}<span :style="{ color: systemThemeColor }"> {{ $t('topBar.guide.theme') }} </span
-                >、 <span :style="{ color: systemThemeColor }"> {{ $t('topBar.guide.menu') }} </span
-                >{{ $t('topBar.guide.description') }}
-              </p>
-            </template>
-          </ElPopover>
-        </div>
-        <!-- 切换主题 -->
-        <div class="btn-box" v-if="shouldShowThemeToggle" @click="themeAnimation">
-          <div class="btn theme-btn">
-            <i class="iconfont-sys">{{ isDark ? '&#xe6b5;' : '&#xe725;' }}</i>
-          </div>
-        </div>
 
         <!-- 用户头像、菜单 -->
         <div class="user">
@@ -154,14 +102,6 @@
                     <i class="menu-icon iconfont-sys">&#xe734;</i>
                     <span class="menu-txt">{{ $t('topBar.user.userCenter') }}</span>
                   </li>
-                  <li @click="toDocs()">
-                    <i class="menu-icon iconfont-sys" style="font-size: 15px">&#xe828;</i>
-                    <span class="menu-txt">{{ $t('topBar.user.docs') }}</span>
-                  </li>
-                  <li @click="toGithub()">
-                    <i class="menu-icon iconfont-sys">&#xe8d6;</i>
-                    <span class="menu-txt">{{ $t('topBar.user.github') }}</span>
-                  </li>
                   <li @click="lockScreen()">
                     <i class="menu-icon iconfont-sys">&#xe817;</i>
                     <span class="menu-txt">{{ $t('topBar.user.lockScreen') }}</span>
@@ -179,26 +119,24 @@
     </div>
     <ArtWorkTab />
 
+    <!--    消息通知显示-->
     <ArtNotification v-model:value="showNotice" ref="notice" />
   </div>
 </template>
 
 <script setup lang="ts">
-  import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { ElMessageBox } from 'element-plus'
   import { useFullscreen, useWindowSize } from '@vueuse/core'
-  import { LanguageEnum, MenuTypeEnum } from '@/enums/appEnum'
   import { useSettingStore } from '@/store/modules/setting'
   import { useUserStore } from '@/store/modules/user'
   import { useMenuStore } from '@/store/modules/menu'
   import AppConfig from '@/config'
-  import { languageOptions } from '@/locales'
-  import { WEB_LINKS } from '@/utils/constants'
   import { mittBus } from '@/utils/sys'
-  import { themeAnimation } from '@/utils/theme/animation'
   import { useCommon } from '@/composables/useCommon'
   import { useHeaderBar } from '@/composables/useHeaderBar'
+  import { MenuTypeEnum } from '@/enums/appEnum'
+  import { useI18n } from 'vue-i18n'
 
   defineOptions({ name: 'ArtHeaderBar' })
 
@@ -206,7 +144,7 @@
   const isWindows = navigator.userAgent.includes('Windows')
 
   const router = useRouter()
-  const { locale, t } = useI18n()
+  const { t } = useI18n()
   const { width } = useWindowSize()
 
   const settingStore = useSettingStore()
@@ -222,17 +160,12 @@
     shouldShowGlobalSearch,
     shouldShowFullscreen,
     shouldShowNotification,
-    shouldShowChat,
-    shouldShowLanguage,
-    shouldShowSettings,
-    shouldShowThemeToggle,
     fastEnterMinWidth: headerBarFastEnterMinWidth
   } = useHeaderBar()
 
-  const { menuOpen, systemThemeColor, showSettingGuide, menuType, isDark, tabStyle } =
-    storeToRefs(settingStore)
+  const { menuOpen, menuType, tabStyle } = storeToRefs(settingStore)
 
-  const { language, getUserInfo: userInfo } = storeToRefs(userStore)
+  const { getUserInfo: userInfo } = storeToRefs(userStore)
   const { menuList } = storeToRefs(menuStore)
 
   const showNotice = ref(false)
@@ -248,7 +181,6 @@
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
 
   onMounted(() => {
-    initLanguage()
     document.addEventListener('click', bodyCloseNotice)
   })
 
@@ -276,20 +208,6 @@
    */
   const goPage = (path: string): void => {
     router.push(path)
-  }
-
-  /**
-   * 打开文档页面
-   */
-  const toDocs = (): void => {
-    window.open(WEB_LINKS.DOCS)
-  }
-
-  /**
-   * 打开 GitHub 页面
-   */
-  const toGithub = (): void => {
-    window.open(WEB_LINKS.GITHUB)
   }
 
   /**
@@ -326,36 +244,6 @@
   }
 
   /**
-   * 初始化语言设置
-   */
-  const initLanguage = (): void => {
-    locale.value = language.value
-  }
-
-  /**
-   * 切换系统语言
-   * @param {LanguageEnum} lang - 目标语言类型
-   */
-  const changeLanguage = (lang: LanguageEnum): void => {
-    if (locale.value === lang) return
-    locale.value = lang
-    userStore.setLanguage(lang)
-    reload(50)
-  }
-
-  /**
-   * 打开设置面板
-   */
-  const openSetting = (): void => {
-    mittBus.emit('openSetting')
-
-    // 隐藏设置引导提示
-    if (showSettingGuide.value) {
-      settingStore.hideSettingGuide()
-    }
-  }
-
-  /**
    * 打开全局搜索对话框
    */
   const openSearchDialog = (): void => {
@@ -385,13 +273,6 @@
    */
   const visibleNotice = (): void => {
     showNotice.value = !showNotice.value
-  }
-
-  /**
-   * 打开聊天窗口
-   */
-  const openChat = (): void => {
-    mittBus.emit('openChat')
   }
 
   /**
