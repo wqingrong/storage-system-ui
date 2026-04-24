@@ -27,11 +27,13 @@
   import type { LineDataItem } from '@/types/component/chart'
   import { websocketStore } from '@/store/modules/websocket'
   import { ref } from 'vue'
+
   defineOptions({ name: 'DiskIoStatWatch' })
 
   const wsStore = websocketStore()
-  const { on } = wsStore.getWS()
+  const { on, send } = wsStore.getWS()
   const diskList = ref<string[]>([])
+
   // 磁盘 IO 数据结构
   class DiskIoStats {
     public device: string = ''
@@ -77,70 +79,79 @@
   //  修复：必须用 ref 响应式 Map
   const diskMap = ref<Map<string, WatchDiskData>>(new Map())
   const utilsMap = ref<Map<string, number>>(new Map())
-  on('message', (data: any) => {
-    switch (data.type) {
-      case 'io_watch':
-        data.data.forEach((item: any) => {
-          const iostats = new DiskIoStats()
-          Object.assign(iostats, item)
-          // ✅ 修复：逻辑颠倒！has 存在 = 更新，不存在 = 新增
-          utilsMap.value.set(iostats.device, iostats.util)
-          if (diskMap.value.has(iostats.device)) {
-            // ============== 更新已有磁盘 ==============
-            const fieldsMap = new Map([
-              ['r_s 每秒读 IO 次数(次/秒)', 'r_s'],
-              ['w_s 每秒写 IO 次数(次/秒', 'w_s'],
-              ['r_mb_s 每秒读取量(MB/s)', 'r_mb_s'],
-              ['w_mb_s 每秒写入量(MB/s)', 'w_mb_s'],
-              ['avg_rq_sz 平均 IO 请求大小', 'avg_rq_sz'],
-              ['avg_qu_sz 平均 IO 队列长度(个)', 'avg_qu_sz'],
-              ['await 平均 IO 等待时间(ms)', 'await'],
-              ['r_await 读等待时间(ms)', 'r_await'],
-              ['w_await 写等待时间(ms)', 'w_await'],
-              ['svctm 平均服务时间(ms)', 'svctm'],
-              ['util 磁盘使用率(%)', 'util']
-            ])
-
-            const target = diskMap.value.get(iostats.device)
-            if (!target) return
-            target.chartData.forEach((chartItem) => {
-              if (fieldsMap.has(chartItem.name)) {
-                chartItem.data.push(
-                  iostats[fieldsMap.get(chartItem.name) as keyof DiskIoStats] as number
-                )
-              }
-            })
-
-            target.xAxiosData.push(iostats.time)
-          } else {
-            const watchData = new WatchDiskData()
-            watchData.device = iostats.device
-            watchData.chartData.push(
-              { name: 'r_s 每秒读 IO 次数(次/秒)', data: [iostats.r_s] },
-              { name: 'w_s 每秒写 IO 次数(次/秒', data: [iostats.w_s] },
-              { name: 'r_mb_s 每秒读取量(MB/s)', data: [iostats.r_mb_s] },
-              { name: 'w_mb_s 每秒写入量(MB/s)', data: [iostats.w_mb_s] },
-              { name: 'avg_rq_sz 平均 IO 请求大小', data: [iostats.avg_rq_sz] },
-              { name: 'avg_qu_sz 平均 IO 队列长度(个)', data: [iostats.avg_qu_sz] },
-              { name: 'await 平均 IO 等待时间(ms)', data: [iostats.await] },
-              { name: 'r_await 读等待时间(ms)', data: [iostats.r_await] },
-              { name: 'w_await 写等待时间(ms)', data: [iostats.w_await] },
-              { name: 'svctm 平均服务时间(ms)', data: [iostats.svctm] },
-              { name: 'util 磁盘使用率(%)', data: [iostats.util] }
-            )
-
-            watchData.xAxiosData.push(iostats.time)
-            diskMap.value.set(iostats.device, watchData)
-            if (!diskList.value.includes(iostats.device)) {
-              diskList.value.push(iostats.device)
-            }
-          }
-        })
-        break
-      default:
-        break
-    }
+  onMounted(() => {
+    send({ type: 'witch_disk_io', timestamp: Date.now() })
+    witchDiskIo()
   })
+  onUnmounted(() => {
+    send({ type: 'close_disk_io', timestamp: Date.now() })
+  })
+  const witchDiskIo = () => {
+    on('message', (data: any) => {
+      switch (data.type) {
+        case 'io_watch':
+          data.data.forEach((item: any) => {
+            const iostats = new DiskIoStats()
+            Object.assign(iostats, item)
+            // ✅ 修复：逻辑颠倒！has 存在 = 更新，不存在 = 新增
+            utilsMap.value.set(iostats.device, iostats.util)
+            if (diskMap.value.has(iostats.device)) {
+              // ============== 更新已有磁盘 ==============
+              const fieldsMap = new Map([
+                ['r_s 每秒读 IO 次数(次/秒)', 'r_s'],
+                ['w_s 每秒写 IO 次数(次/秒', 'w_s'],
+                ['r_mb_s 每秒读取量(MB/s)', 'r_mb_s'],
+                ['w_mb_s 每秒写入量(MB/s)', 'w_mb_s'],
+                ['avg_rq_sz 平均 IO 请求大小', 'avg_rq_sz'],
+                ['avg_qu_sz 平均 IO 队列长度(个)', 'avg_qu_sz'],
+                ['await 平均 IO 等待时间(ms)', 'await'],
+                ['r_await 读等待时间(ms)', 'r_await'],
+                ['w_await 写等待时间(ms)', 'w_await'],
+                ['svctm 平均服务时间(ms)', 'svctm'],
+                ['util 磁盘使用率(%)', 'util']
+              ])
+
+              const target = diskMap.value.get(iostats.device)
+              if (!target) return
+              target.chartData.forEach((chartItem) => {
+                if (fieldsMap.has(chartItem.name)) {
+                  chartItem.data.push(
+                    iostats[fieldsMap.get(chartItem.name) as keyof DiskIoStats] as number
+                  )
+                }
+              })
+
+              target.xAxiosData.push(iostats.time)
+            } else {
+              const watchData = new WatchDiskData()
+              watchData.device = iostats.device
+              watchData.chartData.push(
+                { name: 'r_s 每秒读 IO 次数(次/秒)', data: [iostats.r_s] },
+                { name: 'w_s 每秒写 IO 次数(次/秒', data: [iostats.w_s] },
+                { name: 'r_mb_s 每秒读取量(MB/s)', data: [iostats.r_mb_s] },
+                { name: 'w_mb_s 每秒写入量(MB/s)', data: [iostats.w_mb_s] },
+                { name: 'avg_rq_sz 平均 IO 请求大小', data: [iostats.avg_rq_sz] },
+                { name: 'avg_qu_sz 平均 IO 队列长度(个)', data: [iostats.avg_qu_sz] },
+                { name: 'await 平均 IO 等待时间(ms)', data: [iostats.await] },
+                { name: 'r_await 读等待时间(ms)', data: [iostats.r_await] },
+                { name: 'w_await 写等待时间(ms)', data: [iostats.w_await] },
+                { name: 'svctm 平均服务时间(ms)', data: [iostats.svctm] },
+                { name: 'util 磁盘使用率(%)', data: [iostats.util] }
+              )
+
+              watchData.xAxiosData.push(iostats.time)
+              diskMap.value.set(iostats.device, watchData)
+              if (!diskList.value.includes(iostats.device)) {
+                diskList.value.push(iostats.device)
+              }
+            }
+          })
+          break
+        default:
+          break
+      }
+    })
+  }
 </script>
 
 <style lang="scss" scss>
