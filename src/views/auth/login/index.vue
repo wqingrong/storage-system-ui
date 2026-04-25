@@ -106,8 +106,10 @@
   import { HttpError } from '@/utils/http/error'
   import { fetchLogin, fetchGetUserInfo } from '@/api/auth'
   import { ElNotification, type FormInstance, type FormRules } from 'element-plus'
-
+  import { aesEncrypt } from '@utils/encryption'
+  import { websocketStore } from '@/store/modules/websocket'
   defineOptions({ name: 'Login' })
+  const ws = websocketStore()
 
   const { t, locale } = useI18n()
   const formKey = ref(0)
@@ -131,23 +133,9 @@
     {
       key: 'super',
       label: t('login.roles.super'),
-      userName: 'Super',
-      password: '123456',
+      userName: 'user1',
+      password: 'Abcd1234!',
       roles: ['R_SUPER']
-    },
-    {
-      key: 'admin',
-      label: t('login.roles.admin'),
-      userName: 'Admin',
-      password: '123456',
-      roles: ['R_ADMIN']
-    },
-    {
-      key: 'user',
-      label: t('login.roles.user'),
-      userName: 'User',
-      password: '123456',
-      roles: ['R_USER']
     }
   ])
 
@@ -206,24 +194,21 @@
 
       // 登录请求
       const { username, password } = formData
-
-      const { token, refreshToken } = await fetchLogin({
+      // 给密码加密
+      let enPassword = aesEncrypt(password)
+      const { token, user } = await fetchLogin({
         userName: username,
-        password
+        password: enPassword
       })
 
-      // 验证token
-      if (!token) {
-        throw new Error('Login failed - no token received')
-      }
-
       // 存储token和用户信息
-      userStore.setToken(token, refreshToken)
+      userStore.setToken(token, '')
       const userInfo = await fetchGetUserInfo()
       userStore.setUserInfo(userInfo)
       userStore.setLoginStatus(true)
-
       // 登录成功处理
+      // 登录成功连接ws
+      ws.initGlobalWS(token)
       showLoginSuccessNotice()
       router.push('/')
     } catch (error) {

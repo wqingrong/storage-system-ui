@@ -137,7 +137,10 @@
   import { useHeaderBar } from '@/composables/useHeaderBar'
   import { MenuTypeEnum } from '@/enums/appEnum'
   import { useI18n } from 'vue-i18n'
-
+  import { fetchLogout } from '@/api/auth'
+  import { websocketStore } from '@/store/modules/websocket'
+  const wsStore = websocketStore()
+  const { disconnect } = wsStore.getWS()
   defineOptions({ name: 'ArtHeaderBar' })
 
   // 检测操作系统类型
@@ -228,7 +231,12 @@
         cancelButtonText: t('common.cancel'),
         customClass: 'login-out-dialog'
       }).then(() => {
-        userStore.logOut()
+        fetchLogout().then(() => {
+          // 关闭ws
+          disconnect()
+          wsStore.clear()
+          userStore.logOut()
+        })
       })
     }, 200)
   }

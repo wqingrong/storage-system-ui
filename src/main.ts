@@ -1,7 +1,7 @@
 import App from './App.vue'
-import { createApp } from 'vue'
-import { initStore } from './store'                 // Store
-import { initRouter } from './router'               // Router
+import {createApp} from 'vue'
+import {initStore} from './store'                 // Store
+import {initRouter} from './router'               // Router
 import language from './locales'                    // 国际化
 import '@styles/reset.scss'                         // 重置HTML样式
 import '@styles/app.scss'                           // 全局样式
@@ -13,13 +13,16 @@ import '@styles/el-dark.scss'                       // Element 暗黑主题
 import '@styles/dark.scss'                          // 系统主题
 import '@icons/system/iconfont.css'                 // 系统图标
 import '@utils/sys/console.ts'                      // 控制台输出内容
-import { setupGlobDirectives } from './directives'
-import { setupErrorHandle } from './utils/sys/error-handle'
+import {setupGlobDirectives} from './directives'
+import {setupErrorHandle} from './utils/sys/error-handle'
+import {useUserStore} from '@/store/modules/user'
+import {websocketStore} from '@/store/modules/websocket'
 
 document.addEventListener(
-  'touchstart',
-  function () {},
-  { passive: false }
+    'touchstart',
+    function () {
+    },
+    {passive: false}
 )
 
 const app = createApp(App)
@@ -27,6 +30,11 @@ initStore(app)
 initRouter(app)
 setupGlobDirectives(app)
 setupErrorHandle(app)
+const {accessToken} = useUserStore();
+if (accessToken) {
+    const ws = websocketStore()
+    ws.initGlobalWS(accessToken)
+}
 
 app.use(language)
 app.mount('#app')

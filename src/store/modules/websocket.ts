@@ -8,7 +8,7 @@ export const websocketStore = defineStore('websocket', {
 
   actions: {
     // 初始化全局 WebSocket（只调用一次）
-    initGlobalWS(userId = '0', username = 'admin') {
+    initGlobalWS(token = '') {
       if (this.instance) {
         console.log('✅ WebSocket 已存在，不再重复创建')
         return this.instance
@@ -16,7 +16,7 @@ export const websocketStore = defineStore('websocket', {
 
       // 你原来的代码 👇 完全不变
       const ws = useWebSocketDaemon({
-        url: `/ws/ws?userId=${userId}&username=${username}`,
+        url: `/ws/ws?token=${token}`,
         reconnect: true,
         reconnectInterval: 3000,
         reconnectAttempts: 10,
@@ -37,6 +37,9 @@ export const websocketStore = defineStore('websocket', {
         throw new Error('❌ 请先调用 initGlobalWS 初始化 WebSocket')
       }
       return this.instance
+    },
+    clear() {
+      this.instance = null
     }
   }
 })

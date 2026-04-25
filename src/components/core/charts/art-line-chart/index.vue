@@ -239,34 +239,36 @@
         ? getTooltipStyle('axis', {
             // 👇 核心：悬浮框自动单位换算（KB/MB/GB）
             formatter: (params: any) => {
-              let html = ``
-              params.forEach((item: any) => {
-                // 数值单位自动换算 KB → MB → GB
-                let val = item.value
-                let unit = ''
-                if (props.toolTipUnit === 'KB') {
-                  if (val >= 1024 * 1024) {
-                    val = (val / (1024 * 1024)).toFixed(1)
-                    unit = 'GB'
-                  } else if (val >= 1024) {
-                    val = (val / 1024).toFixed(1)
-                    unit = 'MB'
+              if (Array.isArray(params) && params.length > 0) {
+                let html = `<span style="flex:1">${params[0].axisValue}</span>`
+                params.forEach((item: any) => {
+                  // 数值单位自动换算 KB → MB → GB
+                  let val = item.value
+                  let unit = ''
+                  if (props.toolTipUnit === 'KB') {
+                    if (val >= 1024 * 1024) {
+                      val = (val / (1024 * 1024)).toFixed(1)
+                      unit = 'GB'
+                    } else if (val >= 1024) {
+                      val = (val / 1024).toFixed(1)
+                      unit = 'MB'
+                    } else {
+                      unit = 'KB'
+                    }
                   } else {
-                    unit = 'KB'
+                    // 普通单位
+                    unit = props.toolTipUnit || ''
                   }
-                } else {
-                  // 普通单位
-                  unit = props.toolTipUnit || ''
-                }
-                html += `
+                  html += `
             <div style="display:flex;align-items:center;margin-top:4px">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color};margin-right:6px"></span>
               <span style="flex:1">${item.seriesName}</span>
               <span style="font-weight:bold">${val}${unit}</span>
             </div>
           `
-              })
-              return html
+                })
+                return html
+              }
             }
           })
         : undefined,

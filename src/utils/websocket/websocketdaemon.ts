@@ -33,7 +33,7 @@ interface QueuedMessage {
 }
 
 // WebSocket Daemon 类
-class WebSocketDaemon {
+export class WebSocketDaemon {
   private url: string
   private ws: WebSocket | null = null
   private reconnect: boolean
