@@ -49,3 +49,10 @@ export function fetchPoolKickDisk(data: any) {
     data
   })
 }
+// 引入磁盘
+export function fetchPoolImportDisk(data: any) {
+  return request.post<any>({
+    url: 'storage/poolImportDisk',
+    data
+  })
+}

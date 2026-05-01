@@ -135,15 +135,28 @@
                     </span>
                     <template #dropdown>
                       <el-dropdown-menu>
-                        <el-dropdown-item @click="handleKickDisk(item, scope.row)"
+                        <el-dropdown-item
+                          v-if="scope.row.diskStatus === 'active sync'"
+                          @click="handleKickDisk(item, scope.row)"
                           >踢盘
                         </el-dropdown-item>
-                        <el-dropdown-item @click="handleDiskOrientation(item, scope.row)"
+                        <el-dropdown-item
+                          v-if="scope.row.diskStatus === 'active sync'"
+                          @click="handleDiskOrientation(item, scope.row)"
                           >定位
                         </el-dropdown-item>
 
-                        <el-dropdown-item divided @click="handleDiskDetail(item, scope.row)"
+                        <el-dropdown-item
+                          v-if="scope.row.diskStatus === 'active sync'"
+                          divided
+                          @click="handleDiskDetail(item, scope.row)"
                           >详情
+                        </el-dropdown-item>
+                        <el-dropdown-item
+                          v-if="scope.row.diskStatus === 'removed'"
+                          divided
+                          @click="importDisk(item, scope.row)"
+                          >引入
                         </el-dropdown-item>
                       </el-dropdown-menu>
                     </template>
@@ -261,6 +274,11 @@
       @show="onMenuShow"
       @hide="onMenuHide"
     />
+    <disk-selected-dialog
+      v-model:viable="diskDialogVisible"
+      v-model:pool-item="optionPoolItem"
+      @refresh-storage-list="refreshStorageSpaceData"
+    />
   </div>
 </template>
 
@@ -287,9 +305,11 @@
   } from '@/api/storage-service'
   import { Api } from '@/typings/api'
   import { getStoragePoolStatus } from '@utils/tools'
+  import DiskSelectedDialog from '@views/storage-system/storage-manager/storage-space/modules/disk-selected-dialog.vue'
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
-
+  const diskDialogVisible = ref(false)
+  const optionPoolItem = ref<Disk.Device.StoragePool>({})
   const getStorageSpaceStatusImage = (status: string) => {
     if (status) {
       return new URL('/src/assets/img/svg/storage-space.svg', import.meta.url).href
@@ -575,6 +595,13 @@
   const handleDiskDetail = (poolItem: any, row: any) => {
     console.log('查看详情：', row)
     console.log('item>>', poolItem)
+  }
+
+  // 重新引入硬盘
+  const importDisk = (poolItem: any, row: any) => {
+    optionPoolItem.value = poolItem
+    diskDialogVisible.value = true
+    console.log('row,', row)
   }
 </script>
 <style scoped>
