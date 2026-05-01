@@ -11,6 +11,7 @@ declare namespace Disk {
       device: string
       devicePath: string
       format: boolean
+      raidNumber: number
     }
 
     interface DiskDeviceDetail {

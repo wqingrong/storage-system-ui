@@ -42,3 +42,10 @@ export function fetchDestroyZPool(data: Api.Dto.DestroyZPool) {
     data
   })
 }
+// 踢盘
+export function fetchPoolKickDisk(data: any) {
+  return request.post<any>({
+    url: 'storage/poolKickDisk',
+    data
+  })
+}

@@ -113,7 +113,12 @@
               style="width: 100%"
               @current-change="handleCurrentChange"
             >
-              <el-table-column property="orderNumber" label="RAID顺序" />
+              <el-table-column
+                property="orderNumber"
+                label="RAID顺序"
+                width="100"
+                min-width="100"
+              />
               <el-table-column property="device" label="盘符" width="120" />
               <el-table-column property="model" label="硬盘类型" width="120" />
               <el-table-column property="serialNumber" label="序列号" />
@@ -121,6 +126,30 @@
               <el-table-column property="use" label="用途" />
               <el-table-column property="healthStatus" label="健康状态" />
               <el-table-column property="diskStatus" label="硬盘状态" />
+              <!-- 新增：操作列 -->
+              <el-table-column label="操作" width="120" align="center">
+                <template #default="scope">
+                  <el-dropdown trigger="click">
+                    <span class="el-dropdown-link" style="cursor: pointer">
+                      操作 <i class="el-icon-arrow-down el-icon--right"></i>
+                    </span>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item @click="handleKickDisk(item, scope.row)"
+                          >踢盘
+                        </el-dropdown-item>
+                        <el-dropdown-item @click="handleDiskOrientation(item, scope.row)"
+                          >定位
+                        </el-dropdown-item>
+
+                        <el-dropdown-item divided @click="handleDiskDetail(item, scope.row)"
+                          >详情
+                        </el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                </template>
+              </el-table-column>
             </el-table>
           </div>
         </div>
@@ -251,6 +280,7 @@
     fetchDestroySoftRaid,
     fetchDestroyZPool,
     fetchImportZPool,
+    fetchPoolKickDisk,
     fetchReloadSoftRaid,
     fetchStopSoftRaid,
     fetchStopZPool
@@ -509,6 +539,42 @@
    */
   const onMenuHide = () => {
     console.log('菜单隐藏')
+  }
+
+  interface PoolKickDiskParams {
+    poolName: string
+    poolType: string
+    grade: string
+    diskDevice: string
+    raidDevice: string
+    serialNumber: string
+  }
+  // 踢盘
+  const handleKickDisk = (poolItem: any, row: any) => {
+    // 在这里写你的编辑逻辑
+    const params: PoolKickDiskParams = {
+      poolName: poolItem.poolName,
+      poolType: poolItem.poolType,
+      grade: poolItem.raidDetailInfo.grade,
+      diskDevice: row.devicePath,
+      raidDevice: poolItem.raidDetailInfo.devicePath,
+      serialNumber: row.serialNumber
+    }
+    fetchPoolKickDisk(params).then(() => {
+      refreshStorageSpaceData()
+    })
+  }
+
+  // 定位
+  const handleDiskOrientation = (poolItem: any, row: any) => {
+    console.log('删除当前行数据：', row)
+    console.log('item>>', poolItem)
+  }
+
+  // 查看详情
+  const handleDiskDetail = (poolItem: any, row: any) => {
+    console.log('查看详情：', row)
+    console.log('item>>', poolItem)
   }
 </script>
 <style scoped>
