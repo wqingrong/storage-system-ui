@@ -62,38 +62,6 @@
           </div>
           <div class="detail-item">
             <div class="detail-label">
-              <span>健康状态:</span>
-            </div>
-            <div class="detail-value">
-              <span v-if="item.healthStatus === HealthStatus.OK" class="detail-value status-good"
-                >良好</span
-              >
-              <span
-                v-else-if="item.healthStatus === HealthStatus.WARNING"
-                class="detail-value status-warning"
-                >异常</span
-              >
-              <span v-else class="detail-value status-bad">故障</span>
-            </div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">
-              <span>温度:</span>
-            </div>
-            <div class="detail-value">
-              <span>{{ item.temperature }}</span>
-            </div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">
-              <span>硬盘操作:</span>
-            </div>
-            <div class="detail-value">
-              <span>--</span>
-            </div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">
               <span>序列号:</span>
             </div>
             <div class="detail-value">
@@ -106,6 +74,55 @@
             </div>
             <div class="detail-value">
               <span>{{ item.interfaceType }}</span>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">
+              <span>健康状态:</span>
+            </div>
+            <div class="detail-value">
+              <span v-if="item.healthStatus === HealthStatus.OK" class="detail-value status-good"
+                >良好</span
+              >
+              <span
+                v-else-if="item.healthStatus === HealthStatus.WARNING"
+                class="detail-value status-warning"
+                >异常</span
+              >
+              <span
+                v-else-if="item.healthStatus === HealthStatus.BAD"
+                class="detail-value status-warning"
+                >异常</span
+              >
+              <span
+                v-else-if="item.healthStatus === HealthStatus.UNKNOWN"
+                class="detail-value status-bad"
+                >未检测</span
+              >
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">
+              <span>健康值:</span>
+            </div>
+            <div class="detail-value">
+              <span>{{ item.healthValue }}</span>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">
+              <span>温度:</span>
+            </div>
+            <div class="detail-value">
+              <span>{{ item.temperature }}</span>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">
+              <span>运行天数:</span>
+            </div>
+            <div class="detail-value">
+              <span>{{ item.runningTime }}</span>
             </div>
           </div>
         </div>

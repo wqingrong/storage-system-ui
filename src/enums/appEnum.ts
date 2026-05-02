@@ -58,9 +58,9 @@ export enum BgColorEnum {
 // 磁盘的健康状态
 export enum HealthStatus {
   OK = 'OK', // 良好
-  WARNING = 'warning', // 警告
-  BAD = 'bad', // 故障
-  UNKNOWN = 'unknown' // 未知
+  WARNING = 'Earning', // 警告
+  BAD = 'Bad', // 故障
+  UNKNOWN = 'Unknown' // 未知
 }
 
 export enum PoolStatus {

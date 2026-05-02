@@ -25,6 +25,8 @@ declare namespace Disk {
       use: string // 磁盘的用途
       healthStatus: HealthStatus // 磁盘的健康状态（使用枚举类型）
       temperature: string // 温度
+      healthValue: string
+      runningTime: string
     }
 
     type DiskDeviceList = Api.Common.PaginatedResponse<DiskDeviceDetail>
