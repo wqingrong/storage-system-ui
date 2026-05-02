@@ -33,6 +33,19 @@
                 <span>未分配</span>
               </div>
             </div>
+            <div class="item" style="display: flex; align-items: center">
+              <img
+                v-if="getStoragePoolStatus(item.poolStatus).status !== 'OK'"
+                style="width: 40px"
+                src="@/assets/img/svg/dashboard-warning.svg"
+              />
+              <div class="content">
+                <p :style="{ color: getStoragePoolStatus(item.poolStatus).color }">{{
+                  getStoragePoolStatus(item.poolStatus).statusTxt
+                }}</p>
+                <span>状态</span>
+              </div>
+            </div>
           </div>
         </div>
       </ElCol>
@@ -46,6 +59,7 @@
             :free-size="volume.freeSize"
             :total-size="volume.spaceSize"
             :precent="volume.useRatio"
+            :file-system="volume.fileSystem"
           />
         </div>
       </ElCol>
@@ -57,6 +71,7 @@
   import { ref } from 'vue'
   import { Disk } from '@/typings/disk'
   import { fetchGetStoragePoolList } from '@/api/system-manage'
+  import { getStoragePoolStatus } from '@utils/tools'
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
 
   onMounted(() => {

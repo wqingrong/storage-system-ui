@@ -18,25 +18,25 @@ export const dashboardRoutes: AppRouteRecord = {
         title: '基本信息',
         keepAlive: false
       }
-    },
-    {
-      path: 'basic-console',
-      name: 'BasicConsole',
-      component: '/storage-system/dashboard/console',
-      meta: {
-        title: '设备信息',
-        keepAlive: false,
-        fixedTab: true
-      }
-    },
-    {
-      path: 'basic-analysis',
-      name: 'BasicAnalysis',
-      component: '/storage-system/dashboard/analysis',
-      meta: {
-        title: 'menus.dashboard.analysis',
-        keepAlive: false
-      }
     }
+    // {
+    //   path: 'basic-console',
+    //   name: 'BasicConsole',
+    //   component: '/storage-system/dashboard/console',
+    //   meta: {
+    //     title: '设备信息',
+    //     keepAlive: false,
+    //     fixedTab: true
+    //   }
+    // },
+    // {
+    //   path: 'basic-analysis',
+    //   name: 'BasicAnalysis',
+    //   component: '/storage-system/dashboard/analysis',
+    //   meta: {
+    //     title: 'menus.dashboard.analysis',
+    //     keepAlive: false
+    //   }
+    // }
   ]
 }

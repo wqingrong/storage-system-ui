@@ -69,6 +69,7 @@ export function getStoragePoolStatus(status: string) {
     return {
       imageUrl: new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href,
       statusTxt: '正常',
+      status: 'OK',
       color: '#4caf50'
     }
   } else if (status === PoolStatus.POOL_STATUS_SYNC) {

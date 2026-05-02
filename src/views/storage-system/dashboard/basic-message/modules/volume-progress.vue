@@ -19,6 +19,10 @@
     <!-- 容量详情文字 -->
     <div class="volume-info">
       <div class="info-item">
+        <span>文件系统：</span>
+        <span>{{ fileSystem }}</span>
+      </div>
+      <div class="info-item">
         <span>总容量：</span>
         <span>{{ totalSize }}</span>
       </div>
@@ -40,6 +44,7 @@
     precent: number
     totalSize: string
     freeSize: string
+    fileSystem: string
   }
 
   const props = defineProps<Props>()

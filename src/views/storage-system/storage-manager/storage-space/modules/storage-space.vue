@@ -267,7 +267,6 @@
     <ArtMenuRight
       ref="menuRef"
       :menu-items="menuItems"
-      :menu-width="180"
       :submenu-width="140"
       :border-radius="10"
       @select="handleSelect"
