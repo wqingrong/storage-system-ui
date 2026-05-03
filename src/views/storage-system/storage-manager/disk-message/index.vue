@@ -1,61 +1,66 @@
-<!-- 高级表格能力展示 -->
-<!-- 实际开发中根据需求选择使用哪些功能，可参考功能示例下面的最小化示例进行开发 -->
 <template>
-  <div class="advanced-table-demo">
+  <div class="art-full-height">
     <!-- 表格区域 -->
-    <ElCard class="art-table-card" shadow="never" style="margin-top: 0">
-      <template #header>
-        <div class="table-header-wrapper">
-          <h4>磁盘列表</h4>
-          <div class="table-info">
-            <ElTag v-if="error" type="danger">{{ error.message }}</ElTag>
-            <ElTag v-else-if="loading" type="warning">加载中...</ElTag>
-            <ElTag v-else type="success">{{ data.length }} 条数据</ElTag>
-          </div>
-        </div>
-      </template>
+    <div class="tree-container">
+      <div class="right-content art-full-height" style="margin-bottom: 40px">
+        <ElCard class="art-table-card" shadow="never" style="margin-top: 0">
+          <template #header>
+            <div class="table-header-wrapper">
+              <h4>磁盘列表</h4>
+              <div class="table-info">
+                <ElTag v-if="error" type="danger">{{ error.message }}</ElTag>
+                <ElTag v-else-if="loading" type="warning">加载中...</ElTag>
+                <ElTag v-else type="success">{{ data.length }} 条数据</ElTag>
+              </div>
+            </div>
+          </template>
 
-      <!-- 表格工具栏 -->
-      <!-- fullClass 属性用于设置全屏区域，如果需要设置全屏区域，请使用此属性 -->
-      <ArtTableHeader
-        v-model:columns="columnChecks"
-        :loading="loading"
-        @refresh="handleRefresh"
-        layout="refresh,size,fullscreen,columns,settings"
-        fullClass="art-table-card"
-      >
-        <template #left>
-          <ElButton @click="handleBatchFormat" :disabled="selectedRows.length === 0" v-ripple>
-            <ElIcon>
-              <Delete />
-            </ElIcon>
-            批量格式化 ({{ selectedRows.length }})
-          </ElButton>
-        </template>
-      </ArtTableHeader>
+          <!-- 表格工具栏 -->
+          <!-- fullClass 属性用于设置全屏区域，如果需要设置全屏区域，请使用此属性 -->
+          <ArtTableHeader
+            v-model:columns="columnChecks"
+            :loading="loading"
+            @refresh="handleRefresh"
+            layout="refresh,size,fullscreen,columns,settings"
+            fullClass="art-table-card"
+          >
+            <template #left>
+              <ElButton @click="handleBatchFormat" :disabled="selectedRows.length === 0" v-ripple>
+                <ElIcon>
+                  <Delete />
+                </ElIcon>
+                批量格式化 ({{ selectedRows.length }})
+              </ElButton>
+            </template>
+          </ArtTableHeader>
 
-      <ArtTable
-        ref="tableRef"
-        :loading="loading"
-        :pagination="pagination"
-        :data="data"
-        :columns="columns"
-        empty-height="360px"
-        @selection-change="handleSelectionChange"
-        @row-click="handleRowClick"
-        @header-click="handleHeaderClick"
-        @sort-change="handleSortChange"
-        @pagination:size-change="handleSizeChange"
-        @pagination:current-change="handleCurrentChange"
-      >
-        <template #operation="{ row }">
-          <div class="operation-buttons">
-            <ArtButtonTable type="view" :row="row" @click="handleView(row)" />
-            <ArtButtonTable v-if="row.format" type="delete" :row="row" @click="handleFormat(row)" />
-          </div>
-        </template>
-      </ArtTable>
-    </ElCard>
+          <ArtTable
+            :loading="loading"
+            :pagination="pagination"
+            :data="data"
+            :columns="columns"
+            @selection-change="handleSelectionChange"
+            @row-click="handleRowClick"
+            @header-click="handleHeaderClick"
+            @sort-change="handleSortChange"
+            @pagination:size-change="handleSizeChange"
+            @pagination:current-change="handleCurrentChange"
+          >
+            <template #operation="{ row }">
+              <div class="operation-buttons">
+                <ArtButtonTable type="view" :row="row" @click="handleView(row)" />
+                <ArtButtonTable
+                  v-if="row.format"
+                  type="delete"
+                  :row="row"
+                  @click="handleFormat(row)"
+                />
+              </div>
+            </template>
+          </ArtTable>
+        </ElCard>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -308,333 +313,41 @@
 </script>
 
 <style lang="scss" scoped>
-  .advanced-table-demo {
+  .tree-container {
+    box-sizing: border-box;
     display: flex;
-    flex-direction: column;
     gap: 16px;
-    padding-bottom: 20px;
+    height: 100%;
 
-    .intro-card {
-      .intro-header {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: center;
-        justify-content: space-between;
+    .left-sidebar {
+      flex-shrink: 0;
+      width: 230px;
+      height: 100%;
+    }
 
-        h3 {
-          margin: 0;
-        }
-
-        .intro-badges {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-      }
-
-      .intro-content {
-        .intro-text {
-          margin: 0 0 16px;
-          line-height: 1.6;
-          color: var(--el-text-color-regular);
-        }
-
-        .debug-panel {
-          margin: 16px 0;
-
-          .debug-info {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-
-            .stat-item {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-
-              .label {
-                font-weight: 500;
-                color: var(--el-text-color-regular);
-              }
-
-              .value {
-                font-weight: 600;
-                color: var(--el-color-primary);
-              }
-            }
-
-            .debug-actions {
-              display: flex;
-              gap: 8px;
-              margin-top: 8px;
-            }
-          }
-        }
-
-        .feature-toggles {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-          margin-top: 16px;
-        }
-      }
+    .right-content {
+      flex-grow: 1;
+      min-width: 0;
+      height: 100%;
     }
 
     .art-table-card {
-      flex: 1;
-
-      .table-header-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-
-        h4 {
-          margin: 0;
-        }
-
-        .table-info {
-          display: flex;
-          gap: 8px;
-        }
-      }
-
-      .user-info {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-
-        .el-avatar {
-          flex-shrink: 0;
-          width: 40px !important;
-          height: 40px !important;
-
-          img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-          }
-        }
-
-        .user-details {
-          flex: 1;
-          min-width: 0;
-
-          .user-name {
-            margin: 0;
-            overflow: hidden;
-            font-weight: 500;
-            color: var(--el-text-color-primary);
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-
-          .user-email {
-            margin: 4px 0 0;
-            overflow: hidden;
-            font-size: 12px;
-            color: var(--el-text-color-regular);
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-        }
-      }
-
-      .operation-buttons {
-        display: flex;
-      }
-
-      .custom-header {
-        display: inline-block;
-        gap: 4px;
-        align-items: center;
-        color: var(--el-color-primary);
-        cursor: pointer;
-
-        &:hover {
-          color: var(--el-color-primary-light-3);
-        }
-      }
-    }
-
-    .advanced-features-card {
-      .feature-demo-section {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-
-        .demo-group {
-          padding: 16px;
-          background: var(--el-bg-color-page);
-          border: 1px solid var(--el-border-color-lighter);
-          border-radius: 8px;
-
-          h5 {
-            margin: 0 0 16px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--el-text-color-primary);
-          }
-
-          .demo-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 12px;
-
-            &:last-child {
-              margin-bottom: 0;
-            }
-          }
-
-          .config-toggles {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 12px;
-
-            .el-switch {
-              --el-switch-on-color: var(--el-color-primary);
-            }
-          }
-
-          .event-logs {
-            padding: 12px;
-            margin-top: 12px;
-            background: var(--el-bg-color-page);
-            border: 1px solid var(--el-border-color-light);
-            border-radius: 6px;
-
-            .log-header {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              margin-bottom: 8px;
-              font-weight: 500;
-              color: var(--el-text-color-regular);
-            }
-
-            .log-list {
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-              max-height: 200px;
-              overflow-y: auto;
-
-              .log-item {
-                display: flex;
-                gap: 8px;
-                align-items: center;
-                padding: 6px 8px;
-                font-size: 12px;
-                background: var(--el-bg-color);
-                border-left: 3px solid var(--el-border-color);
-                border-radius: 4px;
-
-                .log-message {
-                  flex: 1;
-                  color: var(--el-text-color-regular);
-                }
-
-                .log-time {
-                  font-size: 11px;
-                  color: var(--el-text-color-placeholder);
-                }
-              }
-            }
-          }
-
-          .performance-info {
-            margin-top: 12px;
-
-            .el-alert {
-              --el-alert-padding: 12px;
-            }
-          }
-        }
-      }
-    }
-
-    .refresh-demo-card {
-      .refresh-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-    }
-  }
-
-  // 响应式设计
-  @media (width <= 768px) {
-    .advanced-table-demo {
-      .intro-card .intro-header {
-        flex-direction: column;
-        align-items: flex-start;
-
-        .intro-badges {
-          width: 100%;
-        }
-      }
-
-      .refresh-demo-card .refresh-buttons {
-        flex-direction: column;
-      }
-    }
-  }
-
-  .request-params {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    .params-display {
-      max-height: 200px;
-      padding: 8px;
-      overflow-y: auto;
-      font-size: 12px;
-      background: var(--el-bg-color-page);
-      border: 1px solid var(--el-border-color-light);
-      border-radius: 6px;
-    }
-  }
-
-  .logs-container {
-    max-height: 200px;
-    overflow-y: auto;
-
-    .empty-logs {
-      padding: 20px;
-      text-align: center;
-    }
-
-    .log-list {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      height: 100%;
+    }
+  }
 
-      .log-item {
-        padding: 6px 8px;
-        font-size: 12px;
-        line-height: 1.4;
-        background: var(--el-bg-color-page);
-        border-left: 3px solid var(--el-border-color);
-        border-radius: 4px;
+  @media screen and (max-width: $device-ipad) {
+    .tree-container {
+      display: block;
+      gap: 0;
+      height: auto;
 
-        &.log-success {
-          background: rgb(103 194 58 / 10%);
-          border-left-color: var(--el-color-success);
-        }
-
-        &.log-cache {
-          background: rgb(64 158 255 / 10%);
-          border-left-color: var(--el-color-primary);
-        }
-
-        &.log-error {
-          background: rgb(245 108 108 / 10%);
-          border-left-color: var(--el-color-danger);
-        }
+      .left-sidebar {
+        width: 100%;
+        height: auto;
+        margin-bottom: 20px;
       }
     }
   }
