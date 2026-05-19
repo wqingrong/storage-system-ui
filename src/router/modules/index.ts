@@ -5,6 +5,7 @@ import { usersManager } from './users-manager'
 import { systemManagerRoutes } from '@/router/modules/system-manager'
 import { storageManager } from '@/router/modules/storage-manager'
 import { fileManager } from '@/router/modules/file-manager'
+import { SafetyProtection } from '@/router/modules/safety_protection'
 // import { templateRoutes } from '@/router/modules/template'
 // import { widgetsRoutes } from '@/router/modules/widgets'
 // import { examplesRoutes } from '@/router/modules/examples'
@@ -19,5 +20,6 @@ export const routeModules: AppRouteRecord[] = [
   usersManager,
   storageManager,
   fileManager,
+  SafetyProtection,
   systemManagerRoutes
 ]
