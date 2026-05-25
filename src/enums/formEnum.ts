@@ -35,3 +35,15 @@ export enum ZFSPoolGrade {
 export const REGULAR = {
   CREATE_DIR: /^[\u4e00-\u9fa5a-zA-Z0-9_.\- ]+$/
 } as const
+
+//  文件列表的排序字段
+export enum FileStoryField {
+  NAME = 1,
+  SIZE = 2,
+  MODIFY_TIME = 3
+}
+
+export enum SortType {
+  ASC = 'asc',
+  DESC = 'desc'
+}
