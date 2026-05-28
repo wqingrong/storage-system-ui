@@ -4,36 +4,37 @@
       <div class="left-sidebar">
         <ElCard class="art-table-card" shadow="never" style="margin-top: 0">
           <template #header>
-            <b>分类树</b>
+            <b>File Station</b>
           </template>
-          <ElScrollbar>
-            <ElTree
-              :data="treeData"
-              :props="treeProps"
-              node-key="id"
-              default-expand-all
-              highlight-current
-              @node-click="handleNodeClick"
-            />
+          <ElScrollbar style="width: 100%; overflow-x: auto">
+            <div style="min-width: 300px; width: max-content">
+              <ElTree
+                ref="treeRef"
+                :data="treeData"
+                :props="treeProps"
+                node-key="id"
+                default-expand-all
+                highlight-current
+                @node-click="handleNodeClick"
+              >
+                <template #default="{ node }">
+                  <ThemeSvg :src="folder" style="width: 18px; height: 18px" />
+                  {{ node.label }}
+                </template>
+              </ElTree>
+            </div>
           </ElScrollbar>
         </ElCard>
       </div>
 
       <div class="right-content art-full-height">
-        <UserSearch v-model="defaultFilter" />
-
         <ElCard class="art-table-card" shadow="never">
-          <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
-            <template #left>
-              <ElSpace wrap>
-                <ElButton @click="showButtons = !showButtons" v-ripple type="primary" plain
-                  >{{ showButtons ? '收起' : '展开' }}按钮组</ElButton
-                >
-                <ElButton v-show="showButtons" v-ripple v-for="value in 12" :key="value"
-                  >表格自适应</ElButton
-                >
-              </ElSpace>
-            </template>
+          <ArtTableHeader
+            v-model:columns="columnChecks"
+            :loading="loading"
+            @refresh="refreshData"
+            layout="search, refresh, size, fullscreen, columns"
+          >
           </ArtTableHeader>
 
           <ArtTable
@@ -41,7 +42,10 @@
             :loading="loading"
             :data="data"
             :columns="columns"
+            :border="false"
             :pagination="pagination"
+            @sort-change="handleSortChange"
+            @row-dblclick="dbClickWorkSpaceFile"
             @pagination:size-change="handleSizeChange"
             @pagination:current-change="handleCurrentChange"
           >
@@ -54,22 +58,30 @@
 
 <script setup lang="ts">
   import { useTable } from '@/composables/useTable'
-  import { fetchGetUserList } from '@/api/system-manage'
-  import UserSearch from '@views/system/user/modules/user-search.vue'
-  import { fetchGetDirInfoList, fetchGetStoragePathList } from '@/api/file-station-service'
+  import { ref, onMounted } from 'vue' // 加入 nextTick
+  import {
+    fetchGetDirInfoList,
+    fetchGetFileInfoList,
+    fetchGetStoragePathList
+  } from '@/api/file-station-service'
   import { FileStoryField, SortType } from '@/enums/formEnum'
+  import folder from '@imgs/svg/folder.svg'
+  import { ElIcon } from 'element-plus'
+  import { Folder, Document } from '@element-plus/icons-vue'
 
   defineOptions({ name: 'TreeTable' })
 
-  const showButtons = ref(false)
-
   interface FileListParams {
     path: string
-    pageSize: number
-    currentPage: number
     sortField: number
     sortType: string
   }
+
+  const workSpaceFileInfoParams = ref<FileListParams>({
+    path: '',
+    sortField: 1,
+    sortType: SortType.ASC
+  })
 
   class FileInfo {
     id: string
@@ -82,6 +94,7 @@
     permission: string
     modifyTime: string
     children: any
+    extension: string
 
     // 构造函数：new 时自动初始化所有字段
     constructor(
@@ -94,6 +107,7 @@
       groupName: string = '',
       permission: string = '',
       modifyTime: string = '',
+      extension: string = '',
       children: any = []
     ) {
       this.id = id
@@ -106,10 +120,29 @@
       this.permission = permission
       this.modifyTime = modifyTime
       this.children = children
+      this.extension = extension
     }
   }
   const treeData = ref([])
+  const treeRef = ref() // 加这行
 
+  const loadNodeChildren = async (node: FileInfo) => {
+    if (node.children && node.children.length > 0) return
+
+    const res = await fetchGetDirInfoList({
+      path: node.path,
+      size: 1,
+      current: 1,
+      sortField: FileStoryField.NAME,
+      sortType: SortType.ASC
+    })
+
+    if (res.records) {
+      node.children = res.records.map((item: FileInfo) => {
+        return { ...new FileInfo(), ...item }
+      })
+    }
+  }
   //  加载顶层的列表名称
   const loadingRootPath = () => {
     fetchGetStoragePathList().then((res) => {
@@ -128,27 +161,67 @@
     label: 'name'
   }
 
-  const handleNodeClick = (data: any) => {
-    if (data.children.length > 0) return
-    fetchGetDirInfoList({
-      path: data.path,
-      pageSize: 1,
-      currentPage: 1,
-      sortField: FileStoryField.NAME,
-      sortType: SortType.ASC
-    }).then((res) => {
-      if (res.fileInfoList) {
-        data.children = res.fileInfoList.map((item: any) => {
-          return { ...new FileInfo(), ...item }
-        })
-      }
-    })
+  const handleNodeClick = async (data: any) => {
+    // 节流...
+    Object.assign(searchParams, { path: data.path })
+    await refreshData()
+    await loadNodeChildren(data)
   }
 
-  // 表单搜索初始值
-  const defaultFilter = ref({
-    name: undefined
-  })
+  const dbClickWorkSpaceFile = async (row: FileInfo) => {
+    if (!row.isDir) return
+    let targetNode = treeRef.value.getNode(row.id)
+
+    if (targetNode) {
+      await handleNodeClick(targetNode.data)
+      treeRef.value.setCurrentKey(targetNode.data.id, true)
+      scrollToTreeNode(targetNode.data.id)
+      targetNode.expand()
+    }
+  }
+
+  // 滚动到指定区域
+  const scrollToTreeNode = (nodeId: string) => {
+    // 获取树节点对应的 DOM 元素
+    const nodeElement = document.querySelector(`[data-key="${nodeId}"]`)
+    if (nodeElement) {
+      nodeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      })
+    }
+  }
+
+  // 监听排序字段的变化
+  const handleSortChange = (field: any) => {
+    console.log(field)
+    const sortParams = { sortField: FileStoryField.NAME, sortType: SortType.ASC }
+    switch (field.prop) {
+      case 'name':
+        sortParams.sortField = FileStoryField.NAME
+        break
+      case 'size':
+        sortParams.sortField = FileStoryField.SIZE
+        break
+      case 'modifyTime':
+        sortParams.sortField = FileStoryField.MODIFY_TIME
+        break
+      default:
+        break
+    }
+    if (field.order) {
+      if (field.order === 'ascending') {
+        sortParams.sortType = SortType.ASC
+      }
+      if (field.order === 'descending') {
+        sortParams.sortType = SortType.DESC
+        console.log('Desc')
+      }
+    }
+    Object.assign(searchParams, sortParams)
+    console.log('searchParams', searchParams)
+    refreshData()
+  }
 
   const {
     data,
@@ -157,40 +230,62 @@
     loading,
     pagination,
     refreshData,
+    searchParams,
     handleSizeChange,
     handleCurrentChange
   } = useTable({
     core: {
-      // apiFn: fetchGetUserList,
+      apiFn: fetchGetFileInfoList,
       apiParams: {
         current: 1,
         size: 20,
-        userName: '',
-        userPhone: '',
-        userEmail: ''
+        ...workSpaceFileInfoParams.value
       },
       columnsFactory: () => [
         {
-          prop: 'id',
-          label: 'ID'
+          prop: 'name',
+          label: '文件名',
+          sortable: 'custom',
+          formatter: (row: any) => {
+            // 判断是文件夹还是文件
+            const isFolder = row.isDir
+            const iconColor = isFolder ? '#E6A23C' : '#909399'
+            const iconName = isFolder ? Folder : Document
+
+            return h('div', { style: 'display: flex; align-items: center; gap: 6px;' }, [
+              // 图标
+              h(
+                ElIcon,
+                {
+                  color: iconColor,
+                  style: 'width: 18px; height: 18px;font-size:18px'
+                },
+                () => h(iconName)
+              ),
+
+              // 文件名
+              h('span', {}, row.name)
+            ])
+          }
         },
         {
-          prop: 'nickName',
-          label: '昵称'
+          prop: 'extension',
+          label: '类型',
+          formatter: (row: any) => (row.isDir ? '文件夹' : row.extension)
         },
         {
-          prop: 'userGender',
-          label: '性别',
-          sortable: true,
-          formatter: (row) => row.userGender || '未知'
+          prop: 'permission',
+          label: '权限'
         },
         {
-          prop: 'userPhone',
-          label: '手机号'
+          prop: 'size',
+          label: '大小',
+          sortable: 'custom'
         },
         {
-          prop: 'userEmail',
-          label: '邮箱'
+          prop: 'modifyTime',
+          label: '修改时间',
+          sortable: 'custom'
         }
       ]
     }
@@ -206,8 +301,15 @@
 
     .left-sidebar {
       flex-shrink: 0;
-      width: 230px;
+      width: 300px;
+      max-width: 800px;
       height: 100%;
+      overflow: hidden; /* 重要 */
+    }
+
+    /* 让树节点不自动换行，才能横向滚动 */
+    :deep(.el-tree-node__content) {
+      white-space: nowrap;
     }
 
     .right-content {
