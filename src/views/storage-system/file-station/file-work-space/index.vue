@@ -15,7 +15,7 @@
                 node-key="id"
                 default-expand-all
                 highlight-current
-                @node-click="handleNodeClick"
+                @node-click="(treeNode) => handleNodeClick(treeNode, true)"
               >
                 <template #default="{ node }">
                   <ThemeSvg :src="folder" style="width: 18px; height: 18px" />
@@ -29,12 +29,47 @@
 
       <div class="right-content art-full-height">
         <ElCard class="art-table-card" shadow="never">
+          <div class="menu-container" style="margin-bottom: 10px">
+            <ElSpace wrap>
+              <ElButton @click="handleNewDirectory">新建文件夹</ElButton>
+              <ElButton @click="handleRenameFileInfo" :disabled="selectionFileInfoRows.length !== 1"
+                >重命名</ElButton
+              >
+              <ElButton
+                @click="handleDeleteFileInfos"
+                :disabled="selectionFileInfoRows.length === 0"
+                >删除</ElButton
+              >
+            </ElSpace>
+          </div>
           <ArtTableHeader
             v-model:columns="columnChecks"
             :loading="loading"
             @refresh="refreshData"
             layout="search, refresh, size, fullscreen, columns"
           >
+            <template #left>
+              <div class="art-table-breadcrumb">
+                <!-- 返回上一级按钮 -->
+                <el-button
+                  text
+                  :disabled="pathHistory.length <= 1"
+                  @click="goBack"
+                  :icon="ArrowLeft"
+                />
+
+                <!-- 前进下一级按钮 -->
+                <el-button
+                  text
+                  :disabled="forwardStack.length === 0"
+                  @click="goForward"
+                  :icon="ArrowRight"
+                />
+
+                <!-- 当前路径显示 -->
+                <span class="path-name">{{ currentPathName }}</span>
+              </div>
+            </template>
           </ArtTableHeader>
 
           <ArtTable
@@ -46,6 +81,7 @@
             :pagination="pagination"
             @sort-change="handleSortChange"
             @row-dblclick="dbClickWorkSpaceFile"
+            @selection-change="handleSelectionFileInfo"
             @pagination:size-change="handleSizeChange"
             @pagination:current-change="handleCurrentChange"
           >
@@ -53,6 +89,17 @@
         </ElCard>
       </div>
     </div>
+    <create-dir-dialog
+      v-model:visible="createDirVisible"
+      type="create"
+      :father-path="currentPathName ? currentPathName : ''"
+      @create-directory="submitCreateDirectory"
+    />
+    <rename-dialog
+      v-model:visible="renameVisible"
+      :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : null"
+      @submit-rename="submitRename"
+    />
   </div>
 </template>
 
@@ -67,8 +114,12 @@
   import { FileStoryField, SortType } from '@/enums/formEnum'
   import folder from '@imgs/svg/folder.svg'
   import { ElIcon } from 'element-plus'
-  import { Folder, Document } from '@element-plus/icons-vue'
+  import { Folder, Document, ArrowRight, ArrowLeft } from '@element-plus/icons-vue'
+  import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
+  import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
 
+  const createDirVisible = ref(false)
+  const renameVisible = ref(false)
   defineOptions({ name: 'TreeTable' })
 
   interface FileListParams {
@@ -123,12 +174,60 @@
       this.extension = extension
     }
   }
+
+  const handleDeleteFileInfos = () => {}
+
+  // 新建文件夹的弹窗
+  const handleNewDirectory = () => {
+    createDirVisible.value = true
+  }
+
+  // 点击确定创建文件夹
+  const submitCreateDirectory = (params: any) => {
+    console.log('点击提交创建文件夹的表单', params)
+  }
+
+  const handleRenameFileInfo = () => {
+    renameVisible.value = true
+  }
+
+  const submitRename = (params: FileInfo) => {
+    console.log('重命名参数', params)
+  }
+  // 多选选中的文件列表
+  const selectionFileInfoRows = ref<FileInfo[]>([])
   const treeData = ref([])
   const treeRef = ref() // 加这行
 
+  const pathHistory = ref<FileInfo[]>([]) // 路径历史栈
+  const forwardStack = ref<FileInfo[]>([]) // 前进栈
+  const currentPathName = computed(() => pathHistory.value.at(-1)?.path) // 当前路径名
+
+  // 返回上一级
+  const goBack = () => {
+    if (pathHistory.value.length <= 1) {
+      ElMessage.warning('已经是最顶层目录')
+      return
+    }
+    // 把当前路径压入前进栈
+    forwardStack.value.push(pathHistory.value.pop()!)
+    // 刷新数据（切换到上一级目录）
+    handleNodeClick(pathHistory.value.at(-1)!, false)
+  }
+
+  // 前进下一级
+  const goForward = () => {
+    if (forwardStack.value.length === 0) {
+      ElMessage.warning('没有可前进的目录')
+      return
+    }
+    const nextNode = forwardStack.value.pop()!
+    pathHistory.value.push(nextNode)
+    handleNodeClick(nextNode, false)
+  }
+
   const loadNodeChildren = async (node: FileInfo) => {
     if (node.children && node.children.length > 0) return
-
     const res = await fetchGetDirInfoList({
       path: node.path,
       size: 1,
@@ -149,6 +248,9 @@
       treeData.value = res.map((item: any) => {
         return { ...new FileInfo(), ...item }
       })
+      if (treeData.value.length > 0) {
+        handleNodeClick(treeData.value[0], true)
+      }
     })
   }
   onMounted(() => {
@@ -161,11 +263,12 @@
     label: 'name'
   }
 
-  const handleNodeClick = async (data: any) => {
+  const handleNodeClick = async (data: any, isHistory: boolean) => {
     // 节流...
     Object.assign(searchParams, { path: data.path })
     await refreshData()
     await loadNodeChildren(data)
+    if (isHistory) pathHistory.value.push(data)
   }
 
   const dbClickWorkSpaceFile = async (row: FileInfo) => {
@@ -173,7 +276,7 @@
     let targetNode = treeRef.value.getNode(row.id)
 
     if (targetNode) {
-      await handleNodeClick(targetNode.data)
+      await handleNodeClick(targetNode.data, true)
       treeRef.value.setCurrentKey(targetNode.data.id, true)
       scrollToTreeNode(targetNode.data.id)
       targetNode.expand()
@@ -215,11 +318,9 @@
       }
       if (field.order === 'descending') {
         sortParams.sortType = SortType.DESC
-        console.log('Desc')
       }
     }
     Object.assign(searchParams, sortParams)
-    console.log('searchParams', searchParams)
     refreshData()
   }
 
@@ -242,6 +343,11 @@
         ...workSpaceFileInfoParams.value
       },
       columnsFactory: () => [
+        {
+          type: 'selection',
+          width: 55,
+          align: 'center'
+        },
         {
           prop: 'name',
           label: '文件名',
@@ -290,6 +396,11 @@
       ]
     }
   })
+
+  // 当前选中的行数据
+  const handleSelectionFileInfo = (selectionRows: FileInfo[]) => {
+    selectionFileInfoRows.value = selectionRows
+  }
 </script>
 
 <style lang="scss" scoped>
@@ -337,5 +448,20 @@
         margin-bottom: 20px;
       }
     }
+  }
+  /* 面包屑样式：和表头对齐、紧凑美观 */
+  .art-table-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+  }
+
+  /* 当前路径文字样式 */
+  .path-name {
+    margin-left: 4px;
+    font-size: 13px;
+    color: #303133;
+    font-weight: 500;
   }
 </style>
