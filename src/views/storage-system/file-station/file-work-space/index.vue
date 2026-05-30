@@ -117,6 +117,7 @@
   import { Folder, Document, ArrowRight, ArrowLeft } from '@element-plus/icons-vue'
   import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
+  import { fetchSubmitDeleteDirectory } from '@/api/task-service'
 
   const createDirVisible = ref(false)
   const renameVisible = ref(false)
@@ -175,7 +176,15 @@
     }
   }
 
-  const handleDeleteFileInfos = () => {}
+  const handleDeleteFileInfos = () => {
+    console.log('点击了删除')
+    fetchSubmitDeleteDirectory({
+      name: '',
+      path: ''
+    }).then((res) => {
+      console.log('res>>', res)
+    })
+  }
 
   // 新建文件夹的弹窗
   const handleNewDirectory = () => {

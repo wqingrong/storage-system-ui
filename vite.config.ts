@@ -77,6 +77,14 @@ export default ({ mode }: { mode: string }) => {
           target: `http://${VITE_SERVER_IP}:9090`,
           changeOrigin: true
         },
+        '/sse': {
+          target: `http://${VITE_SERVER_IP}:9090`,
+          changeOrigin: true
+        },
+        '/task': {
+          target: `http://${VITE_SERVER_IP}:9090`,
+          changeOrigin: true
+        },
         '/ws': {
           target: `http://${VITE_SERVER_IP}:9090`, // 重点：ws:// 开头
           ws: true,

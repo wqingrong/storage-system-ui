@@ -91,6 +91,7 @@
   import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
   import { useI18n } from 'vue-i18n'
   import AppConfig from '@/config'
+  import { sse } from '@utils/sse'
 
   defineOptions({ name: 'ArtNotification' })
 
@@ -146,6 +147,15 @@
   const show = ref(false)
   const visible = ref(false)
   const barActiveIndex = ref(0)
+  onMounted(() => {
+    sse.init()
+  })
+
+  const sseInstanceSubscribe = (taskId: string) => {
+    sse.subscribe(taskId, (data: any) => {
+      console.log('参数信息:', data)
+    })
+  }
 
   const useNotificationData = () => {
     // 通知数据
