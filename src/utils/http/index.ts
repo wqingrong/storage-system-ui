@@ -3,9 +3,10 @@ import { useUserStore } from '@/store/modules/user'
 import { ApiStatus } from './status'
 import { HttpError, handleError, showError, showSuccess } from './error'
 import { $t } from '@/locales'
+import { loadingService } from '@/utils/ui'
 
 /** 请求配置常量 */
-const REQUEST_TIMEOUT = 15000
+const REQUEST_TIMEOUT = 150000
 const LOGOUT_DELAY = 500
 const MAX_RETRIES = 0
 const RETRY_DELAY = 1000
@@ -15,10 +16,34 @@ const UNAUTHORIZED_DEBOUNCE_TIME = 3000
 let isUnauthorizedErrorShown = false
 let unauthorizedTimer: NodeJS.Timeout | null = null
 
+// ========== Loading 单例控制 ==========
+let pendingReqCount = 0 // 进行中的请求总数
+let isLoadingOpen = false // 当前loading是否已打开
+
+const startLoading = () => {
+  pendingReqCount++
+  // 只有loading未开启时才创建实例，保证全局永远一个loading
+  loadingService.showLoading()
+  if (!isLoadingOpen) {
+    isLoadingOpen = true
+  }
+}
+
+const endLoading = () => {
+  pendingReqCount--
+  // 所有请求完成，关闭loading、重置标记
+  if (pendingReqCount <= 0) {
+    pendingReqCount = 0
+    loadingService.hideLoading()
+    isLoadingOpen = false
+  }
+}
+
 /** 扩展 AxiosRequestConfig */
 interface ExtendedAxiosRequestConfig extends AxiosRequestConfig {
   showErrorMessage?: boolean
   showSuccessMessage?: boolean
+  loading?: boolean
 }
 
 const { VITE_API_URL, VITE_WITH_CREDENTIALS } = import.meta.env
@@ -58,6 +83,7 @@ axiosInstance.interceptors.request.use(
     return request
   },
   (error) => {
+    endLoading() // 关闭 loading
     showError(createHttpError($t('httpMsg.requestConfigError'), ApiStatus.error))
     return Promise.reject(error)
   }
@@ -66,6 +92,7 @@ axiosInstance.interceptors.request.use(
 /** 响应拦截器 */
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse<Http.BaseResponse>) => {
+    endLoading() // 关闭 loading
     const { code, message } = response.data
     if (code === ApiStatus.success) return response
     if (code === ApiStatus.unauthorized) handleUnauthorizedError(message)
@@ -156,7 +183,9 @@ async function request<T = any>(config: ExtendedAxiosRequestConfig): Promise<T> 
     config.data = config.params
     config.params = undefined
   }
-
+  if (config.loading !== false) {
+    startLoading()
+  }
   try {
     const res = await axiosInstance.request<Http.BaseResponse<T>>(config)
     // 显示成功消息

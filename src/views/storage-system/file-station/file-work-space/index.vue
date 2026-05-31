@@ -333,6 +333,11 @@
     refreshData()
   }
 
+  const loadingFetchGetFileInfo = async (params: any) => {
+    if (params.path) return fetchGetFileInfoList(params)
+    return { records: [] }
+  }
+
   const {
     data,
     columns,
@@ -345,7 +350,7 @@
     handleCurrentChange
   } = useTable({
     core: {
-      apiFn: fetchGetFileInfoList,
+      apiFn: loadingFetchGetFileInfo,
       apiParams: {
         current: 1,
         size: 20,

@@ -3,6 +3,7 @@ import { Api } from '@/typings/api'
 
 export function fetchGetGeneralView() {
   return request.get<Api.Dashboard.GeneralView>({
-    url: '/dashboard/getGeneralView'
+    url: '/dashboard/getGeneralView',
+    loading: true
   })
 }
