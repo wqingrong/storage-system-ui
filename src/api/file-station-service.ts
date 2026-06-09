@@ -19,3 +19,17 @@ export function fetchGetDirInfoList(data: any) {
     data
   })
 }
+
+export function fetchNewFolder(data: any) {
+  return request.post<any>({
+    url: '/fileStation/newFolder',
+    data
+  })
+}
+
+export function fetchRenamePath(data: any) {
+  return request.post<any>({
+    url: '/fileStation/renamePath',
+    data
+  })
+}

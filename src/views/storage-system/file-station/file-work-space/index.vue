@@ -26,22 +26,19 @@
           </ElScrollbar>
         </ElCard>
       </div>
-
       <div class="right-content art-full-height">
+        <div class="menu-container" style="margin-bottom: 10px">
+          <ElSpace wrap>
+            <ElButton @click="handleNewDirectory">新建文件夹</ElButton>
+            <ElButton @click="handleRenameFileInfo" :disabled="selectionFileInfoRows.length !== 1"
+              >重命名</ElButton
+            >
+            <ElButton @click="handleDeleteFileInfos" :disabled="selectionFileInfoRows.length === 0"
+              >删除</ElButton
+            >
+          </ElSpace>
+        </div>
         <ElCard class="art-table-card" shadow="never">
-          <div class="menu-container" style="margin-bottom: 10px">
-            <ElSpace wrap>
-              <ElButton @click="handleNewDirectory">新建文件夹</ElButton>
-              <ElButton @click="handleRenameFileInfo" :disabled="selectionFileInfoRows.length !== 1"
-                >重命名</ElButton
-              >
-              <ElButton
-                @click="handleDeleteFileInfos"
-                :disabled="selectionFileInfoRows.length === 0"
-                >删除</ElButton
-              >
-            </ElSpace>
-          </div>
           <ArtTableHeader
             v-model:columns="columnChecks"
             :loading="loading"
@@ -74,7 +71,6 @@
 
           <ArtTable
             rowKey="id"
-            :loading="loading"
             :data="data"
             :columns="columns"
             :border="false"
@@ -97,7 +93,7 @@
     />
     <rename-dialog
       v-model:visible="renameVisible"
-      :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : null"
+      :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : { name: '' }"
       @submit-rename="submitRename"
     />
   </div>
@@ -109,7 +105,9 @@
   import {
     fetchGetDirInfoList,
     fetchGetFileInfoList,
-    fetchGetStoragePathList
+    fetchGetStoragePathList,
+    fetchNewFolder,
+    fetchRenamePath
   } from '@/api/file-station-service'
   import { FileStoryField, SortType } from '@/enums/formEnum'
   import folder from '@imgs/svg/folder.svg'
@@ -118,6 +116,7 @@
   import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
+  import path from 'path'
 
   const createDirVisible = ref(false)
   const renameVisible = ref(false)
@@ -193,15 +192,46 @@
 
   // 点击确定创建文件夹
   const submitCreateDirectory = (params: any) => {
-    console.log('点击提交创建文件夹的表单', params)
+    fetchNewFolder(params).then((res) => {
+      let nodeValue = new FileInfo()
+      Object.assign(nodeValue, res)
+      data.value.push(res)
+      let node = treeRef.value.getNode(pathHistory.value.at(-1)?.id)
+      if (node) {
+        node.data.children.push(nodeValue)
+      }
+    })
   }
 
   const handleRenameFileInfo = () => {
     renameVisible.value = true
   }
 
+  // 提交了确定重命名的请求参数
   const submitRename = (params: FileInfo) => {
-    console.log('重命名参数', params)
+    if (params) {
+      let renameParams = {
+        name: params.name,
+        path: params.path,
+        id: params.id
+      }
+      fetchRenamePath(renameParams)
+        .then((res) => {
+          let olderId = params.id
+          let nodeValue = new FileInfo()
+          Object.assign(nodeValue, res)
+          // 更改树形节点
+          if (nodeValue.isDir) {
+            let node = treeRef.value.getNode(olderId)
+            if (node) {
+              Object.assign(node.data, res)
+            }
+          }
+        })
+        .catch(() => {
+          handleNodeClick(pathHistory.value.at(-1)!, false)
+        })
+    }
   }
   // 多选选中的文件列表
   const selectionFileInfoRows = ref<FileInfo[]>([])

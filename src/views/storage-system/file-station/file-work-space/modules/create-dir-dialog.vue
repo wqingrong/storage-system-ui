@@ -2,7 +2,7 @@
   <ElDialog v-model="dialogVisible" title="新建文件夹" width="30%" align-center>
     <ElForm ref="formRef" :model="formData" :rules="rules" label-width="100px">
       <ElFormItem label="文件夹名称" prop="dirName">
-        <ElInput v-model="formData.dirName" placeholder="请输入文件夹名称" />
+        <ElInput v-model="formData.name" placeholder="请输入文件夹名称" />
       </ElFormItem>
     </ElForm>
 
@@ -40,12 +40,12 @@
   const formRef = ref<FormInstance>()
 
   const formData = reactive({
-    dirName: '',
+    name: '',
     fatherPath: ''
   })
 
   const rules: FormRules = {
-    dirName: [
+    name: [
       { required: true, message: '请输入文件夹名称', trigger: 'blur' },
       { min: 1, max: 255, message: '长度在 1 到 255 个字符', trigger: 'blur' },
       {
@@ -57,7 +57,7 @@
   }
 
   const initFormData = () => {
-    formData.dirName = ''
+    formData.name = ''
     formData.fatherPath = props.fatherPath
   }
 
