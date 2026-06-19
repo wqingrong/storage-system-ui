@@ -1,6 +1,4 @@
 // 系统通知的对象
-import { stringify } from 'node:querystring'
-
 export class SysNotify {
   // 通知主键ID
   id: number
@@ -55,12 +53,44 @@ export class SysNotify {
 export class SSEEvent {
   event: string
   time: string
+  status: string
   data: any
   constructor(data?: Partial<SSEEvent>) {
     this.event = data?.event ?? ''
     this.time = data?.time ?? ''
+    this.status = data?.status ?? ''
     this.data = data?.data ?? {}
+  }
+
+  public clear() {
+    this.event = ''
+    this.time = ''
+    this.status = ''
+    this.data = null
   }
 }
 
 export type NoticeType = 'warning' | 'error' | 'success' | 'notice' | 'unknown'
+
+export interface FileUserInfo {
+  userName: string
+  uid: number
+  userAlias: string
+  userEmail: string
+  groupName: string
+  gid: number
+  groupAlias: string
+}
+
+// 文件属性信息
+export interface FileAttribute {
+  name: string
+  path: string
+  permission: string
+  modifyTime: string
+  isDir: boolean
+  totalBytes: number
+  totalDirs: number
+  totalFiles: number
+  userInfo?: FileUserInfo
+}

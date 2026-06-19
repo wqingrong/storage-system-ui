@@ -1,4 +1,5 @@
 import { PoolStatus } from '@/enums/appEnum'
+import { NoticeType } from '@utils/global_entity'
 
 /**
  * 深度对比两个对象的所有字段值是否完全相同（支持嵌套/数组/特殊值）
@@ -105,6 +106,62 @@ export function getStoragePoolStatus(status: string) {
   }
 }
 
+/**
+ * 自适应存储单位换算
+ * @param value 原始数值
+ * @param srcUnit 原始单位 bytes/KB/MB/GB/TB/PB（大小写不敏感）
+ * @param decimal 保留小数位数，默认2
+ * @param base 进制 1024(二进制存储) / 1000(厂商标称)，默认1024
+ * @returns 格式化后带单位字符串
+ */
+export function unitConvertAdapter(
+  value: number,
+  srcUnit: string,
+  decimal: number = 2,
+  base: number = 1024
+): string {
+  // 非法数值兜底
+  if (isNaN(value) || value < 0 || !Number.isFinite(value)) {
+    return 'unknown'
+  }
+
+  // 标准单位映射，统一小写匹配输入
+  const unitMap: Record<string, number> = {
+    bytes: 0,
+    b: 0,
+    kb: 1,
+    mb: 2,
+    gb: 3,
+    tb: 4,
+    pb: 5
+  }
+  const displayUnits = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+
+  // 统一转小写匹配
+  const lowerSrcUnit = srcUnit.toLowerCase()
+  const srcIndex = unitMap[lowerSrcUnit]
+  if (srcIndex === undefined) {
+    return 'unknown'
+  }
+
+  // 第一步：先把输入数值统一换算成 Bytes
+  let bytesVal = value * base ** srcIndex
+  let targetIndex = 0
+
+  // 第二步：自动向上进位到合适单位
+  while (bytesVal >= base && targetIndex < displayUnits.length - 1) {
+    bytesVal /= base
+    targetIndex++
+  }
+
+  // 格式化小数，去除末尾多余 .00 / .0
+  let formatNum = bytesVal.toFixed(decimal)
+  // 清理末尾0
+  formatNum = formatNum.replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '')
+
+  return `${formatNum} ${displayUnits[targetIndex]}`
+}
+
 export function kbConvertAdapter(kb_number: number): string {
   // 空值/负数处理
   if (isNaN(kb_number) || kb_number < 0) {
@@ -124,4 +181,18 @@ export function kbConvertAdapter(kb_number: number): string {
 
   // 保留 2 位小数 + 单位
   return `${value.toFixed(2)} ${units[unitIndex]}`
+}
+
+// 匹配消息等级
+export function convertSysNotifyGrad(notifyType: number): NoticeType {
+  if (notifyType === 1) {
+    return 'error'
+  } else if (notifyType === 2) {
+    return 'warning'
+  } else if (notifyType === 3) {
+    return 'notice'
+  } else if (notifyType === 4) {
+    return 'success'
+  }
+  return 'unknown'
 }

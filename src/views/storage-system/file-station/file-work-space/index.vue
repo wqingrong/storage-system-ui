@@ -1,5 +1,5 @@
 <template>
-  <div class="art-full-height">
+  <div class="art-full-height" @click="closeContextMenu">
     <div class="tree-container">
       <div class="left-sidebar">
         <ElCard class="art-table-card" shadow="never" style="margin-top: 0">
@@ -80,11 +80,28 @@
             @selection-change="handleSelectionFileInfo"
             @pagination:size-change="handleSizeChange"
             @pagination:current-change="handleCurrentChange"
+            @row-contextmenu="handleRowContextMenu"
           >
           </ArtTable>
         </ElCard>
       </div>
     </div>
+
+    <!-- 右键悬浮菜单 重构 -->
+    <div
+      v-if="contextMenuVisible"
+      class="file-context-menu"
+      :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+      @click.stop
+    >
+      <div class="menu-item" @click="contextMenuRename">重命名</div>
+      <div class="divider"></div>
+      <div class="menu-item" @click="contextMenuComputeFileAttribute">属性</div>
+      <div v-if="rightClickRow?.isDir" class="menu-item" @click="contextMenuOpenDir"
+        >进入文件夹</div
+      >
+    </div>
+
     <create-dir-dialog
       v-model:visible="createDirVisible"
       type="create"
@@ -95,6 +112,11 @@
       v-model:visible="renameVisible"
       :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : { name: '' }"
       @submit-rename="submitRename"
+    />
+    <!--   查看文件属性菜单信息-->
+    <file-attribute-dialog
+      v-model:visible="attributeVisible"
+      :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : { name: '' }"
     />
   </div>
 </template>
@@ -116,9 +138,60 @@
   import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
+  import FileAttributeDialog from '@views/storage-system/file-station/file-work-space/modules/file-attribute-dialog.vue'
+
+  // 右键菜单相关
+  /**
+   * 表格行右键菜单
+   */
+  // 右键菜单相关
+  const contextMenuVisible = ref(false)
+  const contextMenuX = ref(0)
+  const contextMenuY = ref(0)
+  const rightClickRow = ref<FileInfo | null>(null)
+
+  // 右键行触发
+  const handleRowContextMenu = (row: FileInfo, column: any, event: MouseEvent) => {
+    event.preventDefault()
+    // 阻止冒泡，不会被外层点击立刻关闭
+    event.stopPropagation()
+    rightClickRow.value = row
+    // 同步选中行，保证删除/重命名读取数据正常
+    handleSelectionFileInfo([row])
+    // 鼠标屏幕坐标，精准定位
+    contextMenuX.value = event.clientX
+    contextMenuY.value = event.clientY
+    contextMenuVisible.value = true
+  }
+
+  // 空白处关闭菜单
+  const closeContextMenu = () => {
+    contextMenuVisible.value = false
+    selectionFileInfoRows.value = []
+  }
+
+  // 右键菜单 - 重命名
+  const contextMenuRename = () => {
+    contextMenuVisible.value = false
+    if (!rightClickRow.value) return
+    renameVisible.value = true
+  }
+
+  // 右键菜单 - 进入文件夹
+  const contextMenuOpenDir = async () => {
+    contextMenuVisible.value = false
+    if (!rightClickRow.value || !rightClickRow.value.isDir) return
+    await dbClickWorkSpaceFile(rightClickRow.value)
+  }
+
+  const contextMenuComputeFileAttribute = () => {
+    attributeVisible.value = true
+    contextMenuVisible.value = false
+  }
 
   const createDirVisible = ref(false)
   const renameVisible = ref(false)
+  const attributeVisible = ref(false)
   defineOptions({ name: 'TreeTable' })
 
   interface FileListParams {
@@ -137,6 +210,7 @@
     id: string
     name: string
     size: string
+    totalBytes: number
     isDir: boolean
     path: string
     ownerName: string
@@ -158,10 +232,12 @@
       permission: string = '',
       modifyTime: string = '',
       extension: string = '',
+      totalBytes: number = 0,
       children: any = []
     ) {
       this.id = id
       this.name = name
+      this.totalBytes = totalBytes
       this.size = size
       this.isDir = isDir
       this.path = path
@@ -509,5 +585,31 @@
     font-size: 13px;
     color: #303133;
     font-weight: 500;
+  }
+  .file-context-menu {
+    position: fixed;
+    z-index: 99999;
+    width: 120px;
+    background: #fff;
+    border: 1px solid #e4e7ed;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+    padding: 4px 0;
+
+    .menu-item {
+      padding: 7px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      &:hover {
+        background-color: #f5f7fa;
+        color: #409eff;
+      }
+    }
+
+    .divider {
+      height: 1px;
+      margin: 4px 0;
+      background-color: #e4e7ed;
+    }
   }
 </style>

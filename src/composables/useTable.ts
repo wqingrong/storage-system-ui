@@ -12,6 +12,7 @@ import {
   createErrorHandler
 } from '../utils/table/tableUtils'
 import { tableConfig } from '../utils/table/tableConfig'
+import { Api } from '@/typings/api'
 
 // 类型推导工具类型
 type InferApiParams<T> = T extends (params: infer P) => any ? P : never
