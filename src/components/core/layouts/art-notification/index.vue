@@ -88,10 +88,12 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
+  import { computed, type ComputedRef, type Ref, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import AppConfig from '@/config'
   import { sse } from '@utils/sse'
+  import { SSEEvent, SysNotify, NoticeType } from '@utils/global_entity'
+  import { convertSysNotifyGrad } from '@utils/tools'
 
   defineOptions({ name: 'ArtNotification' })
 
@@ -136,8 +138,6 @@
     backgroundColor: string
   }
 
-  type NoticeType = 'warning' | 'error' | 'success' | 'notice'
-
   const { t } = useI18n()
 
   const props = defineProps<{
@@ -151,37 +151,30 @@
     sse.init()
   })
 
-  const sseInstanceSubscribe = (taskId: string) => {
+  const sseReceiveMessage = (taskId: string) => {
     sse.subscribe(taskId, (data: any) => {
-      console.log('参数信息:', data)
+      let event = new SSEEvent(data)
+      noticeList.value = []
+      if (Array.isArray(event.data)) {
+        event.data.forEach((item) => {
+          let notify = new SysNotify(item)
+          console.log(notify)
+          noticeList.value.push({
+            title: notify.content,
+            time: notify.notifyTime,
+            type: convertSysNotifyGrad(notify.notifyType)
+          })
+        })
+      }
     })
   }
-
+  onMounted(() => {
+    // 持续监听这个类型的消息
+    sseReceiveMessage('sys_notify')
+  })
   const useNotificationData = () => {
     // 通知数据
-    const noticeList = ref<NoticeItem[]>([
-      // 容量不足（最常见）
-      {
-        title: '存储空间 5 容量不足（剩余 3.2%），请及时清理或扩容！',
-        time: '2025-05-19 00:10',
-        type: 'warning'
-      },
-      {
-        title: '存储空间 5 容量不足（剩余 3.2%），请及时清理或扩容！',
-        time: '2025-05-19 00:10',
-        type: 'success'
-      },
-      {
-        title: '存储空间 5 容量不足（剩余 3.2%），请及时清理或扩容！',
-        time: '2025-05-19 00:10',
-        type: 'notice'
-      },
-      {
-        title: '存储空间 5 容量不足（剩余 3.2%），请及时清理或扩容！',
-        time: '2025-05-19 00:10',
-        type: 'error'
-      }
-    ])
+    const noticeList = ref<NoticeItem[]>([])
 
     // 消息数据
     const msgList = ref<MessageItem[]>([])

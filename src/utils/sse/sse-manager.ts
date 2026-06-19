@@ -41,7 +41,7 @@ class SSEManager {
       try {
         const data = JSON.parse(event.data)
         console.log('sse接收消息>>', data)
-        const taskId = data.taskId
+        const taskId = data.taskId || data.event
         if (taskId && this.listeners[taskId]) {
           this.listeners[taskId](data)
         }

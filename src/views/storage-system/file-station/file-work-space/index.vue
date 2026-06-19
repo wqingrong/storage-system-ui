@@ -116,7 +116,6 @@
   import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
-  import path from 'path'
 
   const createDirVisible = ref(false)
   const renameVisible = ref(false)
@@ -177,12 +176,15 @@
 
   const handleDeleteFileInfos = () => {
     console.log('点击了删除')
-    fetchSubmitDeleteDirectory({
-      name: '',
-      path: ''
-    }).then((res) => {
-      console.log('res>>', res)
-    })
+    if (selectionFileInfoRows.value.length > 0) {
+      let deletePathList = []
+      deletePathList = selectionFileInfoRows.value.map((item) => item.path)
+      fetchSubmitDeleteDirectory({
+        pathList: deletePathList
+      }).then((res) => {
+        console.log('res>>', res)
+      })
+    }
   }
 
   // 新建文件夹的弹窗
