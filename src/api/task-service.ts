@@ -20,3 +20,10 @@ export function fetchGetFileAttribute(params: any) {
     params
   })
 }
+
+export function fetchSubmitDiskFormat(data: any) {
+  return request.post<any>({
+    url: '/task/SubmitDiskFormatTask',
+    data
+  })
+}

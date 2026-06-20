@@ -42,6 +42,15 @@
         >请选择至少选择 {{ diskNumber(createZPoolFormData.grade) }} 块硬盘创建
         {{ createZPoolFormData.grade }}
       </div>
+      <div style="margin-top: 10px">
+        <el-button
+          size="default"
+          style="float: left; margin-left: 20px"
+          :disabled="createZPoolFormData.diskDeviceList.length === 0"
+          @click="formDisk"
+          >磁盘格式化</el-button
+        >
+      </div>
       <div class="form-box">
         <el-table
           ref="multipleTableRef"
@@ -182,6 +191,12 @@
         {{ currentStep >= 2 ? '完成' : '下一步' }}
       </el-button>
     </template>
+    <!--    格式弹窗-->
+    <disk-format-dialog
+      v-model:formatDialogVisible="formatDialogVisible"
+      v-model:disk-device-list="diskDeviceList"
+      v-model:format-device-list="createZPoolFormData.diskDeviceList"
+    ></disk-format-dialog>
   </el-dialog>
 </template>
 
@@ -191,9 +206,15 @@
   import { fetchCreateZPool, fetchGetFreeDiscDeviceList } from '@/api/system-manage'
   import { Disk } from '@/typings/disk'
   import { TableInstance } from 'element-plus'
+  import DiskFormatDialog from '@views/storage-system/storage-manager/disk-manager/modules/disk-format-dialog.vue'
   const multipleTableRef = ref<TableInstance>()
   interface Props {
     visible: boolean
+  }
+
+  const formatDialogVisible = ref(false)
+  const formDisk = () => {
+    formatDialogVisible.value = true
   }
 
   const createZPoolFormData = reactive<Disk.Device.CreateZPoolDto>({

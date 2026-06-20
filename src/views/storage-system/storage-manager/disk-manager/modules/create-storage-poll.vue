@@ -43,6 +43,15 @@
         >请选择至少选择 {{ diskNumber(createStoragePoolFormData.grade) }} 块硬盘创建
         {{ createStoragePoolFormData.grade }}
       </div>
+      <div style="margin-top: 10px">
+        <el-button
+          size="default"
+          style="float: left; margin-left: 20px"
+          :disabled="createStoragePoolFormData.diskDeviceList.length === 0"
+          @click="formDisk"
+          >格式化</el-button
+        >
+      </div>
       <div class="form-box">
         <el-table
           ref="multipleTableRef"
@@ -217,6 +226,12 @@
       v-model:disk-device-list="diskDeviceList"
       v-model:softRiadFormData="createStoragePoolFormData"
     ></softraid-advanced-setup>
+    <!--    格式弹窗-->
+    <disk-format-dialog
+      v-model:formatDialogVisible="formatDialogVisible"
+      v-model:disk-device-list="diskDeviceList"
+      v-model:format-device-list="createStoragePoolFormData.diskDeviceList"
+    ></disk-format-dialog>
   </el-dialog>
 </template>
 
@@ -227,9 +242,15 @@
   import { Disk } from '@/typings/disk'
   import { TableInstance } from 'element-plus'
   import SoftraidAdvancedSetup from '@views/storage-system/storage-manager/disk-manager/modules/softraid-advanced-setup.vue'
+  import DiskFormatDialog from '@views/storage-system/storage-manager/disk-manager/modules/disk-format-dialog.vue'
   interface Props {
     visible: boolean
   }
+  const formatDialogVisible = ref(false)
+  const formDisk = () => {
+    formatDialogVisible.value = true
+  }
+
   // 高级设置显示弹窗
   const advancedSetupVisible = ref(false)
   const createStoragePoolFormData = ref<Disk.Device.CreateStoragePoolDto>({
