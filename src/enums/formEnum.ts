@@ -19,6 +19,8 @@ export enum RaidGrade {
   RAID_1 = 'RAID_1',
   RAID_5 = 'RAID_5',
   RAID_6 = 'RAID_6',
+  RAID_10 = 'RAID_10',
+  RAID_60 = 'RAID_60',
   RAID_Stripe = 'RAID_Stripe',
   RAID_Mirror = 'RAID_Mirror',
   RAID_Z1 = 'RAID_Z1',

@@ -119,6 +119,15 @@
                 width="100"
                 min-width="100"
               />
+              <el-table-column
+                v-if="
+                  item.raidDetailInfo.grade === RaidGrade.RAID_10 ||
+                  item.raidDetailInfo.grade === RaidGrade.RAID_60
+                "
+                property="raidClass"
+                label="归属raid单元"
+                width="120"
+              />
               <el-table-column property="device" label="盘符" width="120" />
               <el-table-column property="model" label="硬盘类型" width="120" />
               <el-table-column property="serialNumber" label="序列号" />
@@ -305,6 +314,7 @@
   import { Api } from '@/typings/api'
   import { getStoragePoolStatus } from '@utils/tools'
   import DiskSelectedDialog from '@views/storage-system/storage-manager/storage-space/modules/disk-selected-dialog.vue'
+  import { RaidGrade } from '@/enums/formEnum'
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
   const diskDialogVisible = ref(false)

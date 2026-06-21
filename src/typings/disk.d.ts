@@ -27,6 +27,8 @@ declare namespace Disk {
       temperature: string // 温度
       healthValue: string
       runningTime: string
+      readClass: string
+      wwn: string
     }
 
     type DiskDeviceList = Api.Common.PaginatedResponse<DiskDeviceDetail>

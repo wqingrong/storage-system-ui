@@ -20,6 +20,7 @@
               <el-option :label="RaidGrade.RAID_1" :value="RaidGrade.RAID_1" />
               <el-option :label="RaidGrade.RAID_5" :value="RaidGrade.RAID_5" />
               <el-option :label="RaidGrade.RAID_6" :value="RaidGrade.RAID_6" />
+              <el-option :label="RaidGrade.RAID_10" :value="RaidGrade.RAID_10" />
             </el-select>
             <span style="line-height: 2">{{
               raidGradeTipTxt(createStoragePoolFormData.grade)
@@ -236,13 +237,14 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, computed, watch } from 'vue'
+  import { computed, reactive, ref, watch } from 'vue'
   import { RaidGrade } from '@/enums/formEnum'
-  import { fetchGetFreeDiscDeviceList, fetchCreateStoragePool } from '@/api/system-manage'
+  import { fetchCreateStoragePool, fetchGetFreeDiscDeviceList } from '@/api/system-manage'
   import { Disk } from '@/typings/disk'
   import { TableInstance } from 'element-plus'
   import SoftraidAdvancedSetup from '@views/storage-system/storage-manager/disk-manager/modules/softraid-advanced-setup.vue'
   import DiskFormatDialog from '@views/storage-system/storage-manager/disk-manager/modules/disk-format-dialog.vue'
+
   interface Props {
     visible: boolean
   }
@@ -275,6 +277,8 @@
         return 3
       case RaidGrade.RAID_6:
         return 5
+      case RaidGrade.RAID_10:
+        return 4
     }
   }
 
@@ -332,6 +336,16 @@
       `
           .trim()
           .replace(/\s+/g, ' ')
+      case RaidGrade.RAID_10:
+        return `
+        【RAID 10】条带镜像（Striped Mirror）
+        • 核心技术：先两两磁盘做RAID1镜像，多组镜像上层再做RAID0条带
+        • 性能表现：读写均衡，随机IO性能极强，重建速度快
+        • 可靠性：每组镜像最多坏1块盘，不同组各坏1盘数据无损；同组双盘损坏则数据丢失
+        • 容量利用率：1/2（总可用容量=磁盘总容量÷2）
+        • 适用场景：数据库、虚拟机、高IO业务、高性能生产服务器
+        • 最少需要：4块硬盘，磁盘总数必须为偶数
+        `
       default:
         return '未知 RAID 等级'
     }
