@@ -7,6 +7,7 @@ import { storageManager } from '@/router/modules/storage-manager'
 import { fileManager } from '@/router/modules/file-manager'
 import { SafetyProtection } from '@/router/modules/safety_protection'
 import { fileStation } from '@/router/modules/file-station'
+import { netWork } from '@/router/modules/network'
 // import { templateRoutes } from '@/router/modules/template'
 // import { widgetsRoutes } from '@/router/modules/widgets'
 // import { examplesRoutes } from '@/router/modules/examples'
@@ -20,6 +21,7 @@ export const routeModules: AppRouteRecord[] = [
   watchStatusRoutes,
   usersManager,
   storageManager,
+  netWork,
   fileManager,
   fileStation,
   SafetyProtection,

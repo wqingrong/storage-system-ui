@@ -37,6 +37,10 @@ export default ({ mode }: { mode: string }) => {
           target: VITE_API_PROXY_URL,
           changeOrigin: true
         },
+        '/network': {
+          target: `http://${VITE_SERVER_IP}:9090`,
+          changeOrigin: true
+        },
         '/system': {
           target: `http://${VITE_SERVER_IP}:9090`,
           changeOrigin: true
