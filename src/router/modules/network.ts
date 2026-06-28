@@ -6,7 +6,7 @@ export const netWork: AppRouteRecord = {
   component: '/index/index',
   meta: {
     title: '网络',
-    icon: '&#xe726;',
+    icon: '&#xe7df;',
     roles: ['R_SUPER', 'R_ADMIN']
   },
   children: [

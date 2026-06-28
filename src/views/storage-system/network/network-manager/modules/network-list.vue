@@ -3,8 +3,8 @@
     <div>
       <div class="menu-container" style="margin-bottom: 10px">
         <ElSpace wrap>
-          <ElButton @click="handleNewShareClick">新增</ElButton>
-          <ElButton @click="handleEditShareClick">编辑</ElButton>
+          <ElButton @click="handleCreateBondClick">Bond绑定</ElButton>
+          <ElButton @click="handleInterfaceEditClick">编辑</ElButton>
           <ElButton @click="handleDownClick">停用</ElButton>
         </ElSpace>
       </div>
@@ -21,16 +21,8 @@
           @click="handleCurrentNetworkItem(item)"
         >
           <div class="title-with-icon">
-            <ThemeSvg
-              v-if="item.state === InterfaceState.UP"
-              :src="networkUp"
-              style="width: 35px; height: 35px"
-            />
-            <ThemeSvg
-              v-if="item.state === InterfaceState.DOWN"
-              :src="networkDown"
-              style="width: 35px; height: 35px"
-            />
+            <ThemeSvg v-if="item.enabled" :src="networkUp" style="width: 35px; height: 35px" />
+            <ThemeSvg v-else :src="networkDown" style="width: 35px; height: 35px" />
             <span class="main-title">{{ item.name }}</span>
           </div>
           <div class="header-actions">
@@ -138,17 +130,32 @@
         </el-collapse-transition>
       </div>
     </div>
+    <Interface-edit
+      v-model:visible="editInterfaceDialog"
+      :init-data="networkForm"
+      @confirm="saveNetworkConfig"
+    >
+    </Interface-edit>
+    <BondCreateWizard
+      v-model:visible="createBondDialogVisible"
+      :device-list="netDeviceList"
+      @create="handleCreateBond"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+  import InterfaceEdit from './interface-edit.vue'
+  import BondCreateWizard from '@views/storage-system/network/network-manager/modules/bond-create-wizard.vue'
   import { ElCollapseTransition } from 'element-plus'
   import networkUp from '@imgs/svg/network-up.svg'
   import networkDown from '@imgs/svg/network-down.svg'
-  import { AddressMethod, InterfaceState, NetworkInterface } from '@/entity/network'
+  import { AddressMethod, NetworkInterface } from '@/entity/network'
 
-  const newShareDialogVisible = ref(false)
-  const newShareDialogType = ref('add')
+  const createBondDialogVisible = ref(false)
+  const netDeviceList = ref(['eth0', 'eth1', 'ens18'])
+
+  const editInterfaceDialog = ref(false)
   interface Props {
     networkInterfaceList: NetworkInterface[]
   }
@@ -160,17 +167,38 @@
     currentNetworkItem.value.isExpanded = !item.isExpanded
   }
   // 点击了创建的的按钮
-  const handleNewShareClick = () => {
-    newShareDialogVisible.value = true
-    newShareDialogType.value = 'add'
+  const handleCreateBondClick = () => {
+    createBondDialogVisible.value = true
   }
 
   const handleCurrentNetworkItem = (item: NetworkInterface) => {
     currentNetworkItem.value = item
   }
-  const handleEditShareClick = () => {
-    newShareDialogVisible.value = true
-    newShareDialogType.value = 'edit'
+
+  const saveNetworkConfig = (data: any) => {
+    console.log('提交的网络配置', data)
+    // 这里发起接口请求保存配置
+  }
+
+  const handleCreateBond = (data: any) => {
+    console.log('>>>>', data)
+  }
+
+  const networkForm = ref({
+    ipv4Mode: 'static',
+    ipAddr: '192.168.10.111',
+    netmask: '255.255.255.0',
+    gateway: '192.168.10.1',
+    dns: '192.168.10.1',
+    defaultGateway: true,
+    enableMTU: true,
+    mtuVal: 9000,
+    enableVLAN: false,
+    vlanId: ''
+  })
+
+  const handleInterfaceEditClick = () => {
+    editInterfaceDialog.value = true
   }
 
   const handleDownClick = () => {}
