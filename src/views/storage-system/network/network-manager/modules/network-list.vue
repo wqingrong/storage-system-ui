@@ -4,6 +4,7 @@
       <div class="menu-container" style="margin-bottom: 10px">
         <ElSpace wrap>
           <ElButton @click="handleCreateBondClick">Bond绑定</ElButton>
+          <ElButton @click="handleCreateNetworkInterface">新建网络</ElButton>
           <ElButton @click="handleInterfaceEditClick">编辑</ElButton>
           <ElButton @click="handleDownClick">停用</ElButton>
         </ElSpace>
@@ -40,13 +41,20 @@
         <el-collapse-transition>
           <div v-show="item.isExpanded" class="info-grid-wrapper">
             <div class="info-grid">
-              <!--              存储空间-->
               <div class="info-item">
                 <div class="info-label">
-                  <span>网口：</span>
+                  <span>网络名称：</span>
                 </div>
                 <div class="info-value">
                   <span>{{ item.name }}</span>
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">
+                  <span>物理网口：</span>
+                </div>
+                <div class="info-value">
+                  <span>{{ item.device }}</span>
                 </div>
               </div>
               <div class="info-item">
@@ -132,10 +140,16 @@
     </div>
     <Interface-edit
       v-model:visible="editInterfaceDialog"
-      :init-data="networkForm"
+      :edit-data="currentNetworkItem"
       @confirm="saveNetworkConfig"
     >
     </Interface-edit>
+
+    <network-create
+      v-model:visible="createNetworkInterfaceDialog"
+      @confirm="handleCreateNetworkInterface"
+    >
+    </network-create>
     <BondCreateWizard
       v-model:visible="createBondDialogVisible"
       :device-list="netDeviceList"
@@ -151,11 +165,13 @@
   import networkUp from '@imgs/svg/network-up.svg'
   import networkDown from '@imgs/svg/network-down.svg'
   import { AddressMethod, NetworkInterface } from '@/entity/network'
+  import NetworkCreate from '@views/storage-system/network/network-manager/modules/network-create.vue'
 
   const createBondDialogVisible = ref(false)
   const netDeviceList = ref(['eth0', 'eth1', 'ens18'])
 
   const editInterfaceDialog = ref(false)
+  const createNetworkInterfaceDialog = ref(false)
   interface Props {
     networkInterfaceList: NetworkInterface[]
   }
@@ -184,23 +200,13 @@
     console.log('>>>>', data)
   }
 
-  const networkForm = ref({
-    ipv4Mode: 'static',
-    ipAddr: '192.168.10.111',
-    netmask: '255.255.255.0',
-    gateway: '192.168.10.1',
-    dns: '192.168.10.1',
-    defaultGateway: true,
-    enableMTU: true,
-    mtuVal: 9000,
-    enableVLAN: false,
-    vlanId: ''
-  })
-
   const handleInterfaceEditClick = () => {
     editInterfaceDialog.value = true
   }
 
+  const handleCreateNetworkInterface = () => {
+    createNetworkInterfaceDialog.value = true
+  }
   const handleDownClick = () => {}
 </script>
 

@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="编辑"
+    :title="`编辑 ${props.editData?.name ?? ''} 网络配置`"
     width="620px"
     destroy-on-close
     @close="handleClose"
@@ -15,7 +15,7 @@
             <div style="margin-bottom: 10px">
               <!-- DHCP/手动单选 -->
               <el-radio-group
-                v-model="formData.ipv4Mode"
+                v-model="formData.ipv4Method"
                 style="
                   display: flex;
                   flex-direction: column;
@@ -31,18 +31,18 @@
             <!-- IP地址 -->
             <el-form-item label="IP 地址:" label-position="left">
               <el-input
-                v-model="formData.ipAddr"
+                v-model="formData.ipv4Addresses[0].address"
                 placeholder="192.168.10.111"
-                :disabled="formData.ipv4Mode === 'dhcp'"
+                :disabled="formData.ipv4Method === 'dhcp'"
               />
             </el-form-item>
 
             <!-- 子网掩码 -->
             <el-form-item label="子网掩码 (mask):" label-position="left">
               <el-input
-                v-model="formData.netmask"
+                v-model="formData.ipv4Addresses[0].mask"
                 placeholder="255.255.255.0"
-                :disabled="formData.ipv4Mode === 'dhcp'"
+                :disabled="formData.ipv4Method === 'dhcp'"
               />
             </el-form-item>
 
@@ -50,9 +50,9 @@
             <el-form-item label="网关:" label-position="left">
               <div class="input-with-tip">
                 <el-input
-                  v-model="formData.gateway"
+                  v-model="formData.ipv4Addresses[0].gateway"
                   placeholder="192.168.10.1"
-                  :disabled="formData.ipv4Mode === 'dhcp'"
+                  :disabled="formData.ipv4Method === 'dhcp'"
                 />
                 <el-tooltip content="网关说明：访问跨网段流量出口地址" placement="right">
                   <el-icon class="tip-icon">
@@ -65,40 +65,21 @@
             <!-- DNS Server -->
             <el-form-item label="DNS Server:" label-position="left">
               <el-input
-                v-model="formData.dns"
-                placeholder="192.168.10.1"
-                :disabled="formData.ipv4Mode === 'dhcp'"
+                v-model="dnsInputText"
+                placeholder="多个DNS用英文逗号分隔，如 192.168.10.1,223.5.5.5"
+                :disabled="formData.ipv4Method === 'dhcp'"
+                @blur="handleDnsInputConfirm"
+                @keyup.enter="handleDnsInputConfirm"
+                clearable
               />
+              <template #hint>输入多个DNS以英文逗号分隔，回车/失焦自动保存到数组</template>
             </el-form-item>
-
-            <div>
-              <el-checkbox v-model="formData.defaultGateway" label="设为默认网关" />
-            </div>
-            <!-- 设为默认网关 -->
-            <div>
-              <el-checkbox v-model="formData.enableMTU" label="手动设置 MTU 值" />
-            </div>
-            <!-- MTU配置 -->
-            <el-form-item label="MTU 值:" v-if="formData.enableMTU" label-position="left">
-              <el-select v-model="formData.mtuVal" placeholder="选择MTU">
+            <el-form-item label="MTU 值:" label-position="left">
+              <el-select v-model="formData.mtu" placeholder="选择MTU">
                 <el-option label="9000" value="9000" />
                 <el-option label="8992" value="8992" />
                 <el-option label="1500" value="1500" />
               </el-select>
-            </el-form-item>
-            <div>
-              <el-checkbox v-model="formData.enableVLAN" label="启用 VLAN" />
-              <el-tooltip placement="bottom" max-width="480" popper-class="vlan-tip-popper">
-                <template #content>
-                  <span class="tip-red">重要：</span>确保您的客户端计算机也加入同一个 VLAN。
-                </template>
-                <el-icon class="tip-icon">
-                  <InfoFilled />
-                </el-icon>
-              </el-tooltip>
-            </div>
-            <el-form-item label="VLAN ID:" v-if="formData.enableVLAN" label-position="left">
-              <el-input v-model="formData.vlanId" type="number" min="1" max="4094" />
             </el-form-item>
           </el-form>
         </div>
@@ -119,10 +100,27 @@
   </el-dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
   import { defineEmits, defineProps, ref } from 'vue'
   import { InfoFilled } from '@element-plus/icons-vue'
   import { ElMessage } from 'element-plus'
+  import { AddressMethod, InterfaceState, InterfaceType, NetworkInterface } from '@/entity/network'
+  const dnsInputText = ref('')
+  // 处理输入确认（回车/失去焦点触发）
+  const handleDnsInputConfirm = () => {
+    const raw = dnsInputText.value.trim()
+    if (!raw) {
+      formData.value.dnsServers = []
+      return
+    }
+    // 按英文逗号分割、去空格、过滤空字符串
+    const dnsList = raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+    // 去重后赋值给数组
+    formData.value.dnsServers = [...new Set(dnsList)]
+  }
 
   // 父组件传入控制弹窗显示
   const props = defineProps({
@@ -130,24 +128,48 @@
       type: Boolean,
       default: false
     },
-    // 初始网络数据
-    initData: {
+    editData: {
       type: Object,
-      default: () => ({
-        ipv4Mode: 'static',
-        ipAddr: '192.168.10.111',
-        netmask: '255.255.255.0',
-        gateway: '192.168.10.1',
-        dns: '192.168.10.1',
-        defaultGateway: true,
-        enableMTU: true,
-        mtuVal: 9000,
-        enableVLAN: false,
-        vlanId: ''
-      })
+      default: null
     }
   })
   const emit = defineEmits(['update:visible', 'confirm'])
+  // 表单数据
+  const formRef = ref(null)
+  const formData = ref<NetworkInterface>({
+    device: '',
+    name: '',
+    type: InterfaceType.ETHERNET,
+    state: InterfaceState.UP,
+    macAddress: '',
+    description: '',
+    namespace: '',
+    speed: '',
+    ipv4Addresses: [
+      {
+        address: '',
+        prefix: '',
+        label: '',
+        mask: ''
+      }
+    ],
+    ipv6Addresses: [],
+    ipv4Method: AddressMethod.STATIC,
+    ipv6Method: AddressMethod.NONE,
+    gateway4: '',
+    gateway6: '',
+    routes: [],
+    dnsServers: [],
+    dnsSearchDomains: [],
+    mtu: 1500,
+    enabled: true,
+    autoStart: true,
+    vlanId: 0,
+    parentInterface: '',
+    updatedAt: null,
+    createdAt: null,
+    isExpanded: true
+  })
 
   // 弹窗双向绑定
   const dialogVisible = ref(false)
@@ -157,7 +179,10 @@
       dialogVisible.value = val
       if (val) {
         // 打开弹窗时重置表单
-        Object.assign(formData, props.initData)
+        if (props.editData) {
+          dnsInputText.value = props.editData.dnsServers.join(',')
+          Object.assign(formData.value, props.editData)
+        }
       }
     },
     { immediate: true }
@@ -165,24 +190,8 @@
   watch(dialogVisible, (val) => {
     emit('update:visible', val)
   })
-
   // Tab激活项
   const activeTab = ref('ipv4')
-
-  // 表单数据
-  const formRef = ref(null)
-  const formData = ref({
-    ipv4Mode: 'static',
-    ipAddr: '',
-    netmask: '',
-    gateway: '',
-    dns: '',
-    defaultGateway: false,
-    enableMTU: false,
-    mtuVal: 1500,
-    enableVLAN: false,
-    vlanId: ''
-  })
 
   // 关闭弹窗
   const handleClose = () => {

@@ -26,10 +26,10 @@
     reloadNetworkList()
   })
   const handleClick = (tab: TabsPaneContext, event: Event) => {
-    console.log(event)
     activeName.value = String(tab.paneName)
     switch (activeName.value) {
       case 'networkList':
+        reloadNetworkList()
         break
       case 'networkLimit':
         ElMessage.success(activeName.value + '暂未对接')

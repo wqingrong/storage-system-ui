@@ -45,6 +45,8 @@ export interface IPAddress {
   version: IPVersion
   /** 可选：地址标签 (用于 ifconfig 别名) */
   label?: string
+  mask: string
+  gateway: string
 }
 
 /** IP 地址范围 (用于 DHCP 池) */
@@ -54,9 +56,20 @@ export interface IPRange {
   prefix: number
 }
 
+// 物理接口
+export interface NetworkDeviceInterface {
+  device: string
+  speed: string
+  actualDuplex: string
+  isVirtual: string
+  state: string
+  enable: string
+}
+
 /** 网络接口配置 (核心对象) */
 export interface NetworkInterface {
   /** 接口名称 (如 eth0, wlan0) */
+  device: string
   name: string
   /** 接口类型 */
   type: InterfaceType
