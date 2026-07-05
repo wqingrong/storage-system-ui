@@ -46,7 +46,6 @@ export interface IPAddress {
   /** 可选：地址标签 (用于 ifconfig 别名) */
   label?: string
   mask: string
-  gateway: string
 }
 
 /** IP 地址范围 (用于 DHCP 池) */

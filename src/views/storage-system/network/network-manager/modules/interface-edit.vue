@@ -50,7 +50,7 @@
             <el-form-item label="网关:" label-position="left">
               <div class="input-with-tip">
                 <el-input
-                  v-model="formData.ipv4Addresses[0].gateway"
+                  v-model="formData.gateway4"
                   placeholder="192.168.10.1"
                   :disabled="formData.ipv4Method === 'dhcp'"
                 />
