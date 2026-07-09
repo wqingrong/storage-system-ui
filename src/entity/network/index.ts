@@ -35,6 +35,17 @@ export enum NetNamespace {
   // 可扩展其他命名空间
 }
 
+export enum BondMode {
+  BOND_MODE_UNKNOWN = -1,
+  ROUND_ROBIN = 0,
+  ACTIVE_BACKUP = 1,
+  BLANCE_XOR = 2,
+  BROADCAST = 3,
+  B_802_3AD = 4,
+  BLANCE_TLB = 5,
+  BLANCE_ALB = 6
+}
+
 /** IP 地址配置 */
 export interface IPAddress {
   /** IP 地址 (如 "192.168.1.100") */
@@ -122,6 +133,12 @@ export interface NetworkInterface {
   /** 创建时间 */
   createdAt?: Date
   isExpanded: boolean
+  bond: Bond
+}
+
+export interface Bond {
+  mode: BondMode
+  slaveInterfaces: NetworkDeviceInterface[]
 }
 
 /** 静态路由 */

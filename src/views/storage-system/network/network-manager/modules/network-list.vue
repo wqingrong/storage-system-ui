@@ -150,11 +150,7 @@
       @confirm="handleCreateNetworkInterface"
     >
     </network-create>
-    <BondCreateWizard
-      v-model:visible="createBondDialogVisible"
-      :device-list="netDeviceList"
-      @create="handleCreateBond"
-    />
+    <BondCreateWizard v-model:visible="createBondDialogVisible" @create="handleCreateBond" />
   </div>
 </template>
 
@@ -168,7 +164,6 @@
   import NetworkCreate from '@views/storage-system/network/network-manager/modules/network-create.vue'
 
   const createBondDialogVisible = ref(false)
-  const netDeviceList = ref(['eth0', 'eth1', 'ens18'])
 
   const editInterfaceDialog = ref(false)
   const createNetworkInterfaceDialog = ref(false)

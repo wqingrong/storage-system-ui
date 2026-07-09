@@ -104,7 +104,15 @@
   import { defineEmits, defineProps, ref } from 'vue'
   import { InfoFilled } from '@element-plus/icons-vue'
   import { ElMessage } from 'element-plus'
-  import { AddressMethod, InterfaceState, InterfaceType, NetworkInterface } from '@/entity/network'
+  import {
+    AddressMethod,
+    BondMode,
+    InterfaceState,
+    InterfaceType,
+    IPVersion,
+    NetworkInterface
+  } from '@/entity/network'
+
   const dnsInputText = ref('')
   // 处理输入确认（回车/失去焦点触发）
   const handleDnsInputConfirm = () => {
@@ -150,7 +158,8 @@
         address: '',
         prefix: '',
         label: '',
-        mask: ''
+        mask: '',
+        version: IPVersion.IPv4
       }
     ],
     ipv6Addresses: [],
@@ -168,7 +177,8 @@
     parentInterface: '',
     updatedAt: null,
     createdAt: null,
-    isExpanded: true
+    isExpanded: true,
+    bond: { mode: BondMode.BOND_MODE_UNKNOWN, slaveInterfaces: [] }
   })
 
   // 弹窗双向绑定

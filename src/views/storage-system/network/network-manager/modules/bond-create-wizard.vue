@@ -1,257 +1,348 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="新建Bond绑定网口"
-    width="720px"
+    title="新建网络"
+    width="620px"
     destroy-on-close
-    @close="resetWizard"
+    @close="handleClose"
+    id="net-edit-dialog"
   >
-    <!-- 步骤条 -->
-    <el-steps v-model="activeStep" finish-status="success" simple>
-      <el-step title="1.选择Bond模式" />
-      <el-step title="2.选择从属网口" />
-      <el-step title="3.配置IPv4网络" />
-    </el-steps>
-
-    <!-- 步骤1：Bond模式选择 -->
-    <div v-if="activeStep === 1" class="step-content">
-      <el-form ref="step1Ref" :model="form.modeForm" label-width="140px">
-        <el-form-item
-          label="Bond名称"
-          prop="bondName"
-          rules="[{required:true,message:'请输入Bond名称',trigger:'blur'}]"
-        >
-          <el-input v-model="form.modeForm.bondName" placeholder="bond0" />
-        </el-form-item>
-        <el-form-item
-          label="聚合模式"
-          prop="mode"
-          rules="[{required:true,message:'请选择Bond模式',trigger:'change'}]"
-        >
-          <el-select v-model="form.modeForm.mode" placeholder="请选择">
-            <el-option label="active-backup 主备模式" value="active-backup" />
-            <el-option label="balance-rr 轮询负载" value="balance-rr" />
-            <el-option label="balance-xor 哈希负载" value="balance-xor" />
-            <el-option label="broadcast 广播" value="broadcast" />
-            <el-option label="802.3ad LACP链路聚合" value="802.3ad" />
-            <el-option label="balance-tlb 自适应负载" value="balance-tlb" />
-            <el-option label="balance-alb 自适应负载(含接收)" value="balance-alb" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="主备模式主网卡(仅active-backup生效)">
-          <el-select v-model="form.modeForm.primaryDev" placeholder="不指定">
-            <el-option v-for="item in devList" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-      </el-form>
+    <div v-if="currentStep === 0">
+      <el-form-item label="聚合模式">
+        <el-select v-model="formData.bond.mode" placeholder="请选择">
+          <el-option label="active-backup 主备模式" :value="BondMode.ACTIVE_BACKUP" />
+          <el-option label="balance-rr 轮询负载" :value="BondMode.ROUND_ROBIN" />
+          <el-option label="balance-xor 哈希负载" :value="BondMode.BLANCE_XOR" />
+          <el-option label="broadcast 广播" :value="BondMode.BROADCAST" />
+          <el-option label="802.3ad LACP链路聚合" :value="BondMode.B_802_3AD" />
+          <el-option label="balance-tlb 自适应负载" :value="BondMode.BLANCE_TLB" />
+          <el-option label="balance-alb 自适应负载(含接收)" :value="BondMode.BLANCE_ALB" />
+        </el-select>
+      </el-form-item>
+      <el-table
+        ref="spareTableRef"
+        :data="deviceList"
+        row-key="device"
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" :selectable="checkRowSelectable" />
+        <el-table-column property="device" label="物理网口" width="120" />
+        <el-table-column property="speed" label="速率" width="120" />
+        <el-table-column property="state" label="状态" width="100" />
+        <el-table-column property="actualDuplex" label="模式" width="180" />
+      </el-table>
     </div>
+    <div v-if="currentStep === 1">
+      <el-tabs v-model="activeTab">
+        <el-tab-pane label="IPv4" name="ipv4">
+          <div style="padding-right: 20px; padding-left: 20px">
+            <el-form ref="formRef" :model="formData" label-width="130px">
+              <div style="margin-bottom: 10px">
+                <!-- DHCP/手动单选 -->
+                <el-radio-group
+                  v-model="formData.ipv4Method"
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    align-items: flex-start; /* 选项之间的垂直间距 */
+                  "
+                >
+                  <el-radio label="dhcp">自动取得网络设置(DHCP)</el-radio>
+                  <el-radio label="static">手动设置网络配置</el-radio>
+                </el-radio-group>
+              </div>
 
-    <!-- 步骤2：勾选物理网卡作为slave -->
-    <div v-if="activeStep === 2" class="step-content">
-      <el-form ref="step2Ref" :model="form.slaveForm" label-width="140px">
-        <el-form-item
-          label="可选物理网卡"
-          prop="slaves"
-          rules="[{required:true,message:'至少选择一张网卡',trigger:'change'}]"
-        >
-          <el-checkbox-group v-model="form.slaveForm.slaves">
-            <div class="checkbox-row" v-for="dev in devList" :key="dev">
-              <el-checkbox :label="dev">{{ dev }}</el-checkbox>
-            </div>
-          </el-checkbox-group>
-        </el-form-item>
-        <div class="tip-text"
-          >提示：已被其他Bond占用的网卡不会出现在列表，每个网卡只能加入一个Bond</div
-        >
-      </el-form>
+              <!-- IP地址 -->
+              <el-form-item label="IP 地址:" label-position="left">
+                <el-input
+                  v-model="formData.ipv4Addresses[0].address"
+                  placeholder="192.168.10.111"
+                  :disabled="formData.ipv4Method === 'dhcp'"
+                />
+              </el-form-item>
+
+              <!-- 子网掩码 -->
+              <el-form-item label="子网掩码 (mask):" label-position="left">
+                <el-input
+                  v-model="formData.ipv4Addresses[0].prefix"
+                  placeholder="255.255.255.0"
+                  :disabled="formData.ipv4Method === 'dhcp'"
+                />
+              </el-form-item>
+
+              <!-- 网关 + 问号提示气泡 -->
+              <el-form-item label="网关:" label-position="left">
+                <div class="input-with-tip">
+                  <el-input
+                    v-model="formData.gateway4"
+                    placeholder="192.168.10.1"
+                    :disabled="formData.ipv4Method === 'dhcp'"
+                  />
+                  <el-tooltip content="网关说明：访问跨网段流量出口地址" placement="right">
+                    <el-icon class="tip-icon">
+                      <InfoFilled />
+                    </el-icon>
+                  </el-tooltip>
+                </div>
+              </el-form-item>
+
+              <!-- DNS Server -->
+              <el-form-item label="DNS Server:" label-position="left">
+                <el-input
+                  v-model="dnsInputText"
+                  placeholder="多个DNS用英文逗号分隔，如 192.168.10.1,223.5.5.5"
+                  :disabled="formData.ipv4Method === 'dhcp'"
+                  @blur="handleDnsInputConfirm"
+                  @keyup.enter="handleDnsInputConfirm"
+                  clearable
+                />
+                <template #hint>输入多个DNS以英文逗号分隔，回车/失焦自动保存到数组</template>
+              </el-form-item>
+
+              <!--              <div>-->
+              <!--                <el-checkbox v-model="formData.defaultGateway" label="设为默认网关" />-->
+              <!--              </div>-->
+              <!-- 设为默认网关 -->
+              <!-- MTU配置 -->
+              <el-form-item label="MTU 值:" label-position="left">
+                <el-select v-model="formData.mtu" placeholder="选择MTU">
+                  <el-option label="9000" value="9000" />
+                  <el-option label="8992" value="8992" />
+                  <el-option label="1500" value="1500" />
+                </el-select>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="IPv6" name="ipv6">
+          <div class="empty-tab-text">IPv6配置区域（可自行扩展表单）</div>
+        </el-tab-pane>
+      </el-tabs>
     </div>
+    <!-- 顶部Tab切换 -->
 
-    <!-- 步骤3：IPv4网络配置 -->
-    <div v-if="activeStep === 3" class="step-content">
-      <el-form ref="step3Ref" :model="form.ipForm" label-width="140px">
-        <el-form-item label="IP获取方式">
-          <el-radio-group v-model="form.ipForm.ipv4Mode">
-            <el-radio label="dhcp">DHCP自动获取</el-radio>
-            <el-radio label="static">手动静态配置</el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <template v-if="form.ipForm.ipv4Mode === 'static'">
-          <el-form-item
-            label="IP地址/前缀"
-            prop="address"
-            rules="[{required:true,message:'请填写IP地址',trigger:'blur'}]"
-          >
-            <el-input v-model="form.ipForm.address" placeholder="192.168.190.100/24" />
-            <div class="tip-text">子网统一使用CIDR前缀格式，如/24等价255.255.255.0</div>
-          </el-form-item>
-          <el-form-item
-            label="网关"
-            prop="gateway"
-            rules="[{required:true,message:'请填写网关地址',trigger:'blur'}]"
-          >
-            <el-input v-model="form.ipForm.gateway" placeholder="192.168.190.2" />
-          </el-form-item>
-          <el-form-item label="DNS服务器">
-            <el-input v-model="form.ipForm.dns" placeholder="多个DNS用逗号分隔" />
-          </el-form-item>
-          <el-form-item label="MTU">
-            <el-select v-model="form.ipForm.mtu">
-              <el-option label="1500 标准帧" value="1500" />
-              <el-option label="9000 巨帧" value="9000" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label=" ">
-            <el-checkbox v-model="form.ipForm.defaultGateway" label="设为默认网关" />
-          </el-form-item>
-        </template>
-      </el-form>
-    </div>
-
-    <!-- 底部按钮 -->
+    <!-- 弹窗底部按钮 -->
     <template #footer>
-      <div class="footer-btn-group">
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-if="activeStep > 1" @click="prevStep">上一步</el-button>
-        <el-button v-if="activeStep < 3" type="primary" @click="nextStep">下一步</el-button>
-        <el-button v-if="activeStep === 3" type="success" @click="submitCreateBond"
-          >完成创建</el-button
+      <div class="dialog-footer">
+        <el-button
+          v-if="currentStep <= 1 && currentStep !== 0"
+          @click="
+            () => {
+              currentStep--
+            }
+          "
+          :disabled="currentStep === 0"
+          >上一步</el-button
         >
+        <el-button type="primary" @click="nextStep">
+          {{ currentStep >= 1 ? '完成' : '下一步' }}
+        </el-button>
       </div>
     </template>
   </el-dialog>
 </template>
 
-<script setup>
-  import { ref, defineEmits, reactive, watch } from 'vue'
+<script setup lang="ts">
+  import { defineEmits, defineProps, ref } from 'vue'
+  import { InfoFilled } from '@element-plus/icons-vue'
   import { ElMessage } from 'element-plus'
+  import {
+    AddressMethod,
+    BondMode,
+    InterfaceState,
+    InterfaceType,
+    IPVersion,
+    NetworkDeviceInterface,
+    NetworkInterface
+  } from '@/entity/network'
+  import { fetchGetNetworkDeviceList } from '@/api/network'
 
+  const deviceList = ref<NetworkDeviceInterface>([])
+  const currentStep = ref(0)
+  // 父组件传入控制弹窗显示
   const props = defineProps({
-    visible: Boolean,
-    // 传入系统所有可用物理网卡列表 eth0 eth1 ens18...
-    deviceList: {
-      type: Array,
-      default: () => []
+    visible: {
+      type: Boolean,
+      default: false
     }
   })
-  const emit = defineEmits(['update:visible', 'create'])
 
+  // Tab激活项
+  const activeTab = ref('ipv4')
+
+  // 表单数据
+  const formRef = ref(null)
+  const formData = ref<NetworkInterface>({
+    device: '',
+    name: '',
+    type: InterfaceType.ETHERNET,
+    state: InterfaceState.UP,
+    macAddress: '',
+    description: '',
+    namespace: '',
+    speed: '',
+    ipv4Addresses: [
+      {
+        address: '',
+        prefix: '255.255.255.0',
+        label: '',
+        mask: '',
+        version: IPVersion.IPv4
+      }
+    ],
+    ipv6Addresses: [],
+    ipv4Method: AddressMethod.STATIC,
+    ipv6Method: AddressMethod.NONE,
+    gateway4: '',
+    gateway6: '',
+    routes: [],
+    dnsServers: [],
+    dnsSearchDomains: [],
+    mtu: 1500,
+    enabled: true,
+    autoStart: true,
+    vlanId: 0,
+    parentInterface: '',
+    updatedAt: null,
+    createdAt: null,
+    isExpanded: true,
+    bond: { mode: BondMode.ACTIVE_BACKUP, slaveInterfaces: [] }
+  })
+
+  const emit = defineEmits(['update:visible'])
+
+  const checkRowSelectable = (row: NetworkDeviceInterface) => {
+    return row.enable
+  }
+  const spareTableRef = ref()
+  const selectNetworkDevice = ref<NetworkDeviceInterface>(null)
+  // 2. 单选核心逻辑：只能保留一条选中
+  const handleSelectionChange = (selectedRows: NetworkDeviceInterface[]) => {
+    formData.value.bond.slaveInterfaces = selectedRows
+  }
+
+  // 下一步
+  const nextStep = () => {
+    // 提交表单信息
+    if (currentStep.value === 1) {
+      handleConfirm()
+    } else {
+      if (formData.value.bond.interfaces.length === 0) {
+        ElMessage.info('必须选择一个网络接口!')
+        return
+      }
+      currentStep.value++
+    }
+  }
+  const loadingDeviceList = () => {
+    fetchGetNetworkDeviceList().then((res) => {
+      deviceList.value = res
+    })
+  }
+
+  const dnsInputText = ref('')
+
+  // 处理输入确认（回车/失去焦点触发）
+  const handleDnsInputConfirm = () => {
+    const raw = dnsInputText.value.trim()
+    if (!raw) {
+      formData.value.dnsServers = []
+      return
+    }
+    // 按英文逗号分割、去空格、过滤空字符串
+    const dnsList = raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+    // 去重后赋值给数组
+    formData.value.dnsServers = [...new Set(dnsList)]
+  }
+
+  // 弹窗双向绑定
   const dialogVisible = ref(false)
   watch(
     () => props.visible,
     (val) => {
       dialogVisible.value = val
-      if (val) resetWizard()
+      if (val) {
+        // 打开弹窗时重置表单
+        currentStep.value = 0
+        selectNetworkDevice.value = null
+        loadingDeviceList()
+      }
     },
     { immediate: true }
   )
-  watch(dialogVisible, (val) => emit('update:visible', val))
-
-  // 步骤控制
-  const activeStep = ref(1)
-  const devList = ref(props.deviceList)
-
-  // 表单完整数据
-  const form = reactive({
-    // 第一步：bond基础配置
-    modeForm: {
-      bondName: 'bond0',
-      mode: 'active-backup',
-      primaryDev: ''
-    },
-    // 第二步：选择slave网卡
-    slaveForm: {
-      slaves: []
-    },
-    // 第三步：IP网络配置
-    ipForm: {
-      ipv4Mode: 'static',
-      address: '192.168.190.100/24',
-      gateway: '192.168.190.2',
-      dns: '223.5.5.5,114.114.114.114',
-      mtu: 9000,
-      defaultGateway: true
-    }
+  watch(dialogVisible, (val) => {
+    emit('update:visible', val)
   })
 
-  // 表单ref
-  const step1Ref = ref(null)
-  const step2Ref = ref(null)
-  const step3Ref = ref(null)
+  // 监听数组变化，同步回填到输入框（编辑回显）
+  watch(
+    formData.value.dnsServers,
+    (newArr) => {
+      dnsInputText.value = newArr.join(',')
+    },
+    { immediate: true }
+  )
 
-  // 下一步校验切换
-  const nextStep = async () => {
-    let valid = true
-    if (activeStep.value === 1) {
-      await step1Ref.value.validate((v) => (valid = v))
-    } else if (activeStep.value === 2) {
-      await step2Ref.value.validate((v) => (valid = v))
-    }
-    if (!valid) return
-    activeStep.value += 1
-  }
-
-  // 上一步
-  const prevStep = () => {
-    activeStep.value -= 1
-  }
-
-  // 重置向导
-  const resetWizard = () => {
-    activeStep.value = 1
-    form.modeForm = { bondName: 'bond0', mode: 'active-backup', primaryDev: '' }
-    form.slaveForm.slaves = []
-    form.ipForm = {
-      ipv4Mode: 'static',
-      address: '192.168.190.100/24',
-      gateway: '192.168.190.2',
-      dns: '223.5.5.5,114.114.114.114',
-      mtu: 9000,
-      defaultGateway: true
-    }
-    step1Ref.value?.clearValidate()
-    step2Ref.value?.clearValidate()
-    step3Ref.value?.clearValidate()
-  }
-
-  // 提交创建Bond，抛出事件给父组件执行nmcli命令
-  const submitCreateBond = async () => {
-    if (form.ipForm.ipv4Mode === 'static') {
-      await step3Ref.value.validate((v) => {
-        if (!v) throw new Error('网络参数校验失败')
-      })
-    }
-    // 组装完整Bond配置数据
-    const bondData = {
-      bondName: form.modeForm.bondName,
-      bondMode: form.modeForm.mode,
-      primaryDev: form.modeForm.primaryDev,
-      slaveDevices: form.slaveForm.slaves,
-      network: form.ipForm
-    }
-    emit('create', bondData)
-    ElMessage.success('Bond配置已提交，正在创建')
+  // 关闭弹窗
+  const handleClose = () => {
     dialogVisible.value = false
+  }
+
+  // 确认提交
+  const handleConfirm = async () => {
+    await formRef.value?.validate()
+    console.log('formData>>', formData.value)
+    ElMessage.success('网络配置保存成功')
+    // handleClose()
   }
 </script>
 
 <style scoped>
-  .step-content {
-    padding: 20px 10px;
-    min-height: 260px;
+  #net-edit-dialog .el-dialog__body {
+    padding: 0 0 !important;
+    position: relative;
   }
-  .checkbox-row {
-    margin: 8px 0;
+
+  .input-with-tip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .tip-text {
+
+  .vlan-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tip-icon {
+    color: #409eff;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  .empty-tab-text {
+    padding: 40px 0;
+    text-align: center;
     color: #999;
-    font-size: 12px;
-    margin-top: 6px;
   }
-  .footer-btn-group {
+
+  .dialog-footer {
     text-align: right;
   }
-  :deep(.el-steps) {
-    margin-bottom: 24px;
+
+  :deep(.vlan-tip-popper) {
+    line-height: 1.6;
+  }
+
+  :deep(.tip-red) {
+    color: #f53f3f;
+    font-weight: bold;
   }
 </style>

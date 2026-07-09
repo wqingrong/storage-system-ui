@@ -140,10 +140,12 @@
   import { ElMessage } from 'element-plus'
   import {
     AddressMethod,
+    BondMode,
     InterfaceState,
     InterfaceType,
-    NetworkInterface,
-    NetworkDeviceInterface
+    IPVersion,
+    NetworkDeviceInterface,
+    NetworkInterface
   } from '@/entity/network'
   import { fetchGetNetworkDeviceList } from '@/api/network'
 
@@ -176,7 +178,8 @@
         address: '',
         prefix: '255.255.255.0',
         label: '',
-        mask: ''
+        mask: '',
+        version: IPVersion.IPv4
       }
     ],
     ipv6Addresses: [],
@@ -194,7 +197,8 @@
     parentInterface: '',
     updatedAt: null,
     createdAt: null,
-    isExpanded: true
+    isExpanded: true,
+    bond: { mode: BondMode.BOND_MODE_UNKNOWN, slaveInterfaces: [] }
   })
 
   const emit = defineEmits(['update:visible'])
