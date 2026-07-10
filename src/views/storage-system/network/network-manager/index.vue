@@ -2,7 +2,11 @@
 <template>
   <el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
     <el-tab-pane label="网络接口列表" name="networkList">
-      <NetworkList v-model:network-interface-list="networkInterfaceList"> </NetworkList>
+      <NetworkList
+        v-model:network-interface-list="networkInterfaceList"
+        @reloadList="reloadNetworkList"
+      >
+      </NetworkList>
     </el-tab-pane>
     <el-tab-pane label="流量控制" name="networkLimit"> </el-tab-pane>
   </el-tabs>
@@ -25,6 +29,7 @@
   onMounted(() => {
     reloadNetworkList()
   })
+
   const handleClick = (tab: TabsPaneContext, event: Event) => {
     activeName.value = String(tab.paneName)
     switch (activeName.value) {

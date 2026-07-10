@@ -5,8 +5,12 @@
         <ElSpace wrap>
           <ElButton @click="handleCreateBondClick">Bond绑定</ElButton>
           <ElButton @click="handleCreateNetworkInterface">新建网络</ElButton>
-          <ElButton @click="handleInterfaceEditClick">编辑</ElButton>
-          <ElButton @click="handleDownClick">停用</ElButton>
+          <ElButton @click="handleInterfaceEditClick" :disabled="currentNetworkItem === null"
+            >编辑</ElButton
+          >
+          <ElButton @click="handleDownClick" :disabled="currentNetworkItem === null"
+            >清除配置</ElButton
+          >
         </ElSpace>
       </div>
       <div
@@ -142,12 +146,14 @@
       v-model:visible="editInterfaceDialog"
       :edit-data="currentNetworkItem"
       @confirm="saveNetworkConfig"
+      @emitReload="emitReload"
     >
     </Interface-edit>
 
     <network-create
       v-model:visible="createNetworkInterfaceDialog"
       @confirm="handleCreateNetworkInterface"
+      @emitReload="emitReload"
     >
     </network-create>
     <BondCreateWizard v-model:visible="createBondDialogVisible" @create="handleCreateBond" />
@@ -162,9 +168,11 @@
   import networkDown from '@imgs/svg/network-down.svg'
   import { AddressMethod, NetworkInterface } from '@/entity/network'
   import NetworkCreate from '@views/storage-system/network/network-manager/modules/network-create.vue'
+  import { fetchClearInterfaceConfig } from '@/api/network'
 
   const createBondDialogVisible = ref(false)
 
+  const emit = defineEmits(['reloadList'])
   const editInterfaceDialog = ref(false)
   const createNetworkInterfaceDialog = ref(false)
   interface Props {
@@ -202,7 +210,17 @@
   const handleCreateNetworkInterface = () => {
     createNetworkInterfaceDialog.value = true
   }
-  const handleDownClick = () => {}
+  const handleDownClick = () => {
+    if (currentNetworkItem.value) {
+      fetchClearInterfaceConfig(currentNetworkItem.value).then((res) => {
+        emit('reloadList')
+      })
+    }
+  }
+
+  const emitReload = () => {
+    emit('reloadList')
+  }
 </script>
 
 <style scoped lang="scss">

@@ -112,6 +112,7 @@
     IPVersion,
     NetworkInterface
   } from '@/entity/network'
+  import { fetchSetNetworkConfig } from '@/api/network'
 
   const dnsInputText = ref('')
   // 处理输入确认（回车/失去焦点触发）
@@ -141,7 +142,7 @@
       default: null
     }
   })
-  const emit = defineEmits(['update:visible', 'confirm'])
+  const emit = defineEmits(['update:visible', 'confirm', 'emitReload'])
   // 表单数据
   const formRef = ref(null)
   const formData = ref<NetworkInterface>({
@@ -190,7 +191,7 @@
       if (val) {
         // 打开弹窗时重置表单
         if (props.editData) {
-          dnsInputText.value = props.editData.dnsServers.join(',')
+          dnsInputText.value = props.editData.dnsServers ? props.editData.dnsServers.join(',') : ''
           Object.assign(formData.value, props.editData)
         }
       }
@@ -210,10 +211,13 @@
 
   // 确认提交
   const handleConfirm = async () => {
-    await formRef.value?.validate()
-    emit('confirm', { ...formData.value })
-    ElMessage.success('网络配置保存成功')
-    handleClose()
+    // await formRef.value?.validate()
+    console.log('>>', formData.value)
+    fetchSetNetworkConfig(formData.value).then((res) => {
+      ElMessage.success('网络配置保存成功')
+      emit('emitReload')
+      handleClose()
+    })
   }
 </script>
 

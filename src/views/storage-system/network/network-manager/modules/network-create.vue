@@ -55,7 +55,7 @@
               <!-- 子网掩码 -->
               <el-form-item label="子网掩码 (mask):" label-position="left">
                 <el-input
-                  v-model="formData.ipv4Addresses[0].prefix"
+                  v-model="formData.ipv4Addresses[0].mask"
                   placeholder="255.255.255.0"
                   :disabled="formData.ipv4Method === 'dhcp'"
                 />
@@ -147,9 +147,9 @@
     NetworkDeviceInterface,
     NetworkInterface
   } from '@/entity/network'
-  import { fetchGetNetworkDeviceList } from '@/api/network'
+  import { fetchGetNetworkDeviceList, fetchSetNetworkConfig } from '@/api/network'
 
-  const deviceList = ref<NetworkDeviceInterface>([])
+  const deviceList = ref<NetworkDeviceInterface[]>([])
   const currentStep = ref(0)
   // 父组件传入控制弹窗显示
   const props = defineProps({
@@ -176,9 +176,9 @@
     ipv4Addresses: [
       {
         address: '',
-        prefix: '255.255.255.0',
+        prefix: '',
         label: '',
-        mask: '',
+        mask: '255.255.255.0',
         version: IPVersion.IPv4
       }
     ],
@@ -201,10 +201,10 @@
     bond: { mode: BondMode.BOND_MODE_UNKNOWN, slaveInterfaces: [] }
   })
 
-  const emit = defineEmits(['update:visible'])
+  const emit = defineEmits(['update:visible', 'emitReload'])
 
   const checkRowSelectable = (row: NetworkDeviceInterface) => {
-    return row.enable
+    return !row.enable
   }
   const spareTableRef = ref()
   const selectNetworkDevice = ref<NetworkDeviceInterface>(null)
@@ -236,7 +236,7 @@
     }
   }
   const loadingDeviceList = () => {
-    fetchGetNetworkDeviceList().then((res) => {
+    fetchGetNetworkDeviceList(null).then((res) => {
       deviceList.value = res
     })
   }
@@ -294,10 +294,13 @@
 
   // 确认提交
   const handleConfirm = async () => {
-    await formRef.value?.validate()
-    console.log('formData>>', formData.value)
-    ElMessage.success('网络配置保存成功')
-    // handleClose()
+    //  表单校验...
+    // await formRef.value?.validate()
+    fetchSetNetworkConfig(formData.value).then((res) => {
+      ElMessage.success('网络配置保存成功')
+      emit('emitReload')
+      handleClose()
+    })
   }
 </script>
 
