@@ -9,7 +9,7 @@
   >
     <div v-if="currentStep === 0">
       <el-form-item label="聚合模式">
-        <el-select v-model="formData.bond.mode" placeholder="请选择">
+        <el-select v-model="formData.bonder.mode" placeholder="请选择">
           <el-option label="active-backup 主备模式" :value="BondMode.ACTIVE_BACKUP" />
           <el-option label="balance-rr 轮询负载" :value="BondMode.ROUND_ROBIN" />
           <el-option label="balance-xor 哈希负载" :value="BondMode.BLANCE_XOR" />
@@ -158,9 +158,9 @@
     NetworkDeviceInterface,
     NetworkInterface
   } from '@/entity/network'
-  import { fetchGetNetworkDeviceList } from '@/api/network'
+  import { fetchCreateBond, fetchGetNetworkDeviceList } from '@/api/network'
 
-  const deviceList = ref<NetworkDeviceInterface>([])
+  const deviceList = ref<NetworkDeviceInterface[]>([])
   const currentStep = ref(0)
   // 父组件传入控制弹窗显示
   const props = defineProps({
@@ -209,19 +209,19 @@
     updatedAt: null,
     createdAt: null,
     isExpanded: true,
-    bond: { mode: BondMode.ACTIVE_BACKUP, slaveInterfaces: [] }
+    bonder: { mode: BondMode.ACTIVE_BACKUP, slaveInterfaces: [] }
   })
 
-  const emit = defineEmits(['update:visible'])
+  const emit = defineEmits(['update:visible', 'emitReload'])
 
   const checkRowSelectable = (row: NetworkDeviceInterface) => {
-    return row.enable
+    return !row.enable
   }
   const spareTableRef = ref()
   const selectNetworkDevice = ref<NetworkDeviceInterface>(null)
   // 2. 单选核心逻辑：只能保留一条选中
   const handleSelectionChange = (selectedRows: NetworkDeviceInterface[]) => {
-    formData.value.bond.slaveInterfaces = selectedRows
+    formData.value.bonder.slaveInterfaces = selectedRows
   }
 
   // 下一步
@@ -230,15 +230,15 @@
     if (currentStep.value === 1) {
       handleConfirm()
     } else {
-      if (formData.value.bond.interfaces.length === 0) {
-        ElMessage.info('必须选择一个网络接口!')
+      if (formData.value.bonder.slaveInterfaces.length < 2) {
+        ElMessage.info('网络接口必须大于等于2')
         return
       }
       currentStep.value++
     }
   }
   const loadingDeviceList = () => {
-    fetchGetNetworkDeviceList().then((res) => {
+    fetchGetNetworkDeviceList(null).then((res) => {
       deviceList.value = res
     })
   }
@@ -296,10 +296,12 @@
 
   // 确认提交
   const handleConfirm = async () => {
-    await formRef.value?.validate()
+    // await formRef.value?.validate()
     console.log('formData>>', formData.value)
-    ElMessage.success('网络配置保存成功')
-    // handleClose()
+    fetchCreateBond(formData.value).then((res) => {
+      handleClose()
+      emit('emitReload')
+    })
   }
 </script>
 

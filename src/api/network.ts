@@ -29,3 +29,10 @@ export function fetchClearInterfaceConfig(data: NetworkInterface) {
     data
   })
 }
+
+export function fetchCreateBond(data: NetworkInterface) {
+  return request.post<NetworkInterface>({
+    url: '/network/createBond',
+    data
+  })
+}

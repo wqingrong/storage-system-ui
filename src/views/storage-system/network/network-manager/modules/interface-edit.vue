@@ -179,7 +179,7 @@
     updatedAt: null,
     createdAt: null,
     isExpanded: true,
-    bond: { mode: BondMode.BOND_MODE_UNKNOWN, slaveInterfaces: [] }
+    bonder: { mode: BondMode.BOND_MODE_UNKNOWN, slaveInterfaces: [] }
   })
 
   // 弹窗双向绑定

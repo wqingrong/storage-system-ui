@@ -133,7 +133,7 @@ export interface NetworkInterface {
   /** 创建时间 */
   createdAt?: Date
   isExpanded: boolean
-  bond: Bond
+  bonder: Bond
 }
 
 export interface Bond {

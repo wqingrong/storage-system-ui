@@ -156,7 +156,11 @@
       @emitReload="emitReload"
     >
     </network-create>
-    <BondCreateWizard v-model:visible="createBondDialogVisible" @create="handleCreateBond" />
+    <BondCreateWizard
+      v-model:visible="createBondDialogVisible"
+      @create="handleCreateBond"
+      @emitReload="emitReload"
+    />
   </div>
 </template>
 
