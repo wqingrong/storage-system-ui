@@ -7,7 +7,7 @@
 <script setup lang="ts">
   import WatchNetwork from '@views/storage-system/watch-status/watch-network/modules/watch-network.vue'
 
-  defineOptions({ name: 'BasicConsole' })
+  defineOptions({ name: 'watchNetwork' })
 </script>
 
 <style lang="scss" scoped>

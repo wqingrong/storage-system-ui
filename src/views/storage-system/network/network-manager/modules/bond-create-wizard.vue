@@ -178,7 +178,7 @@
   const formData = ref<NetworkInterface>({
     device: '',
     name: '',
-    type: InterfaceType.ETHERNET,
+    type: InterfaceType.BOND,
     state: InterfaceState.UP,
     macAddress: '',
     description: '',

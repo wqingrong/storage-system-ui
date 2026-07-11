@@ -30,19 +30,19 @@ export const watchStatusRoutes: AppRouteRecord = {
         keepAlive: false
       }
     },
-    {
-      path: 'watch-storagePool',
-      name: 'WatchStoragePool',
-      component: '/storage-system/watch-status/ecommerce',
-      meta: {
-        title: '存储池监控',
-        keepAlive: false
-      }
-    },
+    // {
+    //   path: 'watch-storagePool',
+    //   name: 'WatchStoragePool',
+    //   component: '/storage-system/watch-status/ecommerce',
+    //   meta: {
+    //     title: '存储池监控',
+    //     keepAlive: false
+    //   }
+    // },
     {
       path: 'watch-process',
       name: 'watchProcess',
-      component: '/storage-system/watch-status/ecommerce',
+      component: '/storage-system/watch-status/watch-progress',
       meta: {
         title: '进程监控',
         keepAlive: false

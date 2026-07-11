@@ -11,3 +11,11 @@ export function fetchGetMemoryInfo() {
     url: '/monitor/getMemoryInfo'
   })
 }
+
+export function fetchGetSystemProgress(params: any) {
+  return request.get<any>({
+    url: '/monitor/getSystemProgress',
+    params,
+    loading: false
+  })
+}
