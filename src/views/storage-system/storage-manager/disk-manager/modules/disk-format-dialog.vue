@@ -24,7 +24,7 @@
             {{ formatDeviceList.length }} 块
           </el-descriptions-item>
         </el-descriptions>
-        <el-table :data="props.diskDeviceList" row-key="device" style="width: 100%">
+        <el-table :data="props.formatDeviceList" row-key="device" style="width: 100%">
           <el-table-column property="device" label="盘符" width="120" />
           <el-table-column property="model" label="型号" width="250" />
           <el-table-column property="totalSize" label="容量" />

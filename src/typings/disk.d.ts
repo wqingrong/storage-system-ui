@@ -12,6 +12,7 @@ declare namespace Disk {
       devicePath: string
       format: boolean
       raidNumber: number
+      wwn: string
     }
 
     interface DiskDeviceDetail {
