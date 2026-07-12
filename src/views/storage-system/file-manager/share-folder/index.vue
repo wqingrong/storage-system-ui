@@ -12,7 +12,13 @@
           >
         </ElSpace>
       </div>
+      <el-empty
+        v-if="shareFolderList === null || shareFolderList.length === 0"
+        :image-size="300"
+        description="未创建共享文件夹"
+      />
       <div
+        v-else
         v-for="item in shareFolderList"
         :key="item.folder.folderName"
         class="storage-info-container"

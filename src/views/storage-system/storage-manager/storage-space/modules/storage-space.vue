@@ -1,6 +1,11 @@
 <template>
   <div class="demo-collapse">
-    <el-collapse v-for="item in storagePoolList" :key="item.poolName">
+    <el-empty
+      v-if="storagePoolList === null || storagePoolList.length === 0"
+      :image-size="300"
+      description="未创建存储池"
+    />
+    <el-collapse v-else v-for="item in storagePoolList" :key="item.poolName">
       <el-collapse-item name="1">
         <template #title>
           <div style="display: flex; flex-direction: row; align-items: center">
