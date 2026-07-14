@@ -119,7 +119,7 @@
               @current-change="handleCurrentChange"
             >
               <el-table-column
-                property="orderNumber"
+                property="raidMetData.orderNumber"
                 label="RAID顺序"
                 width="100"
                 min-width="100"
@@ -129,7 +129,7 @@
                   item.raidDetailInfo.grade === RaidGrade.RAID_10 ||
                   item.raidDetailInfo.grade === RaidGrade.RAID_60
                 "
-                property="raidClass"
+                property="raidMetData.raidClass"
                 label="归属raid单元"
                 width="120"
               />
@@ -138,8 +138,8 @@
               <el-table-column property="serialNumber" label="序列号" />
               <el-table-column property="totalSize" label="容量" />
               <el-table-column property="use" label="用途" />
-              <el-table-column property="healthStatus" label="健康状态" />
-              <el-table-column property="diskStatus" label="硬盘状态" />
+              <el-table-column property="diskHealth.healthStatus" label="健康状态" />
+              <el-table-column property="raidMetData.status" label="硬盘状态" />
               <!-- 新增：操作列 -->
               <el-table-column label="操作" width="120" align="center">
                 <template #default="scope">
@@ -151,34 +151,34 @@
                       <el-dropdown-menu>
                         <el-dropdown-item
                           v-if="
-                            scope.row.diskStatus === 'active sync' ||
-                            scope.row.diskStatus === 'ONLINE'
+                            scope.row.raidMetData.status === 'active sync' ||
+                            scope.row.raidMetData.status === 'ONLINE'
                           "
                           @click="handleKickDisk(item, scope.row)"
                           >踢盘
                         </el-dropdown-item>
                         <el-dropdown-item
-                          v-if="scope.row.diskStatus === 'active sync'"
+                          v-if="scope.row.raidMetData.status === 'active sync'"
                           @click="handleDiskOrientation(item, scope.row)"
                           >定位
                         </el-dropdown-item>
 
                         <el-dropdown-item
-                          v-if="scope.row.diskStatus === 'active sync'"
+                          v-if="scope.row.raidMetData.status === 'active sync'"
                           divided
                           @click="handleDiskDetail(item, scope.row)"
                           >详情
                         </el-dropdown-item>
                         <el-dropdown-item
-                          v-if="scope.row.diskStatus === 'removed'"
+                          v-if="scope.row.raidMetData.status === 'removed'"
                           divided
                           @click="sortRaidImportDisk(item, scope.row)"
                           >引入
                         </el-dropdown-item>
                         <el-dropdown-item
                           v-if="
-                            scope.row.diskStatus === 'DEGRADED' ||
-                            scope.row.diskStatus === 'FAULTED'
+                            scope.row.raidMetData.status === 'DEGRADED' ||
+                            scope.row.raidMetData.status === 'FAULTED'
                           "
                           divided
                           @click="onlineDisk(item, scope.row)"
@@ -186,8 +186,8 @@
                         </el-dropdown-item>
                         <el-dropdown-item
                           v-if="
-                            scope.row.diskStatus === 'DEGRADED' ||
-                            scope.row.diskStatus === 'FAULTED'
+                            scope.row.raidMetData.status === 'DEGRADED' ||
+                            scope.row.raidMetData.status === 'FAULTED'
                           "
                           divided
                           @click="zfsReplaceDisk(item, scope.row)"
@@ -654,7 +654,7 @@
       poolType: poolItem.poolType,
       grade: poolItem.raidDetailInfo.grade,
       raidDevicePath: poolItem.raidDetailInfo.devicePath,
-      diskDeviceBasicInfo: row
+      diskDeviceBasic: row
     }
     fetchPoolImportDisk(params).then(() => {
       // 页面刷新一下

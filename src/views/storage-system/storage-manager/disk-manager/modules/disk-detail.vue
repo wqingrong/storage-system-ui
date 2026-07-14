@@ -9,7 +9,7 @@
           <div style="display: flex; flex-direction: row; align-items: center">
             <img
               style="width: 60px; height: 60px; margin: 10px"
-              :src="getDiskHealthStatusImage(item.healthStatus)"
+              :src="getDiskHealthStatusImage(item.diskHealth.healthStatus)"
             />
             <div
               style="
@@ -32,10 +32,12 @@
                 </div>
               </div>
               <div>
-                <span v-if="item.healthStatus === HealthStatus.OK" style="color: #4caf50"
+                <span v-if="item.diskHealth.healthStatus === HealthStatus.OK" style="color: #4caf50"
                   >良好</span
                 >
-                <span v-else-if="item.healthStatus === HealthStatus.WARNING" style="color: #ec6f30"
+                <span
+                  v-else-if="item.diskHealth.healthStatus === HealthStatus.WARNING"
+                  style="color: #ec6f30"
                   >异常</span
                 >
                 <span v-else style="color: #e80536">损坏</span>
@@ -81,21 +83,23 @@
               <span>健康状态:</span>
             </div>
             <div class="detail-value">
-              <span v-if="item.healthStatus === HealthStatus.OK" class="detail-value status-good"
+              <span
+                v-if="item.diskHealth.healthStatus === HealthStatus.OK"
+                class="detail-value status-good"
                 >良好</span
               >
               <span
-                v-else-if="item.healthStatus === HealthStatus.WARNING"
+                v-else-if="item.diskHealth.healthStatus === HealthStatus.WARNING"
                 class="detail-value status-warning"
                 >异常</span
               >
               <span
-                v-else-if="item.healthStatus === HealthStatus.BAD"
+                v-else-if="item.diskHealth.healthStatus === HealthStatus.BAD"
                 class="detail-value status-warning"
                 >异常</span
               >
               <span
-                v-else-if="item.healthStatus === HealthStatus.UNKNOWN"
+                v-else-if="item.diskHealth.healthStatus === HealthStatus.UNKNOWN"
                 class="detail-value status-bad"
                 >未检测</span
               >
@@ -106,7 +110,7 @@
               <span>健康值:</span>
             </div>
             <div class="detail-value">
-              <span>{{ item.healthValue }}</span>
+              <span>{{ item.diskHealth.healthValue }}</span>
             </div>
           </div>
           <div class="detail-item">
@@ -114,7 +118,7 @@
               <span>温度:</span>
             </div>
             <div class="detail-value">
-              <span>{{ item.temperature }}</span>
+              <span>{{ item.diskHealth.temperature }}</span>
             </div>
           </div>
           <div class="detail-item">
@@ -122,7 +126,7 @@
               <span>运行天数:</span>
             </div>
             <div class="detail-value">
-              <span>{{ item.runningTime }}</span>
+              <span>{{ item.diskHealth.runningTime }}</span>
             </div>
           </div>
         </div>

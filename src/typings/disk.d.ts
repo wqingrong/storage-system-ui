@@ -11,7 +11,6 @@ declare namespace Disk {
       device: string
       devicePath: string
       format: boolean
-      raidNumber: number
       wwn: string
     }
 
@@ -24,14 +23,24 @@ declare namespace Disk {
       device: string // 盘符
       devicePath: string // 盘符路径
       use: string // 磁盘的用途
-      healthStatus: HealthStatus // 磁盘的健康状态（使用枚举类型）
-      temperature: string // 温度
-      healthValue: string
-      runningTime: string
-      readClass: string
-      wwn: string
+      raidMetData: RaidMetData
+      diskHealth: DiskHealth
     }
 
+    interface DiskHealth {
+      healthStatus: string
+      temperature: string
+      runningTime: string
+      healthValue: string
+    }
+
+    interface RaidMetData {
+      StoragePool: string
+      Status: string
+      grade: string
+      orderNumber: number
+      RaidClass: string
+    }
     type DiskDeviceList = Api.Common.PaginatedResponse<DiskDeviceDetail>
     type DiskDeviceSimpleList = Api.Common.PaginatedResponse<DeviceMessage>
 

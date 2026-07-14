@@ -73,7 +73,7 @@
     poolType: string
     grade: string
     raidDevicePath: string
-    diskDeviceBasicInfo: any
+    diskDeviceBasic: any
   }
   const confirmImport = () => {
     switch (props.option) {
@@ -83,7 +83,7 @@
           poolType: props.poolItem.poolType,
           grade: props.poolItem.raidDetailInfo.grade,
           raidDevicePath: props.poolItem.raidDetailInfo.devicePath,
-          diskDeviceBasicInfo: selectedDisk.value
+          diskDeviceBasic: selectedDisk.value
         }
         fetchPoolImportDisk(params).then(() => {
           // 页面刷新一下
