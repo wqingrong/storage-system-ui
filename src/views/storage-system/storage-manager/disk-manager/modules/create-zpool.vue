@@ -220,6 +220,7 @@
   const createZPoolFormData = reactive<Disk.Device.CreateZPoolDto>({
     grade: RaidGrade.RAID_Stripe,
     diskDeviceList: [],
+    spareDeviceList: [],
     storagePoolDesc: '',
     chunkSize: '64k'
   })

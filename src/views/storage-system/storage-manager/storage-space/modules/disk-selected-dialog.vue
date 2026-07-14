@@ -24,10 +24,12 @@
   import { ref, watch } from 'vue'
   import { Disk } from '@/typings/disk'
   import { fetchGetFreeDiscDeviceList } from '@/api/system-manage'
-  import { fetchPoolImportDisk } from '@/api/storage-service'
+  import { fetchPoolImportDisk, fetchPoolReplaceDisk } from '@/api/storage-service'
   interface Props {
     viable: boolean
     poolItem: Disk.Device.StoragePool
+    optionDiskItem: any
+    option: string
   }
   //
   const diskDeviceList = ref<Disk.Device.DeviceMessage[]>([])
@@ -74,18 +76,42 @@
     diskDeviceBasicInfo: any
   }
   const confirmImport = () => {
-    const params: PoolImportDisk = {
-      poolName: props.poolItem.poolName,
-      poolType: props.poolItem.poolType,
-      grade: props.poolItem.raidDetailInfo.grade,
-      raidDevicePath: props.poolItem.raidDetailInfo.devicePath,
-      diskDeviceBasicInfo: selectedDisk.value
+    switch (props.option) {
+      case 'sortRaidImportDisk': {
+        const params: PoolImportDisk = {
+          poolName: props.poolItem.poolName,
+          poolType: props.poolItem.poolType,
+          grade: props.poolItem.raidDetailInfo.grade,
+          raidDevicePath: props.poolItem.raidDetailInfo.devicePath,
+          diskDeviceBasicInfo: selectedDisk.value
+        }
+        fetchPoolImportDisk(params).then(() => {
+          // 页面刷新一下
+          emit('refreshStorageList')
+          handleDialogClose()
+        })
+        return
+      }
+      case 'zfsReplaceDisk': {
+        const params = {
+          poolName: props.poolItem.poolName,
+          poolType: props.poolItem.poolType,
+          grade: props.poolItem.raidDetailInfo.grade,
+          raidDevicePath: props.poolItem.raidDetailInfo.devicePath,
+          olderDiskDevice: props.optionDiskItem,
+          newerDiskDevice: selectedDisk.value
+        }
+        fetchPoolReplaceDisk(params).then(() => {
+          // 页面刷新一下
+          emit('refreshStorageList')
+          handleDialogClose()
+        })
+        return
+      }
+      default: {
+        ElMessage.error('未知类型操作')
+      }
     }
-    fetchPoolImportDisk(params).then(() => {
-      // 页面刷新一下
-      emit('refreshStorageList')
-      handleDialogClose()
-    })
   }
   //  关闭弹窗
   const handleDialogClose = () => {

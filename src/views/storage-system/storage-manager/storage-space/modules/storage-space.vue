@@ -150,7 +150,10 @@
                     <template #dropdown>
                       <el-dropdown-menu>
                         <el-dropdown-item
-                          v-if="scope.row.diskStatus === 'active sync'"
+                          v-if="
+                            scope.row.diskStatus === 'active sync' ||
+                            scope.row.diskStatus === 'ONLINE'
+                          "
                           @click="handleKickDisk(item, scope.row)"
                           >踢盘
                         </el-dropdown-item>
@@ -169,8 +172,26 @@
                         <el-dropdown-item
                           v-if="scope.row.diskStatus === 'removed'"
                           divided
-                          @click="importDisk(item, scope.row)"
+                          @click="sortRaidImportDisk(item, scope.row)"
                           >引入
+                        </el-dropdown-item>
+                        <el-dropdown-item
+                          v-if="
+                            scope.row.diskStatus === 'DEGRADED' ||
+                            scope.row.diskStatus === 'FAULTED'
+                          "
+                          divided
+                          @click="onlineDisk(item, scope.row)"
+                          >上线
+                        </el-dropdown-item>
+                        <el-dropdown-item
+                          v-if="
+                            scope.row.diskStatus === 'DEGRADED' ||
+                            scope.row.diskStatus === 'FAULTED'
+                          "
+                          divided
+                          @click="zfsReplaceDisk(item, scope.row)"
+                          >替换
                         </el-dropdown-item>
                       </el-dropdown-menu>
                     </template>
@@ -290,6 +311,8 @@
     <disk-selected-dialog
       v-model:viable="diskDialogVisible"
       v-model:pool-item="optionPoolItem"
+      v-model:option-disk-item="optionDiskItem"
+      v-model:option="option"
       @refresh-storage-list="refreshStorageSpaceData"
     />
   </div>
@@ -311,6 +334,7 @@
     fetchDestroySoftRaid,
     fetchDestroyZPool,
     fetchImportZPool,
+    fetchPoolImportDisk,
     fetchPoolKickDisk,
     fetchReloadSoftRaid,
     fetchStopSoftRaid,
@@ -323,7 +347,9 @@
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
   const diskDialogVisible = ref(false)
-  const optionPoolItem = ref<Disk.Device.StoragePool>({})
+  const optionPoolItem = ref<Disk.Device.StoragePool>({}) // 当前选中的存储池
+  const optionDiskItem = ref(null) // 当前需要操作的磁盘
+  const option = ref('')
   const getStorageSpaceStatusImage = (status: string) => {
     if (status) {
       return new URL('/src/assets/img/svg/storage-space.svg', import.meta.url).href
@@ -582,6 +608,7 @@
     diskDevice: string
     raidDevice: string
     serialNumber: string
+    wwn: string
   }
   // 踢盘
   const handleKickDisk = (poolItem: any, row: any) => {
@@ -592,7 +619,8 @@
       grade: poolItem.raidDetailInfo.grade,
       diskDevice: row.devicePath,
       raidDevice: poolItem.raidDetailInfo.devicePath,
-      serialNumber: row.serialNumber
+      serialNumber: row.serialNumber,
+      wwn: row.wwn
     }
     fetchPoolKickDisk(params).then(() => {
       refreshStorageSpaceData()
@@ -612,10 +640,34 @@
   }
 
   // 重新引入硬盘
-  const importDisk = (poolItem: any, row: any) => {
+  const sortRaidImportDisk = (poolItem: any, row: any) => {
     optionPoolItem.value = poolItem
+    optionDiskItem.value = row
+    option.value = 'sortRaidImportDisk'
     diskDialogVisible.value = true
-    console.log('row,', row)
+  }
+
+  //  zfs存储池重新上线磁盘
+  const onlineDisk = (poolItem: any, row: any) => {
+    const params = {
+      poolName: poolItem.poolName,
+      poolType: poolItem.poolType,
+      grade: poolItem.raidDetailInfo.grade,
+      raidDevicePath: poolItem.raidDetailInfo.devicePath,
+      diskDeviceBasicInfo: row
+    }
+    fetchPoolImportDisk(params).then(() => {
+      // 页面刷新一下
+      refreshStorageSpaceData()
+    })
+  }
+
+  // zfs进行替换磁盘操作
+  const zfsReplaceDisk = (poolItem: any, row: any) => {
+    optionPoolItem.value = poolItem
+    optionDiskItem.value = row
+    diskDialogVisible.value = true
+    option.value = 'zfsReplaceDisk'
   }
 </script>
 <style scoped>

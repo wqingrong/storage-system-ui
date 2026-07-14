@@ -56,3 +56,10 @@ export function fetchPoolImportDisk(data: any) {
     data
   })
 }
+
+export function fetchPoolReplaceDisk(data: any) {
+  return request.post<any>({
+    url: 'storage/poolReplaceDisk',
+    data
+  })
+}

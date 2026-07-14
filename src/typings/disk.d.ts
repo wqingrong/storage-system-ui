@@ -47,6 +47,7 @@ declare namespace Disk {
     interface CreateZPoolDto {
       grade: RaidGrade
       diskDeviceList: Device.DeviceMessage[]
+      spareDeviceList: Device.DeviceMessage[]
       storagePoolDesc: string
       chunkSize: string
     }
