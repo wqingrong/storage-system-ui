@@ -1,126 +1,139 @@
 <template>
-  <div class="art-full-height" @click="closeContextMenu">
-    <div class="tree-container">
-      <div class="left-sidebar">
-        <ElCard class="art-table-card" shadow="never" style="margin-top: 0">
-          <template #header>
-            <b>File Station</b>
-          </template>
-          <ElScrollbar style="width: 100%; overflow-x: auto">
-            <div style="min-width: 300px; width: max-content">
-              <ElTree
-                ref="treeRef"
-                :data="treeData"
-                :props="treeProps"
-                node-key="id"
-                default-expand-all
-                highlight-current
-                @node-click="(treeNode) => handleNodeClick(treeNode, true)"
-              >
-                <template #default="{ node }">
-                  <ThemeSvg :src="folder" style="width: 18px; height: 18px" />
-                  {{ node.label }}
-                </template>
-              </ElTree>
-            </div>
-          </ElScrollbar>
-        </ElCard>
-      </div>
-      <div class="right-content art-full-height">
-        <div class="menu-container" style="margin-bottom: 10px">
-          <ElSpace wrap>
-            <ElButton @click="handleNewDirectory">新建文件夹</ElButton>
-            <ElButton @click="handleRenameFileInfo" :disabled="selectionFileInfoRows.length !== 1"
-              >重命名</ElButton
-            >
-            <ElButton @click="handleDeleteFileInfos" :disabled="selectionFileInfoRows.length === 0"
-              >删除</ElButton
-            >
-            <ElButton @click="handleSelectDirectory">路径选择器</ElButton>
-          </ElSpace>
-        </div>
-        <ElCard class="art-table-card" shadow="never">
-          <ArtTableHeader
-            v-model:columns="columnChecks"
-            :loading="loading"
-            @refresh="refreshData"
-            layout="search, refresh, size, fullscreen, columns"
-          >
-            <template #left>
-              <div class="art-table-breadcrumb">
-                <!-- 返回上一级按钮 -->
-                <el-button
-                  text
-                  :disabled="pathHistory.length <= 1"
-                  @click="goBack"
-                  :icon="ArrowLeft"
-                />
-
-                <!-- 前进下一级按钮 -->
-                <el-button
-                  text
-                  :disabled="forwardStack.length === 0"
-                  @click="goForward"
-                  :icon="ArrowRight"
-                />
-
-                <!-- 当前路径显示 -->
-                <span class="path-name">{{ currentPathName }}</span>
-              </div>
+  <ElDialog
+    v-model="dialogVisible"
+    title="选择路径"
+    width="80%"
+    align-center
+    class="menu-container"
+  >
+    <div>
+      <div class="tree-container" style="height: 550px">
+        <div>
+          <ElCard class="art-table-card" shadow="never" style="margin-top: 0">
+            <template #header>
+              <b>挂载点</b>
             </template>
-          </ArtTableHeader>
+            <ElScrollbar style="width: 100%; overflow-x: auto">
+              <div style="min-width: 100px; width: max-content">
+                <ElTree
+                  ref="treeRef"
+                  :data="treeData"
+                  :props="treeProps"
+                  node-key="id"
+                  default-expand-all
+                  highlight-current
+                  @node-click="(treeNode) => handleNodeClick(treeNode, true)"
+                >
+                  <template #default="{ node }">
+                    <ThemeSvg :src="folder" style="width: 18px; height: 18px" />
+                    {{ node.label }}
+                  </template>
+                </ElTree>
+              </div>
+            </ElScrollbar>
+          </ElCard>
+        </div>
+        <div class="right-content">
+          <div class="menu-container" style="margin-bottom: 10px">
+            <ElSpace wrap>
+              <ElButton @click="handleNewDirectory">新建文件夹</ElButton>
+              <ElButton @click="handleRenameFileInfo" :disabled="selectionFileInfoRows.length !== 1"
+                >重命名</ElButton
+              >
+              <ElButton
+                @click="handleDeleteFileInfos"
+                :disabled="selectionFileInfoRows.length === 0"
+                >删除</ElButton
+              >
+            </ElSpace>
+          </div>
+          <ElCard class="art-table-card" shadow="never" style="height: 500px">
+            <ArtTableHeader
+              v-model:columns="columnChecks"
+              :loading="loading"
+              @refresh="refreshData"
+              layout="search, refresh, size, fullscreen, columns"
+            >
+              <template #left>
+                <div class="art-table-breadcrumb">
+                  <!-- 返回上一级按钮 -->
+                  <el-button
+                    text
+                    :disabled="pathHistory.length <= 1"
+                    @click="goBack"
+                    :icon="ArrowLeft"
+                  />
 
-          <ArtTable
-            rowKey="id"
-            :data="data"
-            :columns="columns"
-            :border="false"
-            :pagination="pagination"
-            @sort-change="handleSortChange"
-            @row-dblclick="dbClickWorkSpaceFile"
-            @selection-change="handleSelectionFileInfo"
-            @pagination:size-change="handleSizeChange"
-            @pagination:current-change="handleCurrentChange"
-            @row-contextmenu="handleRowContextMenu"
-          >
-          </ArtTable>
-        </ElCard>
+                  <!-- 前进下一级按钮 -->
+                  <el-button
+                    text
+                    :disabled="forwardStack.length === 0"
+                    @click="goForward"
+                    :icon="ArrowRight"
+                  />
+
+                  <!-- 当前路径显示 -->
+                  <span class="path-name">{{ currentPathName }}</span>
+                </div>
+              </template>
+            </ArtTableHeader>
+
+            <ArtTable
+              rowKey="id"
+              :data="data"
+              :columns="columns"
+              :border="false"
+              :pagination="pagination"
+              @sort-change="handleSortChange"
+              @row-dblclick="dbClickWorkSpaceFile"
+              @selection-change="handleSelectionFileInfo"
+              @pagination:size-change="handleSizeChange"
+              @pagination:current-change="handleCurrentChange"
+              @row-contextmenu="handleRowContextMenu"
+            >
+            </ArtTable>
+          </ElCard>
+        </div>
       </div>
-    </div>
 
-    <!-- 右键悬浮菜单 重构 -->
-    <div
-      v-if="contextMenuVisible"
-      class="file-context-menu"
-      :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
-      @click.stop
-    >
-      <div class="menu-item" @click="contextMenuRename">重命名</div>
-      <div class="divider"></div>
-      <div class="menu-item" @click="contextMenuComputeFileAttribute">属性</div>
-      <div v-if="rightClickRow?.isDir" class="menu-item" @click="contextMenuOpenDir"
-        >进入文件夹</div
+      <!-- 右键悬浮菜单 重构 -->
+      <div
+        v-if="contextMenuVisible"
+        class="file-context-menu"
+        :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+        @click.stop
       >
-    </div>
+        <div class="menu-item" @click="contextMenuRename">重命名</div>
+        <div class="divider"></div>
+        <div class="menu-item" @click="contextMenuComputeFileAttribute">属性</div>
+        <div v-if="rightClickRow?.isDir" class="menu-item" @click="contextMenuOpenDir"
+          >进入文件夹</div
+        >
+      </div>
 
-    <create-dir-dialog
-      v-model:visible="createDirVisible"
-      type="create"
-      :father-path="currentPathName ? currentPathName : ''"
-      @create-directory="submitCreateDirectory"
-    />
-    <rename-dialog
-      v-model:visible="renameVisible"
-      :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : { name: '' }"
-      @submit-rename="submitRename"
-    />
-    <!--   查看文件属性菜单信息-->
-    <file-attribute-dialog
-      v-model:visible="attributeVisible"
-      :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : { name: '' }"
-    />
-    <select-file-dialog v-model:visible="selectDirVisible"> </select-file-dialog>
-  </div>
+      <create-dir-dialog
+        v-model:visible="createDirVisible"
+        type="create"
+        :father-path="currentPathName ? currentPathName : ''"
+        @create-directory="submitCreateDirectory"
+      />
+      <rename-dialog
+        v-model:visible="renameVisible"
+        :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : { name: '' }"
+        @submit-rename="submitRename"
+      />
+      <!--   查看文件属性菜单信息-->
+      <file-attribute-dialog
+        v-model:visible="attributeVisible"
+        :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : { name: '' }"
+      />
+    </div>
+    <!-- 底部按钮区域 -->
+    <div class="dialog-footer">
+      <ElButton @click="handleCancel">取消</ElButton>
+      <ElButton type="primary" @click="handleConfirm">确定</ElButton>
+    </div>
+  </ElDialog>
 </template>
 
 <script setup lang="ts">
@@ -141,7 +154,22 @@
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
   import FileAttributeDialog from '@views/storage-system/file-station/file-work-space/modules/file-attribute-dialog.vue'
-  import selectFileDialog from './modules/select-file-dialog.vue'
+
+  interface Props {
+    visible: boolean
+  }
+  interface Emits {
+    (e: 'update:visible', value: any): void
+    (e: 'submitRename', formData: any): void
+  }
+
+  const props = defineProps<Props>()
+  const emit = defineEmits<Emits>()
+
+  const dialogVisible = computed({
+    get: () => props.visible,
+    set: (value) => emit('update:visible', value)
+  })
   // 右键菜单相关
   /**
    * 表格行右键菜单
@@ -194,7 +222,6 @@
   const createDirVisible = ref(false)
   const renameVisible = ref(false)
   const attributeVisible = ref(false)
-  const selectDirVisible = ref(false)
   defineOptions({ name: 'TreeTable' })
 
   interface FileListParams {
@@ -264,10 +291,6 @@
         console.log('res>>', res)
       })
     }
-  }
-
-  const handleSelectDirectory = () => {
-    selectDirVisible.value = true
   }
 
   // 新建文件夹的弹窗
@@ -530,6 +553,9 @@
   const handleSelectionFileInfo = (selectionRows: FileInfo[]) => {
     selectionFileInfoRows.value = selectionRows
   }
+
+  const handleConfirm = () => {}
+  const handleCancel = () => {}
 </script>
 
 <style lang="scss" scoped>
@@ -618,5 +644,13 @@
       margin: 4px 0;
       background-color: #e4e7ed;
     }
+  }
+  // 底部按钮
+  .dialog-footer {
+    line-height: 50px;
+    margin-bottom: 0px;
+    height: 50px;
+    float: right;
+    margin-top: 9px;
   }
 </style>
