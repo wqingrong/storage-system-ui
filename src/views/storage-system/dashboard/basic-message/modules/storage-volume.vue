@@ -5,17 +5,9 @@
     </div>
 
     <!-- 空状态 -->
-    <ElEmpty
-      v-if="storagePoolList.length === 0"
-      :image-size="200"
-      description="暂无存储池"
-    />
+    <ElEmpty v-if="storagePoolList.length === 0" :image-size="200" description="暂无存储池" />
 
-    <div
-      v-for="(item, index) in storagePoolList"
-      :key="index"
-      class="pool-row"
-    >
+    <div v-for="(item, index) in storagePoolList" :key="index" class="pool-row">
       <!-- 顶部：池名称 + 容量概览 + 状态醒目卡片 -->
       <div
         class="pool-header"
@@ -74,8 +66,18 @@
         <span
           class="status-dot"
           :style="{ backgroundColor: getStoragePoolStatus(item.poolStatus).color }"
-          :class="{ 'pulse-warn': getStoragePoolStatus(item.poolStatus).status === 'WARN' || getStoragePoolStatus(item.poolStatus).status === 'ERROR' }"
+          :class="{
+            'pulse-warn':
+              getStoragePoolStatus(item.poolStatus).status === 'WARN' ||
+              getStoragePoolStatus(item.poolStatus).status === 'ERROR'
+          }"
         ></span>
+
+        <!-- 详情按钮 -->
+        <el-button type="primary" link class="detail-btn" @click="goToStorageSpace">
+          详情
+          <ElIcon class="detail-icon"><ArrowRight /></ElIcon>
+        </el-button>
       </div>
 
       <!-- 存储卷列表 -->
@@ -104,10 +106,14 @@
 
 <script setup lang="ts">
   import { ref, onMounted } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { ArrowRight } from '@element-plus/icons-vue'
   import volumeProgress from './volume-progress.vue'
   import { Disk } from '@/typings/disk'
   import { fetchGetStoragePoolList } from '@/api/system-manage'
   import { getStoragePoolStatus } from '@utils/tools'
+
+  const router = useRouter()
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
 
@@ -121,6 +127,11 @@
         storagePoolList.value = res.records
       }
     })
+  }
+
+  /** 跳转到存储管理 → 存储空间页面 */
+  const goToStorageSpace = () => {
+    router.push('/storage-manager/storage-space')
   }
 </script>
 
@@ -163,7 +174,9 @@
     overflow: hidden;
     flex-shrink: 0;
     min-width: 240px;
-    transition: background 0.3s, border-color 0.3s;
+    transition:
+      background 0.3s,
+      border-color 0.3s;
   }
 
   .status-card-left {
@@ -258,6 +271,17 @@
     width: 1px;
     height: 32px;
     background: #dcdfe6;
+  }
+
+  /* 详情按钮 */
+  .detail-btn {
+    flex-shrink: 0;
+    font-size: 13px;
+
+    .detail-icon {
+      margin-left: 2px;
+      font-size: 12px;
+    }
   }
 
   /* 状态指示点 */
