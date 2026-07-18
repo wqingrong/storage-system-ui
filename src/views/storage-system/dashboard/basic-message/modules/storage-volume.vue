@@ -3,58 +3,88 @@
     <div class="card-header">
       <p class="title">阵列信息</p>
     </div>
-    <ElRow v-for="(item, index) in storagePoolList" :key="index" :gutter="20">
-      <ElCol :sm="24" :md="24" :lg="12" class="center-card">
-        <!-- 让这个容器自动居中包裹所有内容 -->
-        <div class="card-content-wrapper">
-          <ArtRingChart
-            :data="[
-              { value: 100 - item.useRatio, name: '未分配', label: item.freeSize },
-              { value: item.useRatio, name: '已分配', label: item.useSize }
-            ]"
-            :colors="['#EDF2FF', '#4C87F3']"
-            :radius="['70%', '80%']"
-            height="16.5rem"
-            :showLabel="false"
-            :borderRadius="0"
-            :centerText="item.poolName"
-          />
 
-          <div class="icon-text-widget">
-            <div class="item">
-              <div class="content">
-                <p>{{ item.storageSize }}</p>
-                <span>总容量</span>
-              </div>
+    <!-- 空状态 -->
+    <ElEmpty
+      v-if="storagePoolList.length === 0"
+      :image-size="200"
+      description="暂无存储池"
+    />
+
+    <div
+      v-for="(item, index) in storagePoolList"
+      :key="index"
+      class="pool-row"
+    >
+      <!-- 顶部：池名称 + 容量概览 + 状态醒目卡片 -->
+      <div
+        class="pool-header"
+        :style="{ borderLeftColor: getStoragePoolStatus(item.poolStatus).color }"
+      >
+        <!-- 存储池状态醒目卡片 -->
+        <div
+          class="pool-status-card"
+          :class="`status-${getStoragePoolStatus(item.poolStatus).status}`"
+        >
+          <div class="status-card-left">
+            <img
+              class="status-img"
+              :src="getStoragePoolStatus(item.poolStatus).imageUrl"
+              alt="status"
+            />
+          </div>
+          <div class="status-card-middle">
+            <div class="status-label">存储池状态</div>
+            <div
+              class="status-value"
+              :style="{ color: getStoragePoolStatus(item.poolStatus).color }"
+            >
+              {{ getStoragePoolStatus(item.poolStatus).statusTxt }}
             </div>
-            <div class="item">
-              <div class="content">
-                <p>{{ item.freeSize }}</p>
-                <span>未分配</span>
-              </div>
-            </div>
-            <div class="item" style="display: flex; align-items: center">
-              <img
-                v-if="getStoragePoolStatus(item.poolStatus).status !== 'OK'"
-                style="width: 40px"
-                src="@/assets/img/svg/dashboard-warning.svg"
-              />
-              <div class="content">
-                <p :style="{ color: getStoragePoolStatus(item.poolStatus).color }">{{
-                  getStoragePoolStatus(item.poolStatus).statusTxt
-                }}</p>
-                <span>状态</span>
-              </div>
-            </div>
+            <div class="status-pool-name">{{ item.poolName }}</div>
+          </div>
+          <!-- 右上角状态角标 -->
+          <div
+            class="status-card-badge"
+            :style="{ backgroundColor: getStoragePoolStatus(item.poolStatus).color }"
+          >
+            {{ getStoragePoolStatus(item.poolStatus).statusTxt }}
           </div>
         </div>
-      </ElCol>
-      <ElCol :sm="24" :md="24" :lg="12">
-        <div style="height: 100%">
+
+        <!-- 容量概览 -->
+        <div class="capacity-summary">
+          <div class="capacity-item">
+            <span class="capacity-value">{{ item.storageSize }}</span>
+            <span class="capacity-label">总容量</span>
+          </div>
+          <div class="capacity-divider"></div>
+          <div class="capacity-item">
+            <span class="capacity-value">{{ item.freeSize }}</span>
+            <span class="capacity-label">未分配</span>
+          </div>
+          <div class="capacity-divider"></div>
+          <div class="capacity-item">
+            <span class="capacity-value">{{ item.useRatio }}%</span>
+            <span class="capacity-label">已使用</span>
+          </div>
+        </div>
+
+        <!-- 状态指示点（WARN/ERROR 时呼吸灯） -->
+        <span
+          class="status-dot"
+          :style="{ backgroundColor: getStoragePoolStatus(item.poolStatus).color }"
+          :class="{ 'pulse-warn': getStoragePoolStatus(item.poolStatus).status === 'WARN' || getStoragePoolStatus(item.poolStatus).status === 'ERROR' }"
+        ></span>
+      </div>
+
+      <!-- 存储卷列表 -->
+      <div class="volume-list">
+        <div class="volume-list-title">存储卷</div>
+        <div class="volume-grid">
           <volumeProgress
-            v-for="(volume, index) in item.storageSpaceList"
-            :key="index"
-            style="margin-bottom: 10px"
+            v-for="(volume, vIndex) in item.storageSpaceList"
+            :key="vIndex"
             :volume-name="volume.spaceName"
             :free-size="volume.freeSize"
             :total-size="volume.spaceSize"
@@ -62,21 +92,29 @@
             :file-system="volume.fileSystem"
           />
         </div>
-      </ElCol>
-    </ElRow>
+        <ElEmpty
+          v-if="!item.storageSpaceList || item.storageSpaceList.length === 0"
+          :image-size="60"
+          description="暂无存储卷"
+        />
+      </div>
+    </div>
   </div>
 </template>
+
 <script setup lang="ts">
+  import { ref, onMounted } from 'vue'
   import volumeProgress from './volume-progress.vue'
-  import { ref } from 'vue'
   import { Disk } from '@/typings/disk'
   import { fetchGetStoragePoolList } from '@/api/system-manage'
   import { getStoragePoolStatus } from '@utils/tools'
+
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
 
   onMounted(() => {
     refreshStorageSpaceData()
   })
+
   const refreshStorageSpaceData = () => {
     fetchGetStoragePoolList().then((res) => {
       if (res) {
@@ -85,29 +123,215 @@
     })
   }
 </script>
+
 <style scoped>
-  /* 让卡片内部整体垂直 + 水平居中 */
-  .center-card {
-    display: flex;
-    align-items: center; /* 垂直居中 */
-    justify-content: center; /* 水平居中 */
-    height: 100%; /* 占满卡片高度 */
+  /* ===== 存储池行间距 ===== */
+  .pool-row {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #ebeef5;
+  }
+  .pool-row:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
   }
 
-  /* 内容包裹层 */
-  .card-content-wrapper {
-    width: 100%;
+  /* ===== 顶部信息栏：状态卡 + 容量 + 指示点 ===== */
+  .pool-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    border-left: 4px solid #4caf50;
+    border-radius: 0 8px 8px 0;
+    background: #fafbfc;
+    transition: border-color 0.3s;
+    flex-wrap: wrap;
+  }
+
+  /* ===== 存储池状态醒目卡片 ===== */
+  .pool-status-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    background: #f8f9fc;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    min-width: 240px;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .status-card-left {
+    flex-shrink: 0;
+  }
+
+  .status-img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+  }
+
+  .status-card-middle {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .status-label {
+    font-size: 12px;
+    color: #909399;
+    margin-bottom: 2px;
+  }
+
+  .status-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .status-pool-name {
+    font-size: 13px;
+    color: #606266;
+    margin-top: 2px;
+  }
+
+  /* 右上角状态角标 */
+  .status-card-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 4px 16px 4px 20px;
+    font-size: 12px;
+    color: #fff;
+    border-radius: 0 10px 0 12px;
+    font-weight: 500;
+    letter-spacing: 1px;
+  }
+
+  /* 不同状态的背景色 */
+  .pool-status-card.status-OK {
+    background: #f0f9f0;
+    border: 1px solid #c8e6c9;
+  }
+  .pool-status-card.status-WARN {
+    background: #fef7f0;
+    border: 1px solid #ffe0b2;
+  }
+  .pool-status-card.status-ERROR {
+    background: #fef0f0;
+    border: 1px solid #ffcdd2;
+  }
+
+  /* ===== 容量概览 ===== */
+  .capacity-summary {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .capacity-item {
     display: flex;
     flex-direction: column;
-    align-items: center; /* 图表 + 统计项 居中 */
-    gap: 12px; /* 图表和下面容量文字间距 */
+    align-items: center;
+    gap: 4px;
   }
 
-  /* 下面两个容量项横向居中 */
-  .icon-text-widget {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    width: 100%;
+  .capacity-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #303133;
+    line-height: 1;
+  }
+
+  .capacity-label {
+    font-size: 12px;
+    color: #909399;
+  }
+
+  .capacity-divider {
+    width: 1px;
+    height: 32px;
+    background: #dcdfe6;
+  }
+
+  /* 状态指示点 */
+  .status-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  /* 警告/异常呼吸灯动画 */
+  .status-dot.pulse-warn {
+    animation: pool-pulse-warn 2s ease-in-out infinite;
+  }
+
+  @keyframes pool-pulse-warn {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(236, 111, 48, 0.6);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(236, 111, 48, 0);
+    }
+  }
+
+  /* ===== 存储卷列表 ===== */
+  .volume-list {
+    padding: 0 4px;
+  }
+
+  .volume-list-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #303133;
+    margin-bottom: 12px;
+    padding-left: 8px;
+    border-left: 3px solid #409eff;
+  }
+
+  .volume-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  /* ===== 响应式 ===== */
+  @media (max-width: 768px) {
+    .pool-header {
+      flex-direction: column;
+      align-items: stretch;
+      border-left: none;
+      border-top: 4px solid #4caf50;
+      border-radius: 0 0 8px 8px;
+      padding: 12px;
+    }
+
+    .pool-status-card {
+      min-width: auto;
+    }
+
+    .capacity-summary {
+      justify-content: space-around;
+    }
+
+    .status-dot {
+      margin-left: 0;
+      align-self: center;
+    }
+
+    .volume-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>

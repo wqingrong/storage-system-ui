@@ -76,31 +76,36 @@ export function getStoragePoolStatus(status: string) {
   } else if (status === PoolStatus.POOL_STATUS_SYNC) {
     return {
       imageUrl: new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href,
-      statusTxt: '同步',
+      statusTxt: '同步中',
+      status: 'OK',
       color: '#4caf50'
     }
   } else if (status === PoolStatus.POOL_STATUS_RECOVER) {
     return {
       imageUrl: new URL('/src/assets/img/storage/storage-pool-ok.png', import.meta.url).href,
-      statusTxt: '重建',
-      color: '#4caf50'
+      statusTxt: '重建中',
+      status: 'WARN',
+      color: '#e6a23c'
     }
   } else if (status === PoolStatus.POOL_STATUS_STOP) {
     return {
       imageUrl: new URL('/src/assets/img/storage/storage-pool-warring.png', import.meta.url).href,
-      statusTxt: '停止运行',
+      statusTxt: '已停止',
+      status: 'WARN',
       color: '#ec6f30'
     }
   } else if (status === PoolStatus.POOL_STATUS_DEGRADED) {
     return {
       imageUrl: new URL('/src/assets/img/storage/storage-pool-warring.png', import.meta.url).href,
-      statusTxt: '降级',
+      statusTxt: '已降级',
+      status: 'WARN',
       color: '#ec6f30'
     }
   } else {
     return {
       imageUrl: new URL('/src/assets/img/storage/storage-pool-error.png', import.meta.url).href,
-      statusTxt: '损坏',
+      statusTxt: '已损坏',
+      status: 'ERROR',
       color: '#e80536'
     }
   }

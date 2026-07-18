@@ -8,6 +8,7 @@ import { fileManager } from '@/router/modules/file-manager'
 import { SafetyProtection } from '@/router/modules/safety_protection'
 import { fileStation } from '@/router/modules/file-station'
 import { netWork } from '@/router/modules/network'
+import { scheduledTaskRoutes } from '@/router/modules/scheduled-task'
 // import { templateRoutes } from '@/router/modules/template'
 // import { widgetsRoutes } from '@/router/modules/widgets'
 // import { examplesRoutes } from '@/router/modules/examples'
@@ -25,5 +26,6 @@ export const routeModules: AppRouteRecord[] = [
   fileManager,
   fileStation,
   SafetyProtection,
-  systemManagerRoutes
+  systemManagerRoutes,
+  scheduledTaskRoutes
 ]
