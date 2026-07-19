@@ -92,6 +92,7 @@
             :total-size="volume.spaceSize"
             :precent="volume.useRatio"
             :file-system="volume.fileSystem"
+            :mount-status="volume.mountStatus"
           />
         </div>
         <ElEmpty

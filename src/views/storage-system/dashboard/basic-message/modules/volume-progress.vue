@@ -2,7 +2,11 @@
   <div class="lv-volume-card">
     <!-- 标题 -->
     <div class="card-header">
-      <div class="title">{{ volumeName }}</div>
+      <div class="title">
+        {{ volumeName }}
+        <ElTag v-if="mountStatus === 'MOUNTED'" type="success" size="small">已挂载</ElTag>
+        <ElTag v-else type="warning" size="small">未挂载</ElTag>
+      </div>
       <div class="percent-text">{{ precent }}%</div>
     </div>
 
@@ -45,6 +49,8 @@
     totalSize: string
     freeSize: string
     fileSystem: string
+    // 挂载状态
+    mountStatus: string
   }
 
   const props = defineProps<Props>()

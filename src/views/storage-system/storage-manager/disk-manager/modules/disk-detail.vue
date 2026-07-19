@@ -31,7 +31,7 @@
                   <span>{{ item.totalSize }}</span>
                 </div>
               </div>
-              <div>
+              <div style="display: flex; align-items: center; gap: 8px">
                 <span v-if="item.diskHealth.healthStatus === HealthStatus.OK" style="color: #4caf50"
                   >良好</span
                 >
@@ -41,6 +41,8 @@
                   >异常</span
                 >
                 <span v-else style="color: #e80536">损坏</span>
+                <ElTag v-if="item.use" type="success" size="small">已使用</ElTag>
+                <ElTag v-else type="info" size="small">未使用</ElTag>
               </div>
             </div>
           </div>
