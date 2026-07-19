@@ -10,6 +10,18 @@
           <ElButton @click="handleDeleteShareClick" :disabled="currentShareFolder === undefined"
             >删除</ElButton
           >
+          <ElSelect
+            v-model="filterProtocol"
+            placeholder="筛选协议"
+            clearable
+            style="width: 140px"
+            @change="handleFilterChange"
+          >
+            <ElOption label="全部" value="" />
+            <ElOption label="SMB" value="SMB" />
+            <ElOption label="NFS" value="NFS" />
+            <ElOption label="WebDAV" value="WebDAV" />
+          </ElSelect>
         </ElSpace>
       </div>
       <el-empty
@@ -19,7 +31,7 @@
       />
       <div
         v-else
-        v-for="item in shareFolderList"
+        v-for="item in filteredShareFolderList"
         :key="item.folder.folderName"
         class="storage-info-container"
         :style="
@@ -37,6 +49,14 @@
           <div class="title-with-icon">
             <ThemeSvg :src="folder" style="width: 35px; height: 35px" />
             <span class="main-title">{{ item.folder.folderName }}</span>
+            <ElTag
+              v-for="protocol in getProtocols(item)"
+              :key="protocol"
+              :type="getProtocolTagType(protocol)"
+              size="small"
+            >
+              {{ protocol }}
+            </ElTag>
           </div>
           <div class="header-actions">
             <el-button
@@ -106,6 +126,63 @@
   // 展开状态
   const shareFolderList = ref<Api.Sys.ShareFolder[]>([])
   const currentShareFolder = ref<Api.Sys.ShareFolder>()
+  // 协议筛选
+  const filterProtocol = ref('')
+
+  /**
+   * 获取共享文件夹已启用的协议列表
+   * 通过 shareProtocol 数组和 sambaShareFolderConfig 判断
+   */
+  const getProtocols = (item: Api.Sys.ShareFolder): string[] => {
+    const protocols: string[] = []
+    // 通过 shareProtocol 数组获取协议
+    if (Array.isArray(item.shareProtocol) && item.shareProtocol.length > 0) {
+      protocols.push(...(item.shareProtocol as string[]))
+    }
+    // 通过 sambaShareFolderConfig 判断 SMB 是否已配置
+    if (
+      !protocols.includes('SMB') &&
+      item.sambaShareFolderConfig &&
+      (item.sambaShareFolderConfig.shareName ||
+        item.sambaShareFolderConfig.permission?.writeUserList?.length ||
+        item.sambaShareFolderConfig.permission?.readUserList?.length ||
+        item.sambaShareFolderConfig.permission?.writeGroupList?.length ||
+        item.sambaShareFolderConfig.permission?.readGroupList?.length)
+    ) {
+      protocols.push('SMB')
+    }
+    return protocols
+  }
+
+  /** 根据协议名称返回标签类型（颜色） */
+  const getProtocolTagType = (protocol: string): string => {
+    switch (protocol.toUpperCase()) {
+      case 'SMB':
+        return 'success'
+      case 'NFS':
+        return 'warning'
+      case 'WEBDAV':
+        return 'primary'
+      default:
+        return 'info'
+    }
+  }
+
+  /** 根据筛选条件过滤共享文件夹列表 */
+  const filteredShareFolderList = computed(() => {
+    if (!filterProtocol.value) {
+      return shareFolderList.value
+    }
+    return shareFolderList.value.filter((item) => {
+      const protocols = getProtocols(item)
+      return protocols.some((p) => p.toUpperCase() === filterProtocol.value.toUpperCase())
+    })
+  })
+
+  /** 协议筛选变更 */
+  const handleFilterChange = () => {
+    currentShareFolder.value = undefined
+  }
   const refreshShareFolderList = () => {
     fetchGetShareFolderList().then((res) => {
       if (res.records) {

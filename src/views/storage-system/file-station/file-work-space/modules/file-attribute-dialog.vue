@@ -1,6 +1,22 @@
 <template>
-  <ElDialog v-model="dialogVisible" title="文件属性" width="30%" align-center>
+  <ElDialog
+    v-model="dialogVisible"
+    title="文件属性"
+    width="30%"
+    align-center
+    class="file-attr-dialog"
+  >
     <div class="attr-panel">
+      <!-- 统计状态提示 -->
+      <div v-if="computingStatus === 'running'" class="computing-hint">
+        <ElIcon class="is-loading"><Loading /></ElIcon>
+        <span>正在统计文件属性...</span>
+      </div>
+      <div v-else-if="computingStatus === 'success'" class="computing-hint success">
+        <ElIcon><CircleCheck /></ElIcon>
+        <span>统计完成</span>
+      </div>
+
       <!-- 基础信息 -->
       <div class="attr-block">
         <div class="block-title">基础信息</div>
@@ -98,6 +114,7 @@
 
 <script setup lang="ts">
   import { ref, computed, watch } from 'vue'
+  import { Loading, CircleCheck } from '@element-plus/icons-vue'
   import { FileAttribute, SSEEvent } from '@utils/global_entity'
   import { sse } from '@utils/sse'
   import { fetchGetFileAttribute, fetchSubmitCancelTask } from '@/api/task-service'
@@ -127,6 +144,9 @@
     totalFiles: 0,
     userInfo: undefined
   })
+
+  // 统计状态：'' | 'running' | 'success'
+  const computingStatus = ref('running')
 
   const dialogVisible = computed({
     get: () => props.visible,
@@ -167,6 +187,12 @@
     sse.subscribe(taskId, (data: any) => {
       Object.assign(event, data)
       Object.assign(fileAttribute.value, event.data)
+      // 根据 SSE 消息的 status 更新统计状态
+      if (event.status === 'running') {
+        computingStatus.value = 'running'
+      } else if (event.status === 'success') {
+        computingStatus.value = 'success'
+      }
     })
   }
 
@@ -175,6 +201,7 @@
     (visible) => {
       if (visible) {
         event.clear()
+        computingStatus.value = 'running'
         initData()
         receiveAttributeData(fileAttribute.value.path)
       } else {
@@ -191,7 +218,22 @@
 
 <style lang="scss" scoped>
   .attr-panel {
-    padding: 10px 0;
+    padding: 0;
+    .computing-hint {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #409eff;
+      background: #ecf5ff;
+      &.success {
+        color: #67c23a;
+        background: #f0f9eb;
+      }
+    }
     .attr-block {
       margin-bottom: 16px;
       .block-title {
@@ -219,6 +261,17 @@
           color: #409eff;
         }
       }
+    }
+  }
+</style>
+
+<style lang="scss">
+  .file-attr-dialog {
+    .el-dialog__header {
+      padding-bottom: 8px;
+    }
+    .el-dialog__body {
+      padding-top: 8px;
     }
   }
 </style>

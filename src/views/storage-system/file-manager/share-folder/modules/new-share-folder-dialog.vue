@@ -98,13 +98,14 @@
             :prefix-icon="Search"
           />
         </div>
-        <div style="max-height: 400px">
+        <div>
           <el-table
             v-if="tableType === 'localUser'"
             ref="selectGroupTableRef"
             :data="userDataList.records"
             row-key="gid"
             style="width: 100%"
+            height="350"
             :reserve-selection="true"
           >
             <el-table-column property="userName" label="用户名" align="center"></el-table-column>
@@ -155,6 +156,7 @@
             :data="groupDataList.records"
             row-key="gid"
             style="width: 100%"
+            height="350"
             :reserve-selection="true"
           >
             <el-table-column property="groupName" label="用户组" align="center"></el-table-column>
