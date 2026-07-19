@@ -7,16 +7,6 @@
     class="file-attr-dialog"
   >
     <div class="attr-panel">
-      <!-- 统计状态提示 -->
-      <div v-if="computingStatus === 'running'" class="computing-hint">
-        <ElIcon class="is-loading"><Loading /></ElIcon>
-        <span>正在统计文件属性...</span>
-      </div>
-      <div v-else-if="computingStatus === 'success'" class="computing-hint success">
-        <ElIcon><CircleCheck /></ElIcon>
-        <span>统计完成</span>
-      </div>
-
       <!-- 基础信息 -->
       <div class="attr-block">
         <div class="block-title">基础信息</div>
@@ -53,6 +43,15 @@
 
       <!-- 统计信息 -->
       <div class="attr-block" v-if="fileAttribute.isDir">
+        <!-- 统计状态提示 -->
+        <div v-if="computingStatus === 'running'" class="computing-hint">
+          <ElIcon class="is-loading"><Loading /></ElIcon>
+          <span>正在统计文件属性...</span>
+        </div>
+        <div v-else-if="computingStatus === 'success'" class="computing-hint success">
+          <ElIcon><CircleCheck /></ElIcon>
+          <span>统计完成</span>
+        </div>
         <div class="block-title">目录统计</div>
         <div class="attr-row">
           <label>总大小：</label>

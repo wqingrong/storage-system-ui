@@ -39,6 +39,7 @@
             ? 'background: #e6f2fd;'
             : ''
         "
+        @contextmenu.prevent="handleRowContextMenu(item, $event)"
       >
         <!-- 标题区域 -->
         <div
@@ -112,6 +113,19 @@
       :share-folder="currentShareFolder"
       @refreshData="refreshShareFolderList"
     />
+
+    <!-- 右键悬浮菜单 -->
+    <div
+      v-if="contextMenuVisible"
+      class="file-context-menu"
+      :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+      @click.stop
+    >
+      <div class="menu-item" @click="contextMenuFileAttribute">属性</div>
+    </div>
+
+    <!-- 文件属性弹窗 -->
+    <file-attribute-dialog v-model:visible="attributeVisible" :file-info="rightClickFolder" />
   </div>
 </template>
 
@@ -119,6 +133,7 @@
   import { ElCollapseTransition, ElMessageBox } from 'element-plus'
   import folder from '@imgs/svg/folder.svg'
   import newShareFolderDialog from './modules/new-share-folder-dialog.vue'
+  import FileAttributeDialog from '@views/storage-system/file-station/file-work-space/modules/file-attribute-dialog.vue'
   import ShareFolder = Api.Sys.ShareFolder
   import { fetchDeleteShare, fetchGetShareFolderList } from '@/api/share-folder'
   const newShareDialogVisible = ref(false)
@@ -183,6 +198,54 @@
   const handleFilterChange = () => {
     currentShareFolder.value = undefined
   }
+
+  // ---- 右键菜单 ----
+  const contextMenuVisible = ref(false)
+  const contextMenuX = ref(0)
+  const contextMenuY = ref(0)
+  const rightClickFolder = ref<any>({ name: '' })
+  const attributeVisible = ref(false)
+
+  /** 右键菜单触发 */
+  const handleRowContextMenu = (item: Api.Sys.ShareFolder, event: MouseEvent) => {
+    event.preventDefault()
+    // 同时选中当前行
+    handleCurrentShareFolder(item)
+    contextMenuX.value = event.clientX
+    contextMenuY.value = event.clientY
+    contextMenuVisible.value = true
+    // 构造适配 file-attribute-dialog 的 fileInfo 对象
+    rightClickFolder.value = {
+      name: item.folder.folderName,
+      path: item.folder.folderPath,
+      isDir: true,
+      modifyTime: item.folder.modifyTime,
+      permission: '',
+      totalBytes: 0,
+      totalDirs: 0,
+      totalFiles: 0
+    }
+  }
+
+  /** 右键菜单 - 属性 */
+  const contextMenuFileAttribute = () => {
+    contextMenuVisible.value = false
+    attributeVisible.value = true
+  }
+
+  /** 点击空白处关闭菜单 */
+  const closeContextMenu = () => {
+    contextMenuVisible.value = false
+  }
+
+  onMounted(() => {
+    refreshShareFolderList()
+    document.addEventListener('click', closeContextMenu)
+  })
+
+  onUnmounted(() => {
+    document.removeEventListener('click', closeContextMenu)
+  })
   const refreshShareFolderList = () => {
     fetchGetShareFolderList().then((res) => {
       if (res.records) {
@@ -194,10 +257,6 @@
   const handleCurrentShareFolder = (item: ShareFolder) => {
     currentShareFolder.value = item
   }
-
-  onMounted(() => {
-    refreshShareFolderList()
-  })
 
   // 切换展开/收起
   const toggleExpand = (item: ShareFolder) => {
@@ -506,6 +565,36 @@
       .el-button {
         width: 100%;
       }
+    }
+  }
+
+  // 右键菜单样式
+  .file-context-menu {
+    position: fixed;
+    z-index: 9999;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    padding: 6px 0;
+    min-width: 120px;
+
+    .menu-item {
+      padding: 8px 20px;
+      font-size: 13px;
+      color: #303133;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #ecf5ff;
+        color: #409eff;
+      }
+    }
+
+    .divider {
+      height: 1px;
+      margin: 4px 10px;
+      background: #ebeef5;
     }
   }
 </style>
