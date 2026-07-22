@@ -142,7 +142,7 @@
     fetchDelGroups,
     fetchEditGroup,
     fetchGetGroupList,
-    fetchQueryUserList
+    fetchQueryUserListBuGroupName
   } from '@/api/system-manage'
   import UserDialog from '@views/storage-system/users-manager/users/modules/user-dialog.vue'
   import SysGroup = Api.Sys.SysGroup
@@ -188,7 +188,7 @@
 
     const pg = getGroupPagination(groupName)
     expandLoadingMap.value[groupName] = true
-    fetchQueryUserList({
+    fetchQueryUserListBuGroupName({
       userName: '',
       userAlias: '',
       current: pg.current,

@@ -139,6 +139,13 @@ export function fetchQueryUserList(params: Api.Dto.QueryUserListDto) {
   })
 }
 
+export function fetchQueryUserListBuGroupName(params: Api.Dto.QueryUserListDto) {
+  return request.get<Api.result.UserList>({
+    url: 'user/queryUserListBuGroupName',
+    params
+  })
+}
+
 // 编辑用户信息
 export function fetchEditUser(data: Api.Dto.SysUserFormDto) {
   return request.post<Api.Sys.SysUser>({
