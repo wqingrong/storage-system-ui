@@ -1,5 +1,6 @@
 import request from '@utils/http'
 import { Api } from '@/typings/api'
+import { NFSShareFolderConfig } from '@/entity/share-folder'
 
 export function fetchGetShareFolderList() {
   return request.get<Api.Sys.ShareFolderList>({
@@ -31,6 +32,20 @@ export function fetchEditSambaShare(data: Api.Sys.SambaShareFolderConfig) {
 export function fetchDeleteShare(data: Api.Sys.ShareFolder) {
   return request.post<Api.Sys.ShareFolder>({
     url: '/shareFolder/delShareFolder',
+    data
+  })
+}
+
+export function fetchSetNfsShareConfig(data: any) {
+  return request.post<NFSShareFolderConfig>({
+    url: '/shareFolder/setNFSShareConfig',
+    data
+  })
+}
+
+export function fetchDeleteNfsShareConfigs(data: NFSShareFolderConfig[]) {
+  return request.post<NFSShareFolderConfig[]>({
+    url: '/shareFolder/delNFSShareConfigs',
     data
   })
 }

@@ -1,4 +1,4 @@
-import GeneralView from '@views/storage-system/dashboard/basic-message/modules/general-view .vue'
+import { NFSShareFolderConfig } from '@/entity/share-folder'
 
 /**
  * namespace: Api
@@ -152,6 +152,7 @@ declare namespace Api {
       storageSpace: Disk.Device.StorageSpace
       folder: Folder
       sambaShareFolderConfig: SambaShareFolderConfig
+      nfsShareFolderConfig: NFSShareFolderConfig
       folderDesc: string
       shareProtocol: string
       isExpanded: boolean

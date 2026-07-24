@@ -70,7 +70,92 @@
             </el-tab-pane>
             <el-tab-pane label="Webdav" name="Webdav">WebDav</el-tab-pane>
             <el-tab-pane label="Rsync" name="Rsync">RSYNC</el-tab-pane>
-            <el-tab-pane label="NFS" name="NFS">NFS</el-tab-pane>
+            <el-tab-pane label="NFS" name="NFS">
+              <div>
+                <!-- 编辑/取消编辑按钮：仅当已有NFS配置时显示 -->
+                <div style="margin-bottom: 10px; text-align: right">
+                  <el-button v-if="!nfsEditing" type="primary" size="small" @click="startNfsEdit">
+                    编辑
+                  </el-button>
+                  <el-button
+                    v-if="!nfsEditing && hasExistingNfsConfig"
+                    type="danger"
+                    za
+                    size="small"
+                    @click="clearNfsConfig"
+                  >
+                    清空配置
+                  </el-button>
+                  <el-button
+                    v-if="nfsEditing && hasExistingNfsConfig"
+                    size="small"
+                    @click="cancelNfsEdit"
+                  >
+                    取消编辑
+                  </el-button>
+                </div>
+                <ElFormItem label="服务器IP">
+                  <ElInput
+                    v-model="nfsShareFolderConfig.ClientAddress"
+                    :disabled="!nfsEditing"
+                    placeholder="请输入服务器IP地址"
+                  />
+                </ElFormItem>
+                <ElFormItem label="权限">
+                  <el-select
+                    v-model="nfsShareFolderConfig.perm"
+                    :disabled="!nfsEditing"
+                    placeholder="请选择权限"
+                  >
+                    <el-option label="只读" value="ro" />
+                    <el-option label="可读写" value="rw" />
+                  </el-select>
+                </ElFormItem>
+                <ElFormItem label="Squash">
+                  <el-select
+                    v-model="nfsShareFolderConfig.Squash"
+                    :disabled="!nfsEditing"
+                    placeholder="请选择Squash模式"
+                  >
+                    <el-option label="no_root_squash" value="no_root_squash" />
+                    <el-option label="root_squash" value="root_squash" />
+                    <el-option label="all_squash" value="all_squash" />
+                  </el-select>
+                </ElFormItem>
+                <ElFormItem
+                  v-if="
+                    nfsShareFolderConfig.Squash === 'root_squash' ||
+                    nfsShareFolderConfig.Squash === 'all_squash'
+                  "
+                  label="指定用户"
+                >
+                  <el-select
+                    v-model="selectedNfsSquashUser"
+                    :disabled="!nfsEditing"
+                    placeholder="请选择用户"
+                    value-key="uid"
+                    filterable
+                    @change="handleNfsSquashUserChange"
+                  >
+                    <el-option
+                      v-for="user in nfsUserList"
+                      :key="user.uid"
+                      :label="user.userAlias"
+                      :value="user"
+                    />
+                  </el-select>
+                </ElFormItem>
+                <ElFormItem label="启动异步">
+                  <el-checkbox
+                    v-model="nfsShareFolderConfig.syncMode"
+                    :disabled="!nfsEditing"
+                    true-value="async"
+                    false-value="sync"
+                  >
+                  </el-checkbox>
+                </ElFormItem>
+              </div>
+            </el-tab-pane>
             <el-tab-pane label="FTP" name="FTP">FTP</el-tab-pane>
           </el-tabs>
         </div>
@@ -245,22 +330,25 @@
 </template>
 
 <script setup lang="ts">
-  import { ElTable, FormInstance, FormRules } from 'element-plus'
+  import { ElMessageBox, ElTable, FormInstance, FormRules } from 'element-plus'
   import {
     fetchGetGroupList,
     fetchGetStorageSpaceList,
     fetchQueryUserList
   } from '@/api/system-manage'
   import {
+    fetchDeleteNfsShareConfigs,
     fetchEditSambaShare,
     fetchGetSambaShareConfig,
-    fetchNewShareFolder
+    fetchNewShareFolder,
+    fetchSetNfsShareConfig
   } from '@/api/share-folder'
   import { Search } from '@element-plus/icons-vue'
   import { Disk } from '@/typings/disk'
   import { REGULAR } from '@/enums/formEnum'
   import { ref } from 'vue'
   import { deepEqual } from '@/utils/tools'
+  import { NFSShareFolderConfig } from '@/entity/share-folder'
 
   interface Props {
     visible: boolean
@@ -293,6 +381,94 @@
     permission: { writeGroupList: [], writeUserList: [], readGroupList: [], readUserList: [] }
   })
 
+  const nfsShareFolderConfig = ref(new NFSShareFolderConfig())
+  const roNfsShareFolderConfig = ref(new NFSShareFolderConfig())
+  const nfsEditing = ref(true)
+  // 是否已有已存在的NFS配置（非新增）
+  const hasExistingNfsConfig = ref(false)
+  const nfsUserList = ref<Api.Sys.SysUser[]>([])
+  const selectedNfsSquashUser = ref<Api.Sys.SysUser | null>(null)
+
+  // 监听Squash模式变化，加载用户列表
+  watch(
+    () => nfsShareFolderConfig.value.Squash,
+    (newVal) => {
+      if (newVal === 'root_squash' || newVal === 'all_squash') {
+        fetchQueryUserList({
+          userName: '',
+          userAlias: '',
+          orderBy: 'desc',
+          sort: 'create_time',
+          current: 1,
+          size: 999
+        }).then((res) => {
+          nfsUserList.value = res.records
+        })
+      } else {
+        nfsUserList.value = []
+        selectedNfsSquashUser.value = null
+        nfsShareFolderConfig.value.squashUser = new NFSShareFolderConfig().squashUser
+      }
+    }
+  )
+
+  // 选中squash用户时更新配置
+  const handleNfsSquashUserChange = (user: Api.Sys.SysUser | null) => {
+    if (user) {
+      nfsShareFolderConfig.value.squashUser = {
+        userName: user.userName,
+        userAlias: user.userAlias,
+        groupName: user.masterGroup?.groupName || '',
+        groupAlias: user.masterGroup?.groupAlias || '',
+        uid: user.uid,
+        gid: user.masterGroup?.gid || 0
+      }
+    }
+  }
+
+  // 开始编辑NFS配置
+  const startNfsEdit = () => {
+    nfsEditing.value = true
+  }
+
+  // 取消编辑NFS配置，恢复到原始值
+  const cancelNfsEdit = () => {
+    nfsShareFolderConfig.value = JSON.parse(JSON.stringify(roNfsShareFolderConfig.value))
+    // 恢复squash用户选中状态
+    if (
+      nfsShareFolderConfig.value.Squash === 'root_squash' ||
+      nfsShareFolderConfig.value.Squash === 'all_squash'
+    ) {
+      const uid = nfsShareFolderConfig.value.squashUser?.uid
+      if (uid && nfsUserList.value.length > 0) {
+        selectedNfsSquashUser.value = nfsUserList.value.find((u) => u.uid === uid) || null
+      }
+    }
+    nfsEditing.value = false
+  }
+
+  // 清空NFS配置
+  const clearNfsConfig = () => {
+    ElMessageBox.confirm('确定要清空当前NFS共享配置吗？清空后该配置将无法恢复。', '清空NFS配置', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+      .then(() => {
+        fetchDeleteNfsShareConfigs([nfsShareFolderConfig.value]).then(() => {
+          // 重置为默认值
+          nfsShareFolderConfig.value = new NFSShareFolderConfig()
+          nfsShareFolderConfig.value.folderPath = sysShareFolderFormDto.value.folderPath
+          roNfsShareFolderConfig.value = new NFSShareFolderConfig()
+          roNfsShareFolderConfig.value.folderPath = sysShareFolderFormDto.value.folderPath
+          hasExistingNfsConfig.value = false
+          nfsEditing.value = true
+          selectedNfsSquashUser.value = null
+        })
+      })
+      .catch(() => {})
+  }
+
   const activeName = ref('Samba')
 
   // 获取当前按钮显示的文字
@@ -305,6 +481,9 @@
           return '创建'
         }
       case 1:
+        if (activeName.value === 'NFS') {
+          return '保存'
+        }
         return '下一步'
       case 2:
         if (activeName.value === 'Samba') {
@@ -629,9 +808,27 @@
         ElMessage.error('Rsync 未对接')
         return
       case 'NFS':
-        console.log('NFS')
-        ElMessage.error('NFS 未对接')
-        return
+        // 加载nfs配置文件信息....
+        nfsShareFolderConfig.value.folderPath = sysShareFolderFormDto.value.folderPath
+        // 编辑模式下，若已有NFS配置则加载并设为只读；否则可直接编辑
+        if (props.type === 'edit' && props.shareFolder?.nfsShareFolderConfig) {
+          const existing = JSON.parse(JSON.stringify(props.shareFolder.nfsShareFolderConfig))
+          nfsShareFolderConfig.value = existing
+          roNfsShareFolderConfig.value = JSON.parse(JSON.stringify(existing))
+          hasExistingNfsConfig.value = true
+          nfsEditing.value = false
+          // 恢复squash用户选中状态
+          if (existing.Squash === 'root_squash' || existing.Squash === 'all_squash') {
+            if (existing.squashUser?.uid && nfsUserList.value.length > 0) {
+              selectedNfsSquashUser.value =
+                nfsUserList.value.find((u) => u.uid === existing.squashUser.uid) || null
+            }
+          }
+        } else {
+          hasExistingNfsConfig.value = false
+          nfsEditing.value = true
+        }
+        break
       case 'FTP':
         ElMessage.error('FTP 未对接')
         break
@@ -726,6 +923,49 @@
     })
   }
 
+  // 保存NFS的配置
+  const saveNFSShareConfig = () => {
+    // 校验ClientAddress格式：IP地址，可选带/掩码（0-32）
+    const clientAddress = nfsShareFolderConfig.value.ClientAddress.trim()
+    if (!clientAddress) {
+      ElMessage.error('请输入服务器IP地址')
+      return
+    }
+    const ipWithMaskRegex = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(\/(\d{1,2}))?$/
+    const match = clientAddress.match(ipWithMaskRegex)
+    if (!match) {
+      ElMessage.error(
+        '服务器IP地址格式不正确，请输入有效的IP地址（如 192.168.1.1 或 192.168.1.0/24）'
+      )
+      return
+    }
+    // 校验IP每个段是否在0-255范围内
+    const ipParts = match[1].split('.')
+    const isValidIp = ipParts.every((part) => {
+      const num = parseInt(part, 10)
+      return num >= 0 && num <= 255
+    })
+    if (!isValidIp) {
+      ElMessage.error('IP地址不合法，每个段取值范围为 0~255')
+      return
+    }
+    // 如果存在掩码，校验掩码范围 0-32
+    if (match[3] !== undefined) {
+      const mask = parseInt(match[3], 10)
+      if (mask < 0 || mask > 32) {
+        ElMessage.error('子网掩码不合法，取值范围为 0~32')
+        return
+      }
+    }
+
+    nfsShareFolderConfig.value.folderPath = sysShareFolderFormDto.value.folderPath
+    fetchSetNfsShareConfig(nfsShareFolderConfig.value).then(() => {
+      ElMessage.success('NFS配置保存成功')
+      emit('refreshData')
+      dialogVisible.value = false
+    })
+  }
+
   // 下一步
   const nextStep = () => {
     // 提交表单信息
@@ -745,6 +985,10 @@
     }
     // 协议参数设置这边做限制
     if (currentStep.value === 1) {
+      if (activeName.value === 'NFS') {
+        saveNFSShareConfig()
+        return
+      }
       currentStep.value++
       return
     }
