@@ -22,6 +22,9 @@
             <ElOption label="NFS" value="NFS" />
             <ElOption label="WebDAV" value="WebDAV" />
           </ElSelect>
+          <span style="color: #909399; font-size: 13px; margin-left: 8px">
+            共 {{ shareFolderList?.length || 0 }} 个共享目录
+          </span>
         </ElSpace>
       </div>
       <el-empty
@@ -73,7 +76,7 @@
         <!-- 信息卡片（可展开收起） -->
         <el-collapse-transition>
           <div v-show="item.isExpanded" class="info-grid-wrapper">
-            <div class="info-grid">
+            <div class="info-grid" @click="handleCurrentShareFolder(item)">
               <!--              存储空间-->
               <div class="info-item">
                 <div class="info-label">
@@ -383,7 +386,6 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px;
-    background: #e6f2fd;
     cursor: pointer;
     transition: all 0.3s ease;
     user-select: none;
