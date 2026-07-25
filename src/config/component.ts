@@ -53,6 +53,14 @@ export const globalComponentsConfig: GlobalComponentConfig[] = [
       () => import('@/components/core/others/art-watermark/index.vue')
     ),
     enabled: true
+  },
+  {
+    name: '资源监控',
+    key: 'resource-monitor',
+    component: defineAsyncComponent(
+      () => import('@/components/core/layouts/art-resource-monitor/index.vue')
+    ),
+    enabled: true
   }
 ]
 
