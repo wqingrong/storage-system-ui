@@ -4,44 +4,34 @@
     <!-- 搜索栏 -->
     <div class="table-filter-bar">
       <div class="filter-left">
-        <ElInput
-          v-model="searchParams.snapshotName"
-          placeholder="搜索快照名称"
-          clearable
-          style="width: 220px"
-          @keyup.enter="handleSearch"
-        />
+        <span class="filter-label">数据集</span>
         <ElSelect
-          v-model="searchParams.sourceVolume"
-          placeholder="来源存储卷"
-          clearable
-          style="width: 180px; margin-left: 12px"
+          v-model="searchParams.volumeName"
+          placeholder="选择数据集"
+          style="width: 220px"
+          @change="handleVolumeChange"
         >
           <ElOption
             v-for="vol in volumeOptions"
-            :key="vol.value"
-            :label="vol.label"
-            :value="vol.value"
+            :key="vol.volumeName"
+            :label="vol.volumeName"
+            :value="vol.volumeName"
           />
         </ElSelect>
-        <ElSelect
-          v-model="searchParams.status"
-          placeholder="快照状态"
-          clearable
-          style="width: 140px; margin-left: 12px"
-        >
-          <ElOption label="全部" value="" />
-          <ElOption label="可用" value="available" />
-          <ElOption label="回滚中" value="rolling" />
-          <ElOption label="已失效" value="invalid" />
-        </ElSelect>
-        <ElButton type="primary" style="margin-left: 12px" @click="handleSearch">
-          搜索
-        </ElButton>
-        <ElButton @click="handleReset">重置</ElButton>
       </div>
       <div class="filter-right">
-        <ElButton type="primary" @click="handleCreate">
+        <ElButton type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">
+          删除({{ selectedRows.length }})
+        </ElButton>
+        <ElButton
+          type="warning"
+          :disabled="selectedRows.length !== 1"
+          style="margin-left: 8px"
+          @click="handleRollback"
+        >
+          回滚({{ selectedRows.length }})
+        </ElButton>
+        <ElButton type="primary" style="margin-left: 8px" @click="handleCreate">
           <ElIcon><Plus /></ElIcon>
           创建快照
         </ElButton>
@@ -54,41 +44,10 @@
         :data="data"
         :columns="columns"
         :pagination="pagination"
+        @selection-change="handleSelectionChange"
         @pagination:size-change="handleSizeChange"
         @pagination:current-change="handleCurrentChange"
       >
-        <!-- 状态列 -->
-        <template #status="{ row }">
-          <ElTag
-            :type="statusTagType(row.status)"
-            size="small"
-          >
-            {{ statusLabel(row.status) }}
-          </ElTag>
-        </template>
-        <!-- 快照大小 -->
-        <template #snapshotSize="{ row }">
-          <span>{{ row.snapshotSize || '-' }}</span>
-        </template>
-        <!-- 操作列 -->
-        <template #action="{ row }">
-          <ElButton type="primary" link size="small" @click="handleRollback(row)">
-            回滚
-          </ElButton>
-          <ElButton type="primary" link size="small" @click="handleClone(row)">
-            克隆
-          </ElButton>
-          <ElPopconfirm
-            :title="`确定删除快照「${row.snapshotName}」吗？删除后数据将无法恢复。`"
-            confirm-button-text="确定"
-            cancel-button-text="取消"
-            @confirm="handleDelete(row)"
-          >
-            <template #reference>
-              <ElButton type="danger" link size="small">删除</ElButton>
-            </template>
-          </ElPopconfirm>
-        </template>
       </ArtTable>
     </ElCard>
 
@@ -100,37 +59,20 @@
       :close-on-click-modal="false"
     >
       <ElForm :model="createForm" label-width="100px">
-        <ElFormItem label="快照名称" required>
-          <ElInput v-model="createForm.snapshotName" placeholder="请输入快照名称" />
-        </ElFormItem>
-        <ElFormItem label="来源存储卷" required>
-          <ElSelect
-            v-model="createForm.sourceVolume"
-            placeholder="请选择存储卷"
-            style="width: 100%"
-          >
+        <ElFormItem label="数据集" required>
+          <ElSelect v-model="createForm.volumeName" placeholder="请选择数据集" style="width: 100%">
             <ElOption
               v-for="vol in volumeOptions"
-              :key="vol.value"
-              :label="vol.label"
-              :value="vol.value"
+              :key="vol.volumeName"
+              :label="vol.volumeName"
+              :value="vol.volumeName"
             />
           </ElSelect>
-        </ElFormItem>
-        <ElFormItem label="快照描述">
-          <ElInput
-            v-model="createForm.description"
-            type="textarea"
-            :rows="3"
-            placeholder="可选，输入快照描述信息"
-          />
         </ElFormItem>
       </ElForm>
       <template #footer>
         <ElButton @click="createDialogVisible = false">取消</ElButton>
-        <ElButton type="primary" :disabled="!canCreate" @click="submitCreate">
-          确认创建
-        </ElButton>
+        <ElButton type="primary" :disabled="!canCreate" @click="submitCreate"> 确认创建 </ElButton>
       </template>
     </ElDialog>
   </div>
@@ -145,14 +87,52 @@
     fetchCreateSnapshot,
     fetchDeleteSnapshot,
     fetchRollbackSnapshot,
-    fetchCloneSnapshot
+    fetchGetZfsdDataSetList
   } from '@/api/snapshot-service'
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { Disk } from '@/typings/disk'
 
   defineOptions({ name: 'SnapshotList' })
 
-  // 存储卷选项（模拟数据，实际应从接口获取）
-  const volumeOptions = ref<{ label: string; value: string }[]>([])
+  type SortDirection = 'asc' | 'desc'
+  type SnapshotSortField = 'used' | 'refer' | 'creation'
+
+  // interface SnapshotListParams {
+  //   mountPath: string
+  //   volumeName: string
+  //   size: number
+  //   current: number
+  //   sortField: SnapshotSortField
+  //   sortType: SortDirection
+  // }
+
+  type SnapshotStatus = 'available' | 'mounted' | 'deleted'
+
+  interface ZFSSnapshot {
+    id: string
+    name: string
+    dataset: string
+    snapshotName: string
+    snapPath: string
+    used: number
+    available: number
+    referenced: number
+    compressRatio: number
+    creationTime: string
+    mountPoint: string
+    mounted: boolean
+    status: SnapshotStatus
+    isActive: boolean
+    isReadOnly: boolean
+    description: string
+    clone_children: string[]
+  }
+
+  // 数据集选项
+  const volumeOptions = ref<Disk.Device.StorageSpace[]>([])
+
+  // 多选
+  const selectedRows = ref<ZFSSnapshot[]>([])
 
   const {
     columns,
@@ -168,167 +148,161 @@
       apiFn: fetchSnapshotList,
       apiParams: {
         current: 1,
-        size: 20
+        size: 50,
+        sortField: 'creation' as SnapshotSortField,
+        sortType: 'desc' as SortDirection
       },
+      immediate: false,
       columnsFactory: () => [
+        { type: 'selection', width: 50 },
         { type: 'index', width: 60, label: '序号' },
-        {
-          prop: 'snapshotName',
-          label: '快照名称',
-          minWidth: 180
-        },
-        {
-          prop: 'sourceVolume',
-          label: '来源存储卷',
-          width: 160
-        },
-        {
-          prop: 'snapshotSize',
-          label: '快照大小',
-          width: 120,
-          slot: 'snapshotSize'
-        },
-        {
-          prop: 'status',
-          label: '状态',
-          width: 100,
-          slot: 'status'
-        },
-        {
-          prop: 'createTime',
-          label: '创建时间',
-          width: 180
-        },
-        {
-          prop: 'action',
-          label: '操作',
-          width: 200,
-          slot: 'action',
-          fixed: 'right'
-        }
+        { prop: 'name', label: '快照名称', minWidth: 300 },
+        { prop: 'sizeFormat', label: '快照大小', width: 220 },
+        { prop: 'status', label: '状态', width: 200, slot: 'status' },
+        { prop: 'creationTime', label: '创建时间', width: 180 }
       ]
     }
   })
 
-  onMounted(() => {
-    loadVolumeOptions()
+  onMounted(async () => {
+    await loadVolumeOptions()
   })
 
-  /** 加载存储卷选项 */
-  const loadVolumeOptions = () => {
-    // TODO: 对接实际接口获取存储卷列表
-    volumeOptions.value = []
+  /** 加载数据集选项，默认选中第一个 */
+  const loadVolumeOptions = async () => {
+    try {
+      const res = await fetchGetZfsdDataSetList(null)
+      volumeOptions.value = res.records || []
+      if (volumeOptions.value.length > 0) {
+        const first = volumeOptions.value[0]
+        searchParams.volumeName = first.volumeName
+        searchParams.mountPath = first.mountPath
+      }
+    } finally {
+      await getData()
+    }
   }
 
-  // ===== 搜索 =====
-  const handleSearch = () => {
+  /** 数据集变更时重新加载列表 */
+  const handleVolumeChange = (volumeName: string) => {
+    const selected = volumeOptions.value.find((v) => v.volumeName === volumeName)
+    if (selected) {
+      searchParams.mountPath = selected.mountPath
+    }
     getData()
   }
 
-  const handleReset = () => {
-    searchParams.snapshotName = ''
-    searchParams.sourceVolume = ''
-    searchParams.status = ''
-    getData()
+  // /** 格式化快照大小 */
+  // const formatSnapshotSize = (bytes: number): string => {
+  //   if (bytes === undefined || bytes === null) return '-'
+  //   if (bytes === 0) return '0 B'
+  //   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+  //   const k = 1024
+  //   const i = Math.floor(Math.log(bytes) / Math.log(k))
+  //   const size = (bytes / Math.pow(k, i)).toFixed(i > 0 ? 2 : 0)
+  //   return `${size} ${units[i]}`
+  // }
+
+  /** 表格选中变更 */
+  const handleSelectionChange = (selection: ZFSSnapshot[]) => {
+    selectedRows.value = selection
+  }
+
+  /** 批量删除 */
+  const handleBatchDelete = () => {
+    if (selectedRows.value.length === 0) return
+    const names = selectedRows.value.map((r) => r.snapshotName).join('、')
+    ElMessageBox.confirm(
+      `确定删除以下 ${selectedRows.value.length} 个快照吗？<br/>「${names}」<br/>删除后数据将无法恢复。`,
+      '批量删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+      .then(async () => {
+        await fetchDeleteSnapshot(selectedRows.value)
+        selectedRows.value = []
+        await getData()
+      })
+      .catch(() => {
+        ElMessage.info('已取消删除操作')
+      })
+  }
+
+  /** 快照回滚 */
+  const handleRollback = () => {
+    if (selectedRows.value.length !== 1) return
+    const names = selectedRows.value.map((r) => r.snapshotName).join('、')
+    ElMessageBox.confirm(
+      `确定将以下 ${selectedRows.value.length} 个快照进行回滚吗？<br/>「${names}」<br/>回滚后当前数据将被覆盖。`,
+      '批量回滚确认',
+      {
+        confirmButtonText: '确定回滚',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+      .then(async () => {
+        try {
+          await fetchRollbackSnapshot(selectedRows.value[0])
+          selectedRows.value = []
+          await getData()
+        } catch {
+          ElMessage.error('批量回滚失败')
+        }
+      })
+      .catch(() => {
+        ElMessage.info('已取消回滚操作')
+      })
   }
 
   // ===== 状态映射 =====
-  const statusTagType = (status: string) => {
-    const map: Record<string, string> = {
-      available: 'success',
-      rolling: 'warning',
-      invalid: 'info'
-    }
-    return map[status] || 'info'
-  }
-
-  const statusLabel = (status: string) => {
-    const map: Record<string, string> = {
-      available: '可用',
-      rolling: '回滚中',
-      invalid: '已失效'
-    }
-    return map[status] || status
-  }
+  // const statusTagType = (status: string) => {
+  //   const map: Record<string, string> = {
+  //     available: 'success',
+  //     rolling: 'warning',
+  //     invalid: 'info'
+  //   }
+  //   return map[status] || 'info'
+  // }
+  //
+  // const statusLabel = (status: string) => {
+  //   const map: Record<string, string> = {
+  //     available: '可用',
+  //     rolling: '回滚中',
+  //     invalid: '已失效'
+  //   }
+  //   return map[status] || status
+  // }
 
   // ===== 创建快照 =====
   const createDialogVisible = ref(false)
   const createForm = ref({
     snapshotName: '',
-    sourceVolume: '',
+    volumeName: '',
     description: ''
   })
 
   const canCreate = computed(() => {
-    return createForm.value.snapshotName.trim() && createForm.value.sourceVolume
+    return !!createForm.value.volumeName
   })
 
   const handleCreate = () => {
-    createForm.value = { snapshotName: '', sourceVolume: '', description: '' }
+    createForm.value = { snapshotName: '', volumeName: '', description: '' }
     createDialogVisible.value = true
   }
 
   const submitCreate = async () => {
     try {
       await fetchCreateSnapshot(createForm.value)
-      ElMessage.success('快照创建成功')
       createDialogVisible.value = false
-      getData()
+      await getData()
     } catch {
       ElMessage.error('创建失败')
-    }
-  }
-
-  // ===== 回滚快照 =====
-  const handleRollback = (row: Record<string, any>) => {
-    ElMessageBox.confirm(
-      `确定将存储卷回滚到快照「${row.snapshotName}」的状态吗？回滚后当前数据将被覆盖。`,
-      '回滚确认',
-      {
-        confirmButtonText: '确定回滚',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    ).then(async () => {
-      try {
-        await fetchRollbackSnapshot({ snapshotId: row.id })
-        ElMessage.success('回滚成功')
-        getData()
-      } catch {
-        ElMessage.error('回滚失败')
-      }
-    }).catch(() => {
-      ElMessage.info('已取消回滚操作')
-    })
-  }
-
-  // ===== 克隆快照 =====
-  const handleClone = (row: Record<string, any>) => {
-    ElMessageBox.prompt('请输入克隆目标名称', '克隆快照', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputPlaceholder: '输入新的存储卷名称'
-    }).then(async ({ value }) => {
-      try {
-        await fetchCloneSnapshot({ snapshotId: row.id, targetName: value })
-        ElMessage.success('克隆成功')
-        getData()
-      } catch {
-        ElMessage.error('克隆失败')
-      }
-    }).catch(() => {
-      ElMessage.info('已取消克隆操作')
-    })
-  }
-
-  // ===== 删除快照 =====
-  const handleDelete = async (row: Record<string, any>) => {
-    try {
-      await fetchDeleteSnapshot({ snapshotId: row.id })
-      ElMessage.success('删除成功')
-      getData()
-    } catch {
-      ElMessage.error('删除失败')
     }
   }
 </script>
@@ -350,6 +324,13 @@
     .filter-left {
       display: flex;
       align-items: center;
+
+      .filter-label {
+        margin-right: 8px;
+        font-size: 14px;
+        color: var(--el-text-color-regular);
+        white-space: nowrap;
+      }
     }
 
     .filter-right {
