@@ -1,7 +1,12 @@
 <template>
   <div>
-    <!-- 折叠态：右上角悬浮条 -->
-    <div v-if="!expanded" class="resource-float-bar" @click="expanded = true">
+    <!-- 折叠态：可拖拽悬浮条 -->
+    <div
+      v-if="!expanded"
+      class="resource-float-bar"
+      :style="floatBarStyle"
+      @mousedown="startFloatDrag"
+    >
       <span class="float-item cpu">
         <span class="dot cpu-dot" />
         CPU {{ cpuInfo.avgUsageRate }}%
@@ -149,6 +154,15 @@
     }
   }
 
+  // ===== 折叠态悬浮条位置 =====
+  const floatBarX = ref(0) // onMounted 中动态计算
+  const floatBarY = ref(12)
+
+  const floatBarStyle = computed(() => ({
+    left: floatBarX.value + 'px',
+    top: floatBarY.value + 'px'
+  }))
+
   // ===== 位置 / 尺寸（最大 600×600） =====
   const panelX = ref(window.innerWidth - 620)
   const panelY = ref(60)
@@ -195,6 +209,46 @@
     document.removeEventListener('mouseup', stopDrag)
   }
 
+  // ===== 折叠态悬浮条拖拽（点击展开 / 拖动移位） =====
+  let floatDragging = false
+  let floatDragStartX = 0
+  let floatDragStartY = 0
+  let floatDragOrigX = 0
+  let floatDragOrigY = 0
+  let floatHasMoved = false
+
+  const startFloatDrag = (e: MouseEvent) => {
+    floatDragging = true
+    floatHasMoved = false
+    floatDragStartX = e.clientX
+    floatDragStartY = e.clientY
+    floatDragOrigX = floatBarX.value
+    floatDragOrigY = floatBarY.value
+    document.addEventListener('mousemove', onFloatDrag)
+    document.addEventListener('mouseup', stopFloatDrag)
+  }
+
+  const onFloatDrag = (e: MouseEvent) => {
+    if (!floatDragging) return
+    const dx = e.clientX - floatDragStartX
+    const dy = e.clientY - floatDragStartY
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      floatHasMoved = true
+    }
+    floatBarX.value = Math.max(0, Math.min(window.innerWidth - 200, floatDragOrigX + dx))
+    floatBarY.value = Math.max(0, Math.min(window.innerHeight - 40, floatDragOrigY + dy))
+  }
+
+  const stopFloatDrag = () => {
+    floatDragging = false
+    document.removeEventListener('mousemove', onFloatDrag)
+    document.removeEventListener('mouseup', stopFloatDrag)
+    // 未拖动视为点击 → 展开面板
+    if (!floatHasMoved) {
+      expanded.value = true
+    }
+  }
+
   // ===== 调整大小 =====
   let resizing = false
   let resizeStartX = 0
@@ -222,6 +276,12 @@
     resizing = false
     document.removeEventListener('mousemove', onResize)
     document.removeEventListener('mouseup', stopResize)
+  }
+
+  // 窗口 resize 时修正悬浮条不超出屏幕
+  const clampFloatBar = () => {
+    floatBarX.value = Math.max(0, Math.min(window.innerWidth - 200, floatBarX.value))
+    floatBarY.value = Math.max(0, Math.min(window.innerHeight - 40, floatBarY.value))
   }
 
   // ===== Tab =====
@@ -462,6 +522,17 @@
 
   onMounted(() => {
     setupWebSocket()
+    // 计算折叠态悬浮条初始位置（贴右上角）
+    nextTick(() => {
+      const bar = document.querySelector('.resource-float-bar') as HTMLElement
+      if (bar) {
+        floatBarX.value = window.innerWidth - bar.offsetWidth - 16
+      } else {
+        floatBarX.value = window.innerWidth - 360
+      }
+    })
+    // 窗口大小变化时修正悬浮条位置（防止拖出视野）
+    window.addEventListener('resize', clampFloatBar)
   })
 
   // 面板展开后挂载 ResizeObserver，折叠/关闭时断开
@@ -492,6 +563,9 @@
     document.removeEventListener('mouseup', stopDrag)
     document.removeEventListener('mousemove', onResize)
     document.removeEventListener('mouseup', stopResize)
+    document.removeEventListener('mousemove', onFloatDrag)
+    document.removeEventListener('mouseup', stopFloatDrag)
+    window.removeEventListener('resize', clampFloatBar)
   })
 </script>
 
@@ -499,8 +573,6 @@
   // ===== 折叠态：右上角悬浮条 =====
   .resource-float-bar {
     position: fixed;
-    top: 12px;
-    right: 16px;
     z-index: 5000;
     display: flex;
     align-items: center;
@@ -509,10 +581,15 @@
     background: var(--el-bg-color);
     border-radius: 20px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-    cursor: pointer;
+    cursor: grab;
     font-size: 13px;
     white-space: nowrap;
+    user-select: none;
     transition: box-shadow 0.2s;
+
+    &:active {
+      cursor: grabbing;
+    }
 
     &:hover {
       box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
@@ -675,13 +752,13 @@
   .network-combined-chart {
     width: 100%;
     height: 380px;
-    margin-bottom: 16px;
+    margin-bottom: 30px;
   }
 
   .nic-info-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 20px;
+    gap: 10px 20px;
   }
 
   .nic-info-row {

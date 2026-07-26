@@ -248,7 +248,8 @@ export function useChart(options: UseChartOptions = {}) {
   const getGridWithLegend = (
     showLegend: boolean,
     legendPosition: 'bottom' | 'top' | 'left' | 'right' = 'bottom',
-    baseGrid: any = {}
+    baseGrid: any = {},
+    legendItemCount?: number
   ) => {
     const defaultGrid = {
       top: 15,
@@ -265,16 +266,23 @@ export function useChart(options: UseChartOptions = {}) {
 
     // 根据图例位置调整 grid
     switch (legendPosition) {
-      case 'bottom':
+      case 'bottom': {
+        // 根据图例项数量动态计算底部空间，避免图例换行后与图表数据区域重叠
+        const rows = legendItemCount ? Math.ceil(legendItemCount / 5) : 1
+        const bottom = 15 + rows * 28
         return {
           ...defaultGrid,
-          bottom: 40
+          bottom
         }
-      case 'top':
+      }
+      case 'top': {
+        const rows = legendItemCount ? Math.ceil(legendItemCount / 5) : 1
+        const top = 15 + rows * 28
         return {
           ...defaultGrid,
-          top: 40
+          top
         }
+      }
       case 'left':
         return {
           ...defaultGrid,

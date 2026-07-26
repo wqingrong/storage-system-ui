@@ -106,6 +106,14 @@
     )
   })
 
+  // 图例项数量（用于动态计算 grid 底部空间，防止图例换行后与数据线重叠）
+  const legendItemCount = computed(() => {
+    if (isMultipleData.value) {
+      return (props.data as LineDataItem[]).length
+    }
+    return undefined
+  })
+
   // 缓存计算的最大值，避免重复计算
   const maxValue = computed(() => {
     if (isMultipleData.value) {
@@ -234,7 +242,7 @@
         top: 15,
         right: 15,
         left: 15
-      }),
+      }, legendItemCount.value),
       tooltip: props.showTooltip
         ? getTooltipStyle('axis', {
             // 👇 核心：悬浮框自动单位换算（KB/MB/GB）
