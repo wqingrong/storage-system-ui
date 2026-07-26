@@ -12,29 +12,27 @@ type TaskCallback = (data: SSEMessage) => void
 class SSEManager {
   private es: EventSource | null = null
   private listeners: Record<string, TaskCallback> = {}
-  private accessToke: string = ''
   private baseUrl = ``
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private reconnectAttempts = 0
+  private readonly maxReconnectAttempts = 5
 
-  // 获取单例
+  // 获取单例：每次调用都会用最新的 token 重建连接
   public init(): SSEManager {
-    if (!this.es) {
-      const userStore = useUserStore()
-      const token = userStore.accessToken
-      if (token) {
-        this.createConnection(token)
-      }
+    // 先关闭旧连接
+    this.close()
+    // 用当前 store 中的 token 创建新连接
+    const userStore = useUserStore()
+    const token = userStore.accessToken
+    if (token) {
+      this.createConnection(token)
     }
     return this
   }
 
   // 创建连接
   private createConnection(accessToken: string): void {
-    if (this.es) {
-      console.log('连接断开>>>')
-      this.es.close()
-    }
-    this.accessToke = accessToken
-    this.baseUrl = `/sse/sse?token=${this.accessToke}`
+    this.baseUrl = `/sse/sse?token=${accessToken}`
     this.es = new EventSource(this.baseUrl)
 
     this.es.onmessage = (event: MessageEvent) => {
@@ -54,7 +52,21 @@ class SSEManager {
       console.error('【SSE ERROR】异常触发', event)
       this.es?.close()
       this.es = null
-      setTimeout(() => this.createConnection(this.accessToke), 2000)
+
+      // 重连时使用当前 store 中的最新 token，而非缓存值
+      const userStore = useUserStore()
+      const currentToken = userStore.accessToken
+      if (currentToken && this.reconnectAttempts < this.maxReconnectAttempts) {
+        this.reconnectAttempts++
+        this.reconnectTimer = setTimeout(
+          () => this.createConnection(currentToken),
+          2000
+        )
+      } else if (!currentToken) {
+        console.warn('SSE 重连取消：未登录（无 token）')
+      } else {
+        console.warn('SSE 重连取消：已达最大重试次数')
+      }
     }
   }
 
@@ -70,6 +82,11 @@ class SSEManager {
 
   // 关闭连接
   public close(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+    this.reconnectAttempts = 0
     this.es?.close()
     this.es = null
     this.listeners = {}

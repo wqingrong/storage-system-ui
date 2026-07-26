@@ -19,6 +19,8 @@ import { useWorktabStore } from '@/store/modules/worktab'
 import { fetchGetUserInfo } from '@/api/auth'
 import { ApiStatus } from '@/utils/http/status'
 import { HttpError, isHttpError } from '@/utils/http/error'
+import { websocketStore } from '@/store/modules/websocket'
+import { sse } from '@/utils/sse'
 
 // 是否已注册动态路由
 const isRouteRegistered = ref(false)
@@ -127,6 +129,18 @@ async function handleLoginStatus(
   const isStaticRoute = isRouteInStaticRoutes(to.path)
 
   if (!userStore.isLogin && to.path !== RoutesAlias.Login && !isStaticRoute) {
+    // 清理持久连接，确保重新登录时用新 token 重建
+    try {
+      const wsStore = websocketStore()
+      if (wsStore.instance) {
+        wsStore.instance.disconnect()
+      }
+      wsStore.clear()
+    } catch {
+      /* WebSocket store 可能未初始化 */
+    }
+    sse.close()
+
     userStore.logOut()
     next({ name: 'Login' })
     return false

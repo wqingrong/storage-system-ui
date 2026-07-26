@@ -1,5 +1,7 @@
 import axios, { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { useUserStore } from '@/store/modules/user'
+import { websocketStore } from '@/store/modules/websocket'
+import { sse } from '@/utils/sse'
 import { ApiStatus } from './status'
 import { HttpError, handleError, showError, showSuccess } from './error'
 import { $t } from '@/locales'
@@ -133,8 +135,22 @@ function resetUnauthorizedError() {
   unauthorizedTimer = null
 }
 
-/** 退出登录函数 */
+/** 退出登录函数（401 自动注销时调用，清理所有持久连接） */
 function logOut() {
+  // 关闭 WebSocket 并清空实例，确保重新登录时用新 token 重建
+  try {
+    const wsStore = websocketStore()
+    if (wsStore.instance) {
+      wsStore.instance.disconnect()
+    }
+    wsStore.clear()
+  } catch {
+    /* WebSocket store 可能未初始化 */
+  }
+
+  // 关闭 SSE 连接，确保重新登录后组件重新 init 时用新 token
+  sse.close()
+
   setTimeout(() => {
     useUserStore().logOut()
   }, LOGOUT_DELAY)

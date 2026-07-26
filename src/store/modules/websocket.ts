@@ -9,9 +9,14 @@ export const websocketStore = defineStore('websocket', {
   actions: {
     // 初始化全局 WebSocket（只调用一次）
     initGlobalWS(token = '') {
+      // 如果已有实例，先销毁旧连接再创建新的，确保 token 始终是最新的
       if (this.instance) {
-        console.log('✅ WebSocket 已存在，不再重复创建')
-        return this.instance
+        try {
+          this.instance.disconnect()
+        } catch {
+          /* 忽略关闭异常 */
+        }
+        this.clear()
       }
 
       // 你原来的代码 👇 完全不变

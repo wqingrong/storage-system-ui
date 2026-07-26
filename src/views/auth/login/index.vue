@@ -108,6 +108,7 @@
   import { ElNotification, type FormInstance, type FormRules } from 'element-plus'
   import { aesEncrypt } from '@utils/encryption'
   import { websocketStore } from '@/store/modules/websocket'
+  import { sse } from '@/utils/sse'
   defineOptions({ name: 'Login' })
   const ws = websocketStore()
 
@@ -207,10 +208,11 @@
       userStore.setUserInfo(userInfo)
       userStore.setLoginStatus(true)
       // 登录成功处理
-      // 登录成功连接ws
+      // 登录成功连接ws / sse
       ws.initGlobalWS(token)
+      sse.init()
       showLoginSuccessNotice()
-      router.push('/')
+      await router.push('/')
     } catch (error) {
       // 处理 HttpError
       if (error instanceof HttpError) {
