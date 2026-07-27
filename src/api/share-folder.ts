@@ -29,9 +29,10 @@ export function fetchEditSambaShare(data: Api.Sys.SambaShareFolderConfig) {
   })
 }
 
-export function fetchDeleteShare(data: Api.Sys.ShareFolder) {
+// 清空共享配置信息
+export function fetchClearShareFolderConfig(data: Api.Sys.ShareFolder[]) {
   return request.post<Api.Sys.ShareFolder>({
-    url: '/shareFolder/delShareFolder',
+    url: '/shareFolder/clearShareFolderConfig',
     data
   })
 }

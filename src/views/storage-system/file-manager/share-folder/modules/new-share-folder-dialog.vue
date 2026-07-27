@@ -796,6 +796,8 @@
     switch (protocol) {
       case 'Samba':
         fetchGetSambaShareConfig({ path: sysShareFolderFormDto.value.folderPath }).then((res) => {
+          res.folderPath = res.folderPath || props.shareFolder.folder.folderPath
+          res.shareName = res.shareName || props.shareFolder.folder.folderName
           sambaShareFolderConfig.value = JSON.parse(JSON.stringify(res))
           roSambaShareFolderConfig.value = JSON.parse(JSON.stringify(res))
         })
@@ -960,7 +962,6 @@
 
     nfsShareFolderConfig.value.folderPath = sysShareFolderFormDto.value.folderPath
     fetchSetNfsShareConfig(nfsShareFolderConfig.value).then(() => {
-      ElMessage.success('NFS配置保存成功')
       emit('refreshData')
       dialogVisible.value = false
     })

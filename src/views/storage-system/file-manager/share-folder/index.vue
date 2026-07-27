@@ -3,12 +3,12 @@
     <div>
       <div class="menu-container" style="margin-bottom: 10px">
         <ElSpace wrap>
-          <ElButton @click="handleNewShareClick">新增</ElButton>
+          <ElButton @click="handleNewShareClick">新增共享配置</ElButton>
           <ElButton @click="handleEditShareClick" :disabled="currentShareFolder === undefined"
-            >编辑</ElButton
+            >编辑共享配置</ElButton
           >
           <ElButton @click="handleDeleteShareClick" :disabled="currentShareFolder === undefined"
-            >删除</ElButton
+            >删除共享配置</ElButton
           >
           <ElSelect
             v-model="filterProtocol"
@@ -98,10 +98,10 @@
               <!-- 回收站 -->
               <div class="info-item">
                 <div class="info-label">
-                  <span>回收站：</span>
+                  <span>samba回收站：</span>
                 </div>
                 <div class="info-value">
-                  <span>{{ item.sambaShareFolderConfig.recycle?.recyclePath }}</span>
+                  <span>{{ item.sambaShareFolderConfig?.recycle?.recyclePath }}</span>
                 </div>
               </div>
             </div>
@@ -138,7 +138,7 @@
   import newShareFolderDialog from './modules/new-share-folder-dialog.vue'
   import FileAttributeDialog from '@views/storage-system/file-station/file-work-space/modules/file-attribute-dialog.vue'
   import ShareFolder = Api.Sys.ShareFolder
-  import { fetchDeleteShare, fetchGetShareFolderList } from '@/api/share-folder'
+  import { fetchClearShareFolderConfig, fetchGetShareFolderList } from '@/api/share-folder'
   const newShareDialogVisible = ref(false)
   const newShareDialogType = ref('add')
   // 展开状态
@@ -280,7 +280,7 @@
   const handleDeleteShareClick = () => {
     if (currentShareFolder.value) {
       ElMessageBox.confirm(
-        `您是否确认将${currentShareFolder.value?.folder.folderName}文件夹删除?`,
+        `您是否确认将${currentShareFolder.value?.folder.folderName}文件夹所有共享配置删除?`,
         '删除警告',
         {
           confirmButtonText: '确认',
@@ -289,7 +289,8 @@
         }
       )
         .then(() => {
-          fetchDeleteShare(currentShareFolder.value).then(() => {
+          // 请求批量删除的请求
+          fetchClearShareFolderConfig([currentShareFolder.value]).then(() => {
             currentShareFolder.value = undefined
             refreshShareFolderList()
           })

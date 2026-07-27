@@ -94,7 +94,7 @@
   import folder from '@imgs/svg/folder.svg'
   import newShareFolderDialog from './modules/new-share-folder-dialog.vue'
   import ShareFolder = Api.Sys.ShareFolder
-  import { fetchDeleteShare, fetchGetShareFolderList } from '@/api/share-folder'
+  import { fetchClearShareFolderConfig, fetchGetShareFolderList } from '@/api/share-folder'
   const newShareDialogVisible = ref(false)
   const newShareDialogType = ref('add')
   // 展开状态
@@ -144,7 +144,7 @@
         }
       )
         .then(() => {
-          fetchDeleteShare(currentShareFolder.value).then(() => {
+          fetchClearShareFolderConfig([currentShareFolder.value]).then(() => {
             currentShareFolder.value = undefined
             refreshShareFolderList()
           })
