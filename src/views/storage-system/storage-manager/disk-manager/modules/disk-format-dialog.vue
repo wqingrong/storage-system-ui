@@ -167,7 +167,7 @@
 
   const cancelFormatDiskTask = (taskId: string) => {
     if (taskId) {
-      fetchSubmitCancelTask({ task_id: taskId })
+      fetchSubmitCancelTask({ taskId: taskId })
     }
   }
 

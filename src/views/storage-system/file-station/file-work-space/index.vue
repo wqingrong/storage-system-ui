@@ -120,6 +120,13 @@
       :file-info="selectionFileInfoRows.length > 0 ? selectionFileInfoRows[0] : { name: '' }"
     />
     <select-file-dialog v-model:visible="selectDirVisible"> </select-file-dialog>
+
+    <!--    删除文件弹窗组件-->
+    <delete-task-dialog
+      v-model:visible="deleteTaskDialoag.visible"
+      :task-id="deleteTaskDialoag.taskId"
+    >
+    </delete-task-dialog>
   </div>
 </template>
 
@@ -142,6 +149,7 @@
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
   import FileAttributeDialog from '@views/storage-system/file-station/file-work-space/modules/file-attribute-dialog.vue'
   import selectFileDialog from './modules/select-file-dialog.vue'
+  import DeleteTaskDialog from '@views/storage-system/file-station/file-work-space/modules/delete-task-dialog.vue'
   // 右键菜单相关
   /**
    * 表格行右键菜单
@@ -151,6 +159,10 @@
   const contextMenuX = ref(0)
   const contextMenuY = ref(0)
   const rightClickRow = ref<FileInfo | null>(null)
+  const deleteTaskDialoag = ref({
+    visible: false,
+    taskId: ''
+  })
 
   // 右键行触发
   const handleRowContextMenu = (row: FileInfo, column: any, event: MouseEvent) => {
@@ -261,7 +273,8 @@
       fetchSubmitDeleteDirectory({
         pathList: deletePathList
       }).then((res) => {
-        console.log('res>>', res)
+        deleteTaskDialoag.value.visible = true
+        deleteTaskDialoag.value.taskId = res.taskId
       })
     }
   }

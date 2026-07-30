@@ -177,7 +177,7 @@
   }
 
   const cancelComputeFileAttributeTask = (taskId: string) => {
-    fetchSubmitCancelTask({ task_id: taskId }).then((res) => {
+    fetchSubmitCancelTask({ taskId: taskId }).then((res) => {
       console.log('取消任务的返回值', res)
     })
   }

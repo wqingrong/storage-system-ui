@@ -8,6 +8,7 @@ import { AppRouteRecord } from '@/types/router'
 import { setPageTitle } from '@/router/utils/utils'
 import { resetRouterState } from '@/router/guards/beforeEach'
 import { useMenuStore } from './menu'
+import { sse } from '@/utils/sse'
 
 /**
  * 用户状态管理
@@ -106,6 +107,8 @@ export const useUserStore = defineStore(
      * 清空所有用户相关状态并跳转到登录页
      */
     const logOut = () => {
+      // 关闭 SSE 连接，确保退出管理界面后不再接收服务端推送
+      sse.close()
       // 清空用户信息
       info.value = {}
       // 重置登录状态

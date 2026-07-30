@@ -1,13 +1,14 @@
 import { useUserStore } from '@/store/modules/user'
+import { SSEEvent } from '@/entity/sse'
 
-type SSEMessage = {
-  taskId: string
-  progress?: number
-  status?: string
-  message?: string
-  [key: string]: any
-}
-type TaskCallback = (data: SSEMessage) => void
+// type SSEMessage = {
+//   taskId: string
+//   progress?: number
+//   status?: string
+//   message?: string
+//   [key: string]: any
+// }
+type TaskCallback = (data: SSEEvent) => void
 
 class SSEManager {
   private es: EventSource | null = null
@@ -39,7 +40,7 @@ class SSEManager {
       try {
         const data = JSON.parse(event.data)
         console.log('sse接收消息>>', data)
-        const taskId = data.taskId || data.event
+        const taskId = data.taskId || data.eventId || data.event
         if (taskId && this.listeners[taskId]) {
           this.listeners[taskId](data)
         }
@@ -58,10 +59,7 @@ class SSEManager {
       const currentToken = userStore.accessToken
       if (currentToken && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++
-        this.reconnectTimer = setTimeout(
-          () => this.createConnection(currentToken),
-          2000
-        )
+        this.reconnectTimer = setTimeout(() => this.createConnection(currentToken), 2000)
       } else if (!currentToken) {
         console.warn('SSE 重连取消：未登录（无 token）')
       } else {
