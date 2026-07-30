@@ -391,6 +391,7 @@
     })
   }
   onMounted(() => {
+    console.log('页面挂载>>')
     loadingRootPath()
   })
   // 树形数据 - 组织架构示例

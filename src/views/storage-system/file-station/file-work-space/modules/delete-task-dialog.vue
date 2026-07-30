@@ -459,8 +459,10 @@
   const handleCancel = async () => {
     try {
       canceling.value = true
-      await fetchSubmitCancelTask({ taskId: props.taskId }).then(() => {
-        emit('update:visible', false)
+      await fetchSubmitCancelTask({ taskId: props.taskId }).then((res) => {
+        if (res) {
+          emit('update:visible', false)
+        }
       })
     } catch {
       ElMessage.error('取消失败，请重试')

@@ -170,6 +170,15 @@
     get: () => props.visible,
     set: (value) => emit('update:visible', value)
   })
+
+  watch(
+    () => props.visible,
+    (value) => {
+      if (value) {
+        loadingRootPath()
+      }
+    }
+  )
   // 右键菜单相关
   /**
    * 表格行右键菜单
@@ -400,9 +409,6 @@
       }
     })
   }
-  onMounted(() => {
-    loadingRootPath()
-  })
   // 树形数据 - 组织架构示例
 
   const treeProps = {
