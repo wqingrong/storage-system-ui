@@ -142,16 +142,35 @@
         </p>
       </div>
 
-      <!-- Completed: 删除成功 -->
+      <!-- Completed: 删除完成（部分失败时显示异常提示） -->
       <div v-else-if="currentPhase === TaskPhase.Completed" class="phase-panel">
-        <ElResult icon="success" title="删除完成" :sub-title="resultPayload?.message ?? ''">
+        <!-- 存在失败文件：显示异常警告 -->
+        <ElResult
+          v-if="(resultPayload?.failedCount ?? 0) > 0"
+          icon="warning"
+          title="删除完成，部分文件失败"
+          :sub-title="
+            resultPayload?.message ||
+            `成功删除 ${resultPayload?.deletedFiles ?? 0} 个文件、${resultPayload?.deletedDirs ?? 0} 个目录，${resultPayload?.failedCount ?? 0} 个文件删除失败`
+          "
+        >
           <template #extra>
             <div class="result-summary">
               <ElTag type="success">文件 {{ resultPayload?.deletedFiles ?? 0 }}</ElTag>
               <ElTag type="success">目录 {{ resultPayload?.deletedDirs ?? 0 }}</ElTag>
-              <ElTag v-if="(resultPayload?.failedCount ?? 0) > 0" type="danger">
-                失败 {{ resultPayload.failedCount }}
+              <ElTag type="danger">失败 {{ resultPayload?.failedCount ?? 0 }}</ElTag>
+              <ElTag v-if="resultPayload" type="info">
+                耗时 {{ formatDuration(resultPayload.startTime, resultPayload.endTime) }}
               </ElTag>
+            </div>
+          </template>
+        </ElResult>
+        <!-- 全部成功：显示成功结果 -->
+        <ElResult v-else icon="success" title="删除完成" :sub-title="resultPayload?.message ?? ''">
+          <template #extra>
+            <div class="result-summary">
+              <ElTag type="success">文件 {{ resultPayload?.deletedFiles ?? 0 }}</ElTag>
+              <ElTag type="success">目录 {{ resultPayload?.deletedDirs ?? 0 }}</ElTag>
               <ElTag v-if="resultPayload" type="info">
                 耗时 {{ formatDuration(resultPayload.startTime, resultPayload.endTime) }}
               </ElTag>
@@ -385,9 +404,13 @@
       [TaskPhase.Scanning]: '扫描中',
       [TaskPhase.Scanned]: '扫描完成',
       [TaskPhase.Deleting]: '删除中',
-      [TaskPhase.Completed]: '删除成功',
+      [TaskPhase.Completed]: '已完成',
       [TaskPhase.Canceled]: '已取消',
       [TaskPhase.Failed]: '删除失败'
+    }
+    // 删除完成但存在失败文件时，显示"删除异常"
+    if (currentPhase.value === TaskPhase.Completed && (resultPayload.value?.failedCount ?? 0) > 0) {
+      return '删除任务 - 删除异常'
     }
     return `删除任务 - ${labelMap[currentPhase.value] ?? '进行中'}`
   })
@@ -444,7 +467,10 @@
         activeIdx = 0
     }
 
-    const isError = phase === TaskPhase.Failed || phase === TaskPhase.Canceled
+    const isError =
+      phase === TaskPhase.Failed ||
+      phase === TaskPhase.Canceled ||
+      (phase === TaskPhase.Completed && (resultPayload.value?.failedCount ?? 0) > 0)
 
     return phaseOrder.map((step, idx) => ({
       ...step,
@@ -459,11 +485,7 @@
   const handleCancel = async () => {
     try {
       canceling.value = true
-      await fetchSubmitCancelTask({ taskId: props.taskId }).then((res) => {
-        if (res) {
-          emit('update:visible', false)
-        }
-      })
+      await fetchSubmitCancelTask({ taskId: props.taskId })
     } catch {
       ElMessage.error('取消失败，请重试')
     } finally {
@@ -475,9 +497,7 @@
 
   const handleClose = () => {
     dialogVisible.value = false
-    if (isFinished.value) {
-      emit('task-done', props.taskId)
-    }
+    emit('task-done', props.taskId)
   }
 
   // ======================== 工具函数 ========================
@@ -723,15 +743,22 @@
   // 当前路径
   .current-path {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    color: #909399;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 13px;
+    color: #606266;
     margin: 0;
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    word-break: break-all;
+    line-height: 1.5;
+    padding: 8px 12px;
+    background: #f5f7fa;
+    border-radius: 6px;
+
+    .el-icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
   }
 
   // 结果汇总

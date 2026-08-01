@@ -125,6 +125,7 @@
     <delete-task-dialog
       v-model:visible="deleteTaskDialoag.visible"
       :task-id="deleteTaskDialoag.taskId"
+      @task-done="refreshData"
     >
     </delete-task-dialog>
   </div>
