@@ -81,6 +81,7 @@
   import { ColumnOption } from '@/types'
   import { useTableStore } from '@/store/modules/table'
   import { useCommon } from '@/composables/useCommon'
+  import { useColumnResize } from '@/composables/useColumnResize'
   import { useElementSize, useWindowSize } from '@vueuse/core'
 
   defineOptions({ name: 'ArtTable' })
@@ -141,6 +142,8 @@
     emptyText?: string
     /** 是否开启 ArtTableHeader，解决表格高度自适应问题 */
     showTableHeader?: boolean
+    /** 是否启用列宽拖拽调整 */
+    resizable?: boolean
   }
 
   const props = withDefaults(defineProps<ArtTableProps>(), {
@@ -152,7 +155,8 @@
     size: undefined,
     emptyHeight: '100%',
     emptyText: '暂无数据',
-    showTableHeader: true
+    showTableHeader: true,
+    resizable: false
   })
 
   const LAYOUT = {
@@ -344,6 +348,24 @@
       nextTick(() => {
         observeTableHeader()
       })
+    },
+    { flush: 'post' }
+  )
+
+  // 列宽拖拽调整
+  const { setupResizeHandles } = useColumnResize(elTableRef)
+
+  // 监听 resizable 开关和数据变化，重新设置拖拽手柄
+  watch(
+    [() => props.resizable, () => props.data, () => props.columns],
+    () => {
+      if (props.resizable) {
+        nextTick(() => {
+          setTimeout(() => {
+            setupResizeHandles()
+          }, 150)
+        })
+      }
     },
     { flush: 'post' }
   )

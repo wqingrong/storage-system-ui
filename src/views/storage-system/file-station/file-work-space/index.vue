@@ -89,6 +89,7 @@
             :columns="columns"
             :border="false"
             :pagination="pagination"
+            resizable
             @sort-change="handleSortChange"
             @row-dblclick="dbClickWorkSpaceFile"
             @selection-change="handleSelectionFileInfo"
