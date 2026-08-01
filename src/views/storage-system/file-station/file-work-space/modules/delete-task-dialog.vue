@@ -5,9 +5,8 @@
     width="560px"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
-    :show-close="isFinished"
     align-center
-    @close="handleClose"
+    @close="forceHandleClose"
   >
     <!-- ======================== 阶段步骤条 ======================== -->
     <div class="delete-steps">
@@ -494,6 +493,13 @@
   }
 
   // ======================== 关闭弹窗 ========================
+  const forceHandleClose = async () => {
+    if (!isFinished.value) {
+      await fetchSubmitCancelTask({ taskId: props.taskId })
+    }
+    dialogVisible.value = false
+    emit('task-done', props.taskId)
+  }
 
   const handleClose = () => {
     dialogVisible.value = false
