@@ -29,11 +29,24 @@
       <div class="right-content art-full-height">
         <div class="menu-container" style="margin-bottom: 10px">
           <ElSpace wrap>
-            <ElButton @click="handleNewDirectory">新建文件夹</ElButton>
-            <ElButton @click="handleRenameFileInfo" :disabled="selectionFileInfoRows.length !== 1"
+            <ElButton
+              @click="handleNewDirectory"
+              :disabled="hasCreateRestricted(pathHistory.at(-1))"
+              >新建文件夹</ElButton
+            >
+            <ElButton
+              @click="handleRenameFileInfo"
+              :disabled="
+                selectionFileInfoRows.length !== 1 || hasRestrictedPurpose(selectionFileInfoRows[0])
+              "
               >重命名</ElButton
             >
-            <ElButton @click="handleDeleteFileInfos" :disabled="selectionFileInfoRows.length === 0"
+            <ElButton
+              @click="handleDeleteFileInfos"
+              :disabled="
+                selectionFileInfoRows.length === 0 ||
+                selectionFileInfoRows.some((row) => hasRestrictedPurpose(row))
+              "
               >删除</ElButton
             >
             <ElButton @click="handleSelectDirectory">路径选择器</ElButton>
@@ -95,7 +108,9 @@
       :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
       @click.stop
     >
-      <div class="menu-item" @click="contextMenuRename">重命名</div>
+      <div v-if="!hasRestrictedPurpose(rightClickRow)" class="menu-item" @click="contextMenuRename"
+        >重命名</div
+      >
       <div class="divider"></div>
       <div class="menu-item" @click="contextMenuComputeFileAttribute">属性</div>
       <div v-if="rightClickRow?.isDir" class="menu-item" @click="contextMenuOpenDir"
@@ -143,14 +158,36 @@
   } from '@/api/file-station-service'
   import { FileStoryField, SortType } from '@/enums/formEnum'
   import folder from '@imgs/svg/folder.svg'
-  import { ElIcon } from 'element-plus'
-  import { Folder, Document, ArrowRight, ArrowLeft } from '@element-plus/icons-vue'
+  import { ElIcon, ElTag } from 'element-plus'
+  import { Folder, Document, ArrowRight, ArrowLeft, Share, Timer } from '@element-plus/icons-vue'
   import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
   import FileAttributeDialog from '@views/storage-system/file-station/file-work-space/modules/file-attribute-dialog.vue'
   import selectFileDialog from './modules/select-file-dialog.vue'
   import DeleteTaskDialog from '@views/storage-system/file-station/file-work-space/modules/delete-task-dialog.vue'
+  import { Purpose } from '@/entity/file-station'
+
+  /**
+   * 检查文件/文件夹是否不能删除、不能重命名
+   * snapshot / nfsShare / sambaShare 都不能删除和重命名
+   */
+  const hasRestrictedPurpose = (fileInfo?: FileInfo): boolean => {
+    if (!fileInfo?.purposes || fileInfo.purposes.length === 0) return false
+    return fileInfo.purposes.some(
+      (p: Purpose) => p === Purpose.nfsShare || p === Purpose.sambaShare || p === Purpose.snapshot
+    )
+  }
+
+  /**
+   * 检查当前目录是否不能新建文件夹
+   * 只有 snapshot 用途限制新建文件夹，nfsShare / sambaShare 允许新建
+   */
+  const hasCreateRestricted = (fileInfo?: FileInfo): boolean => {
+    if (!fileInfo?.purposes || fileInfo.purposes.length === 0) return false
+    return fileInfo.purposes.some((p: Purpose) => p === Purpose.snapshot)
+  }
+
   // 右键菜单相关
   /**
    * 表格行右键菜单
@@ -189,6 +226,10 @@
   const contextMenuRename = () => {
     contextMenuVisible.value = false
     if (!rightClickRow.value) return
+    if (hasRestrictedPurpose(rightClickRow.value)) {
+      ElMessage.warning('该文件夹受保护，无法重命名')
+      return
+    }
     renameVisible.value = true
   }
 
@@ -235,6 +276,7 @@
     modifyTime: string
     children: any
     extension: string
+    purposes: Purpose[]
 
     // 构造函数：new 时自动初始化所有字段
     constructor(
@@ -249,7 +291,8 @@
       modifyTime: string = '',
       extension: string = '',
       totalBytes: number = 0,
-      children: any = []
+      children: any = [],
+      purposes: any = []
     ) {
       this.id = id
       this.name = name
@@ -263,12 +306,21 @@
       this.modifyTime = modifyTime
       this.children = children
       this.extension = extension
+      this.purposes = purposes
     }
   }
 
   const handleDeleteFileInfos = () => {
     console.log('点击了删除')
     if (selectionFileInfoRows.value.length > 0) {
+      // 检查是否包含受保护的文件（nfsShare / sambaShare 不能删除）
+      const restrictedFiles = selectionFileInfoRows.value.filter((row) => hasRestrictedPurpose(row))
+      if (restrictedFiles.length > 0) {
+        ElMessage.warning(
+          `以下文件夹受保护，无法删除：${restrictedFiles.map((f) => f.name).join('、')}`
+        )
+        return
+      }
       let deletePathList = []
       deletePathList = selectionFileInfoRows.value.map((item) => item.path)
       fetchSubmitDeleteDirectory({
@@ -286,6 +338,10 @@
 
   // 新建文件夹的弹窗
   const handleNewDirectory = () => {
+    if (hasCreateRestricted(pathHistory.value.at(-1))) {
+      ElMessage.warning('快照目录受保护，无法新建文件夹')
+      return
+    }
     createDirVisible.value = true
   }
 
@@ -303,6 +359,11 @@
   }
 
   const handleRenameFileInfo = () => {
+    const target = selectionFileInfoRows.value[0]
+    if (target && hasRestrictedPurpose(target)) {
+      ElMessage.warning('该文件夹受保护，无法重命名')
+      return
+    }
     renameVisible.value = true
   }
 
@@ -490,17 +551,37 @@
         {
           type: 'selection',
           width: 55,
-          align: 'center'
+          align: 'center',
+          selectable: (row: FileInfo) => !hasRestrictedPurpose(row)
         },
         {
           prop: 'name',
           label: '文件名',
           sortable: 'custom',
           formatter: (row: any) => {
-            // 判断是文件夹还是文件
-            const isFolder = row.isDir
-            const iconColor = isFolder ? '#E6A23C' : '#909399'
-            const iconName = isFolder ? Folder : Document
+            // 根据用途决定图标：共享 > 快照 > 文件夹/文件
+            const purposes: Purpose[] = row.purposes || []
+            const isShare = purposes.some(
+              (p: Purpose) => p === Purpose.nfsShare || p === Purpose.sambaShare
+            )
+            const isSnapshot = purposes.some((p: Purpose) => p === Purpose.snapshot)
+
+            let iconColor: string
+            let iconName: any
+
+            if (isShare) {
+              iconColor = '#409EFF'
+              iconName = Share
+            } else if (isSnapshot) {
+              iconColor = '#67C23A'
+              iconName = Timer
+            } else if (row.isDir) {
+              iconColor = '#E6A23C'
+              iconName = Folder
+            } else {
+              iconColor = '#909399'
+              iconName = Document
+            }
 
             return h('div', { style: 'display: flex; align-items: center; gap: 6px;' }, [
               // 图标
@@ -522,6 +603,33 @@
           prop: 'extension',
           label: '类型',
           formatter: (row: any) => (row.isDir ? '文件夹' : row.extension)
+        },
+        {
+          prop: 'purposes',
+          label: '用途',
+          formatter: (row: any) => {
+            const purposes: Purpose[] = row.purposes || []
+            if (purposes.length === 0) return h('span', {}, '-')
+
+            const labelMap: Record<string, string> = {
+              [Purpose.nfsShare]: 'NFS',
+              [Purpose.sambaShare]: 'SMB',
+              [Purpose.snapshot]: '快照'
+            }
+            const typeMap: Record<string, string> = {
+              [Purpose.nfsShare]: 'info',
+              [Purpose.sambaShare]: 'info',
+              [Purpose.snapshot]: 'success'
+            }
+
+            return h(
+              'div',
+              { style: 'display: flex; flex-wrap: wrap; gap: 4px;' },
+              purposes.map((p: Purpose) =>
+                h(ElTag, { size: 'small', type: typeMap[p] }, () => labelMap[p] || p)
+              )
+            )
+          }
         },
         {
           prop: 'permission',
