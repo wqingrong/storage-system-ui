@@ -1,11 +1,5 @@
 import request from '@utils/http'
-import {
-  CancelUploadRe,
-  CheckUploadRes,
-  CheckUploadResp,
-  ChunkUploadReq,
-  MergeReq
-} from '@/entity/file-station'
+import { CancelUploadRe, CheckUploadRes, CheckUploadResp, MergeReq } from '@/entity/file-station'
 
 export function fetchGetStoragePathList() {
   return request.get<any>({
@@ -30,7 +24,8 @@ export function fetchGetDirInfoList(data: any) {
 export function fetchNewFolder(data: any) {
   return request.post<any>({
     url: '/fileStation/newFolder',
-    data
+    data,
+    loading: data.loading !== 'close'
   })
 }
 

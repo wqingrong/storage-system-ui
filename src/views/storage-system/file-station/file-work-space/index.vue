@@ -185,7 +185,15 @@
   import { FileStoryField, SortType } from '@/enums/formEnum'
   import folder from '@imgs/svg/folder.svg'
   import { ElIcon, ElTag } from 'element-plus'
-  import { Folder, Document, ArrowRight, ArrowLeft, Share, Timer, UploadFilled } from '@element-plus/icons-vue'
+  import {
+    Folder,
+    Document,
+    ArrowRight,
+    ArrowLeft,
+    Share,
+    Timer,
+    UploadFilled
+  } from '@element-plus/icons-vue'
   import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
@@ -292,11 +300,13 @@
     cancelUpload,
     removeItem,
     retryUpload,
-    setTargetPathId
+    setTargetPathId,
+    setCurrentPath
   } = useChunkUpload({
     chunkSize: 5 * 1024 * 1024, // 5MB 每片
     concurrency: 3,
-    targetPathId: '' // 每次 drop 时动态更新
+    targetPathId: '', // 每次 drop 时动态更新
+    currentPath: ''
   })
 
   // 拖拽进入
@@ -335,6 +345,7 @@
     const currentDir = pathHistory.value.at(-1)
     if (currentDir?.id) {
       setTargetPathId(currentDir.id)
+      setCurrentPath(currentDir.path || '')
     }
 
     addFilesFromDrop(event)
@@ -590,7 +601,6 @@
   const dbClickWorkSpaceFile = async (row: FileInfo) => {
     if (!row.isDir) return
     let targetNode = treeRef.value.getNode(row.id)
-
     if (targetNode) {
       await handleNodeClick(targetNode.data, true)
       treeRef.value.setCurrentKey(targetNode.data.id, true)

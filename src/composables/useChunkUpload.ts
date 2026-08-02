@@ -5,7 +5,8 @@ import {
   fetchCheckChunkUpload,
   fetchChunkUpload,
   fetchMergeChunkUpload,
-  fetchCancelChunkUpload
+  fetchCancelChunkUpload,
+  fetchNewFolder
 } from '@/api/file-station-service'
 
 // ============================================================
@@ -15,6 +16,7 @@ import {
 /** 单个上传文件的状态 */
 export type UploadStatus =
   | 'pending' // 等待中
+  | 'scanning' // 正在扫描文件夹
   | 'hashing' // 正在计算MD5
   | 'checking' // 正在检查已上传分片
   | 'uploading' // 正在上传分片
@@ -46,6 +48,15 @@ export interface UploadFileItem {
   speed: number
   /** 错误信息 */
   errorMsg?: string
+  /** 文件在文件夹内的相对路径（上传文件夹时使用），用于 UI 展示 */
+  relativePath?: string
+}
+
+/** 文件夹扫描后收集的待上传文件 */
+export interface PendingFileEntry {
+  file: File
+  relativePath: string
+  parentDirId: string
 }
 
 export interface UseChunkUploadOptions {
@@ -55,6 +66,8 @@ export interface UseChunkUploadOptions {
   concurrency?: number
   /** 当前工作区目录路径ID */
   targetPathId: string
+  /** 当前工作区目录路径（用于文件夹创建） */
+  currentPath?: string
 }
 
 // ============================================================
@@ -451,7 +464,8 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
 
       // 4. 合并分片（带重试）
       item.status = 'merging'
-      const targetPathId = options.targetPathId
+      // 文件夹内文件使用其父目录 ID，否则使用当前工作区目录
+      const targetPathId = (item as any)._parentDirId || options.targetPathId
 
       let mergeResp: MergeResp | null = null
 
@@ -540,19 +554,304 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
     }
   }
 
-  /**
-   * 批量添加文件（从拖拽事件）
-   */
-  function addFilesFromDrop(event: DragEvent): void {
-    const files = event.dataTransfer?.files
-    if (!files || files.length === 0) return
+  // ---- 文件夹上传 --------------------------------------------------
 
-    const fileArray = Array.from(files).filter((f) => !f.type.includes('directory'))
-    if (fileArray.length > 0) {
-      isUploading.value = true
-      addFiles(fileArray).finally(() => {
-        isUploading.value = false
+  /** 扫描结果：文件夹路径集合 + 待上传文件列表 */
+  interface ScanResult {
+    /** 所有子文件夹的相对路径（已排序，父目录在前） */
+    folderPaths: string[]
+    /** 待上传文件列表 */
+    files: PendingFileEntry[]
+    /** 总字节数 */
+    totalBytes: number
+  }
+
+  /**
+   * 递归扫描文件夹树（纯前端遍历，不调用服务端接口）
+   *   - 收集所有子文件夹路径
+   *   - 收集所有文件
+   *   - 统计总大小
+   *   - 支持通过 AbortController 取消
+   */
+  async function scanFolderTree(
+    entry: FileSystemDirectoryEntry,
+    parentPath: string,
+    controller: AbortController,
+    onProgress?: (filesFound: number, totalBytes: number, currentPath: string) => void
+  ): Promise<ScanResult> {
+    const currentPath = parentPath ? `${parentPath}/${entry.name}` : entry.name
+
+    // 读取目录下所有条目
+    const allEntries: FileSystemEntry[] = []
+    const reader = entry.createReader()
+
+    await new Promise<void>((resolve, reject) => {
+      const readBatch = () => {
+        reader.readEntries((batch) => {
+          if (controller.signal.aborted) {
+            reject(new DOMException('Aborted', 'AbortError'))
+            return
+          }
+          if (batch.length === 0) {
+            resolve()
+          } else {
+            allEntries.push(...batch)
+            readBatch()
+          }
+        }, reject)
+      }
+      readBatch()
+    })
+
+    // 分类处理
+    const folderPaths: string[] = []
+    const files: PendingFileEntry[] = []
+    let totalBytes = 0
+    let filesFound = 0
+
+    for (const childEntry of allEntries) {
+      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+
+      if (childEntry.isDirectory) {
+        folderPaths.push(currentPath ? `${currentPath}/${childEntry.name}` : childEntry.name)
+        const subResult = await scanFolderTree(
+          childEntry as FileSystemDirectoryEntry,
+          currentPath,
+          controller,
+          onProgress
+        )
+        folderPaths.push(...subResult.folderPaths)
+        files.push(...subResult.files)
+        totalBytes += subResult.totalBytes
+        filesFound += subResult.files.length
+      } else if (childEntry.isFile) {
+        const fileEntry = childEntry as FileSystemFileEntry
+        const file: File = await new Promise((resolve, reject) => {
+          fileEntry.file(resolve, reject)
+        })
+        files.push({
+          file,
+          relativePath: currentPath,
+          parentDirId: '' // 将在创建文件夹后回填
+        })
+        totalBytes += file.size
+        filesFound++
+      }
+
+      if (onProgress) {
+        onProgress(filesFound, totalBytes, currentPath)
+      }
+    }
+
+    return { folderPaths, files, totalBytes }
+  }
+
+  /**
+   * 将文件夹路径按层级排序（父目录在前）
+   */
+  function sortFolderPaths(paths: string[]): string[] {
+    return [...new Set(paths)].sort((a, b) => a.split('/').length - b.split('/').length)
+  }
+
+  /**
+   * 批量创建服务端文件夹，返回 relativePath → serverDirId 的映射
+   * 单个文件夹创建失败不影响其他文件夹
+   */
+  async function createServerFolders(
+    folderPaths: string[],
+    baseParentId: string,
+    basePath: string,
+    controller: AbortController
+  ): Promise<Map<string, string>> {
+    const pathMap = new Map<string, string>() // relativePath → serverDirId
+    const sorted = sortFolderPaths(folderPaths)
+
+    for (const relPath of sorted) {
+      if (controller.signal.aborted) break
+
+      try {
+        // 父路径 = basePath + "/" + 除最后一段外的部分
+        const segs = relPath.split('/')
+        const folderName = segs.pop()!
+        const parentRelPath = segs.join('/')
+        const fatherPath = parentRelPath ? `${basePath}/${parentRelPath}` : basePath
+
+        const res: any = await fetchNewFolder({ fatherPath, name: folderName, loading: 'close' })
+        if (res?.id) {
+          pathMap.set(relPath, res.id)
+        }
+      } catch (err: any) {
+        if (isAbortError(err)) throw err
+        // 单个文件夹创建失败 → 跳过，其子文件将使用父目录兜底
+        console.warn(`[CreateFolder] 创建失败，跳过: ${relPath}`, err)
+      }
+    }
+
+    return pathMap
+  }
+
+  /**
+   * 上传文件夹：扫描 → 创建目录 → 逐个上传文件
+   * 任一步骤失败不影响其他文件/文件夹
+   */
+  async function addFolderFromEntry(
+    folderEntry: FileSystemDirectoryEntry,
+    baseParentId: string,
+    basePath: string
+  ): Promise<void> {
+    // → 创建扫描进度项
+    const scanUid = genUid()
+    const scanController = new AbortController()
+    abortControllers.set(scanUid, scanController)
+
+    const scanItem: UploadFileItem = {
+      uid: scanUid,
+      file: new File([], folderEntry.name, { type: '' }),
+      fileMd5: '',
+      status: 'scanning',
+      progress: 0,
+      chunkProgress: [],
+      uploadedChunks: [],
+      totalChunks: 0,
+      uploadedBytes: 0,
+      speed: 0,
+      relativePath: folderEntry.name
+    }
+
+    uploadList.value.push(scanItem)
+    const scanIdx = uploadList.value.length - 1
+    const reactiveScanItem = uploadList.value[scanIdx]
+
+    try {
+      // ---------- Phase 1: 纯前端扫描 ----------
+      const { folderPaths, files: scannedFiles } = await scanFolderTree(
+        folderEntry,
+        '',
+        scanController,
+        (filesFound, _bytes, currentPath) => {
+          reactiveScanItem.progress = Math.min(
+            99,
+            Math.round((filesFound / Math.max(filesFound + 5, 10)) * 100)
+          )
+          reactiveScanItem.errorMsg = `已发现 ${filesFound} 个文件，当前: ${currentPath}`
+          reactiveScanItem.totalChunks = filesFound
+        }
+      )
+
+      if (scannedFiles.length === 0) {
+        reactiveScanItem.status = 'done'
+        reactiveScanItem.errorMsg = '文件夹为空'
+        return
+      }
+
+      // ---------- Phase 2: 创建服务端文件夹 ----------
+      // 顶层拖入的文件夹本身也需要创建，然后才是子目录
+      const allFolderPaths = [folderEntry.name, ...folderPaths]
+      reactiveScanItem.errorMsg = `正在创建 ${allFolderPaths.length} 个文件夹...`
+      const folderIdMap = await createServerFolders(
+        allFolderPaths,
+        baseParentId,
+        basePath,
+        scanController
+      )
+
+      // ---------- Phase 3: 移除扫描项，创建文件上传项 ----------
+      abortControllers.delete(scanUid)
+      const removeIdx = uploadList.value.findIndex((i) => i.uid === scanUid)
+      if (removeIdx !== -1) uploadList.value.splice(removeIdx, 1)
+
+      // 为每个文件匹配其父目录的 serverId
+      const matchedFiles = scannedFiles.map((sf) => {
+        const parentId = folderIdMap.get(sf.relativePath) || baseParentId
+        return { ...sf, parentDirId: parentId }
       })
+
+      const plainItems: UploadFileItem[] = matchedFiles.map((pe) => {
+        const uid = genUid()
+        abortControllers.set(uid, new AbortController())
+        return {
+          uid,
+          file: pe.file,
+          fileMd5: '',
+          status: 'pending' as UploadStatus,
+          progress: 0,
+          chunkProgress: [],
+          uploadedChunks: [],
+          totalChunks: 0,
+          uploadedBytes: 0,
+          speed: 0,
+          relativePath: pe.relativePath
+        }
+      })
+
+      uploadList.value.push(...plainItems)
+      const newStartIdx = uploadList.value.length - plainItems.length
+      const reactiveItems = plainItems.map((_, i) => uploadList.value[newStartIdx + i])
+
+      // ---------- Phase 4: 逐个上传文件（失败跳过） ----------
+      for (let fi = 0; fi < reactiveItems.length; fi++) {
+        const item = reactiveItems[fi]
+        if (item.status === 'cancelled') continue
+        ;(item as any)._parentDirId = matchedFiles[fi]?.parentDirId || baseParentId
+        try {
+          await processFile(item)
+        } catch {
+          // 单个文件失败不阻塞后续
+        }
+      }
+    } catch (err: any) {
+      if (isAbortError(err)) {
+        reactiveScanItem.status = 'cancelled'
+      } else {
+        reactiveScanItem.status = 'error'
+        reactiveScanItem.errorMsg = err.message || '文件夹扫描失败'
+      }
+    } finally {
+      abortControllers.delete(scanUid)
+    }
+  }
+
+  /**
+   * 批量添加文件（从拖拽事件，兼容文件夹）
+   */
+  async function addFilesFromDrop(event: DragEvent): Promise<void> {
+    const items = event.dataTransfer?.items
+    if (!items || items.length === 0) return
+
+    isUploading.value = true
+
+    try {
+      const regularFiles: File[] = []
+      const folderEntries: FileSystemDirectoryEntry[] = []
+
+      // 分类：普通文件 vs 文件夹
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.kind === 'file') {
+          const entry = item.webkitGetAsEntry?.()
+          if (entry?.isDirectory) {
+            folderEntries.push(entry as FileSystemDirectoryEntry)
+          } else {
+            const file = item.getAsFile()
+            if (file) regularFiles.push(file)
+          }
+        }
+      }
+
+      // 处理普通文件
+      if (regularFiles.length > 0) {
+        await addFiles(regularFiles)
+      }
+
+      // 处理文件夹
+      const baseParentId = options.targetPathId
+      const basePath = options.currentPath || ''
+
+      for (const folderEntry of folderEntries) {
+        await addFolderFromEntry(folderEntry, baseParentId, basePath)
+      }
+    } finally {
+      isUploading.value = false
     }
   }
 
@@ -625,6 +924,13 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
     options.targetPathId = id
   }
 
+  /**
+   * 动态更新当前工作区路径（用于文件夹创建）
+   */
+  function setCurrentPath(path: string): void {
+    options.currentPath = path
+  }
+
   return {
     // 状态
     uploadList,
@@ -638,6 +944,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
     clearFinished,
     retryUpload,
     setTargetPathId,
+    setCurrentPath,
 
     // 工具（暴露给外部调试/自定义）
     computeFileMd5,

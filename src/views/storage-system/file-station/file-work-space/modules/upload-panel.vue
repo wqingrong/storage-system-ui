@@ -38,10 +38,24 @@
 
               <!-- 文件名 & 状态 -->
               <div class="upload-item__detail">
-                <div class="upload-item__name" :title="item.file.name">{{ item.file.name }}</div>
+                <!-- 文件名：有 relativePath 时显示路径，扫描中显示文件夹名 -->
+                <div class="upload-item__name" :title="item.relativePath || item.file.name">
+                  <template v-if="item.status === 'scanning'">
+                    📁 {{ item.relativePath || item.file.name }}
+                  </template>
+                  <template v-else-if="item.relativePath">
+                    {{ item.relativePath }}/{{ item.file.name }}
+                  </template>
+                  <template v-else>
+                    {{ item.file.name }}
+                  </template>
+                </div>
                 <div class="upload-item__meta">
                   <span class="upload-item__status-text">{{ statusTextMap[item.status] }}</span>
-                  <span class="upload-item__size">{{ formatSize(item.file.size) }}</span>
+                  <span v-if="item.status !== 'scanning'" class="upload-item__size">{{ formatSize(item.file.size) }}</span>
+                  <span v-if="item.status === 'scanning' && item.totalChunks > 0" class="upload-item__chunk-info">
+                    {{ item.totalChunks }} 个文件
+                  </span>
                   <span v-if="item.status === 'uploading'" class="upload-item__chunk-info">
                     {{ item.uploadedChunks.length }}/{{ item.totalChunks }} 片
                   </span>
@@ -55,10 +69,11 @@
               </div>
             </div>
 
-            <!-- 进度条：MD5 计算阶段不显示 -->
+            <!-- 进度条：MD5/扫描阶段用不确定进度，完成/取消不显示 -->
             <ElProgress
               v-if="item.status !== 'done' && item.status !== 'cancelled' && item.status !== 'hashing'"
               :percentage="item.progress"
+              :indeterminate="item.status === 'scanning' && item.progress === 0"
               :status="item.status === 'error' ? 'exception' : undefined"
               :stroke-width="6"
               style="margin-top: 6px"
@@ -131,6 +146,7 @@
 
   const statusTextMap: Record<UploadStatus, string> = {
     pending: '等待中...',
+    scanning: '正在扫描文件夹...',
     hashing: '正在计算文件指纹...',
     checking: '正在校验已上传分片...',
     uploading: '上传中',
