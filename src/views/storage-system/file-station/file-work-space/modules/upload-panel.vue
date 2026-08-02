@@ -52,14 +52,22 @@
                 </div>
                 <div class="upload-item__meta">
                   <span class="upload-item__status-text">{{ statusTextMap[item.status] }}</span>
-                  <span v-if="item.status !== 'scanning'" class="upload-item__size">{{ formatSize(item.file.size) }}</span>
-                  <span v-if="item.status === 'scanning' && item.totalChunks > 0" class="upload-item__chunk-info">
+                  <span v-if="item.status !== 'scanning'" class="upload-item__size">{{
+                    formatSize(item.file.size)
+                  }}</span>
+                  <span
+                    v-if="item.status === 'scanning' && item.totalChunks > 0"
+                    class="upload-item__chunk-info"
+                  >
                     {{ item.totalChunks }} 个文件
                   </span>
                   <span v-if="item.status === 'uploading'" class="upload-item__chunk-info">
                     {{ item.uploadedChunks.length }}/{{ item.totalChunks }} 片
                   </span>
-                  <span v-if="item.status === 'uploading' && item.speed > 0" class="upload-item__speed">
+                  <span
+                    v-if="item.status === 'uploading' && item.speed > 0"
+                    class="upload-item__speed"
+                  >
                     {{ formatSpeed(item.speed) }}
                   </span>
                 </div>
@@ -71,7 +79,9 @@
 
             <!-- 进度条：MD5/扫描阶段用不确定进度，完成/取消不显示 -->
             <ElProgress
-              v-if="item.status !== 'done' && item.status !== 'cancelled' && item.status !== 'hashing'"
+              v-if="
+                item.status !== 'done' && item.status !== 'cancelled' && item.status !== 'hashing'
+              "
               :percentage="item.progress"
               :indeterminate="item.status === 'scanning' && item.progress === 0"
               :status="item.status === 'error' ? 'exception' : undefined"

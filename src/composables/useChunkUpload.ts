@@ -46,10 +46,12 @@ export interface UploadFileItem {
   uploadedBytes: number
   /** 实时上传速率 (bytes/s)，基于最近采样窗口计算 */
   speed: number
+  /** 上传挂载路径（currentPath 按 / 分割的第一段） */
+  mountPath: string
   /** 错误信息 */
   errorMsg?: string
   /** 文件在文件夹内的相对路径（上传文件夹时使用），用于 UI 展示 */
-  relativePath?: string
+  relativePath: string
 }
 
 /** 文件夹扫描后收集的待上传文件 */
@@ -68,6 +70,7 @@ export interface UseChunkUploadOptions {
   targetPathId: string
   /** 当前工作区目录路径（用于文件夹创建） */
   currentPath?: string
+  mountPath: string
 }
 
 // ============================================================
@@ -189,7 +192,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
    */
   async function checkUpload(fileMd5: string): Promise<CheckUploadResp> {
     // ====== 伪代码：请替换为实际接口调用 ======
-    return fetchCheckChunkUpload({ fileMd5: fileMd5, totalChunks: 0 })
+    return fetchCheckChunkUpload({ fileMd5: fileMd5, totalChunks: 0, mountPath: options.mountPath })
   }
 
   /**
@@ -207,6 +210,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
     formData.append('totalChunks', String(req.totalChunks))
     formData.append('chunkMd5', req.chunkMd5)
     formData.append('chunkFile', chunkBlob)
+    formData.append('mountPath', req.mountPath)
     await fetchChunkUpload(formData, signal)
     console.log(`[uploadChunk] index=${req.chunkIndex}/${req.totalChunks}, md5=${req.chunkMd5}`)
   }
@@ -358,7 +362,8 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
       chunkIndex,
       totalChunks: item.totalChunks,
       chunkMd5,
-      chunkFile: true
+      chunkFile: true,
+      mountPath: options.mountPath || ''
     }
 
     let lastError: any = null
@@ -876,7 +881,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
 
     // 3. 通知服务端取消（清理服务端已上传的分片）
     if (item.fileMd5) {
-      fetchCancelChunkUpload({ fileMd5: item.fileMd5 }).catch(() => {
+      fetchCancelChunkUpload({ fileMd5: item.fileMd5, mountPath: options.mountPath }).catch(() => {
         // 取消通知失败不影响本地状态
       })
     }
@@ -929,6 +934,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
    */
   function setCurrentPath(path: string): void {
     options.currentPath = path
+    options.mountPath = `/${(path || '').split('/')[1]}`
   }
 
   return {

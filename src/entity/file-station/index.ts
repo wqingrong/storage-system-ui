@@ -13,6 +13,7 @@ export interface ChunkUploadReq {
   totalChunks: number
   chunkMd5: string
   chunkFile: boolean
+  mountPath: string
 }
 
 /**
@@ -21,6 +22,7 @@ export interface ChunkUploadReq {
 export interface CheckUploadRes {
   fileMd5: string
   totalChunks: number
+  mountPath: string
 }
 
 /**
@@ -58,4 +60,5 @@ export interface MergeResp {
 // 取消上传
 export interface CancelUploadRe {
   fileMd5: string
+  mountPath: string
 }

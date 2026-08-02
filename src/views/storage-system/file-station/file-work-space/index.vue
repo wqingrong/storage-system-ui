@@ -304,7 +304,7 @@
     setCurrentPath
   } = useChunkUpload({
     chunkSize: 5 * 1024 * 1024, // 5MB 每片
-    concurrency: 3,
+    concurrency: 2,
     targetPathId: '', // 每次 drop 时动态更新
     currentPath: ''
   })
