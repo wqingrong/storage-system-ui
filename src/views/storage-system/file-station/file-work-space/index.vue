@@ -26,7 +26,24 @@
           </ElScrollbar>
         </ElCard>
       </div>
-      <div class="right-content art-full-height">
+      <div
+        class="right-content art-full-height"
+        :class="{ 'drop-zone-active': isDragOver }"
+        @dragenter.prevent="handleDragEnter"
+        @dragover.prevent="handleDragOver"
+        @dragleave.prevent="handleDragLeave"
+        @drop.prevent="handleDrop"
+      >
+        <!-- 拖拽上传遮罩 -->
+        <Transition name="drop-overlay-fade">
+          <div v-if="isDragOver" class="drop-overlay">
+            <div class="drop-overlay__inner">
+              <ElIcon class="drop-overlay__icon" :size="48"><UploadFilled /></ElIcon>
+              <p class="drop-overlay__text">释放文件到此处上传</p>
+            </div>
+          </div>
+        </Transition>
+
         <div class="menu-container" style="margin-bottom: 10px">
           <ElSpace wrap>
             <ElButton
@@ -144,6 +161,14 @@
       @task-done="refreshData"
     >
     </delete-task-dialog>
+
+    <!--    文件上传面板（右上角悬浮按钮 + 居中弹窗） -->
+    <upload-panel
+      :upload-list="uploadList"
+      @cancel="handleCancelUpload"
+      @remove="handleRemoveUpload"
+      @retry="handleRetryUpload"
+    />
   </div>
 </template>
 
@@ -160,13 +185,15 @@
   import { FileStoryField, SortType } from '@/enums/formEnum'
   import folder from '@imgs/svg/folder.svg'
   import { ElIcon, ElTag } from 'element-plus'
-  import { Folder, Document, ArrowRight, ArrowLeft, Share, Timer } from '@element-plus/icons-vue'
+  import { Folder, Document, ArrowRight, ArrowLeft, Share, Timer, UploadFilled } from '@element-plus/icons-vue'
   import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
   import FileAttributeDialog from '@views/storage-system/file-station/file-work-space/modules/file-attribute-dialog.vue'
   import selectFileDialog from './modules/select-file-dialog.vue'
   import DeleteTaskDialog from '@views/storage-system/file-station/file-work-space/modules/delete-task-dialog.vue'
+  import UploadPanel from '@views/storage-system/file-station/file-work-space/modules/upload-panel.vue'
+  import { useChunkUpload } from '@/composables/useChunkUpload'
   import { Purpose } from '@/entity/file-station'
 
   /**
@@ -251,6 +278,94 @@
   const attributeVisible = ref(false)
   const selectDirVisible = ref(false)
   defineOptions({ name: 'TreeTable' })
+
+  // ============================================================
+  // 拖拽上传相关
+  // ============================================================
+  const isDragOver = ref(false)
+  let dragCounter = 0 // 应对子元素触发的 dragleave 事件
+
+  // 上传 composable（targetPathId 跟随当前目录动态变化）
+  const {
+    uploadList,
+    addFilesFromDrop,
+    cancelUpload,
+    removeItem,
+    retryUpload,
+    setTargetPathId
+  } = useChunkUpload({
+    chunkSize: 5 * 1024 * 1024, // 5MB 每片
+    concurrency: 3,
+    targetPathId: '' // 每次 drop 时动态更新
+  })
+
+  // 拖拽进入
+  const handleDragEnter = (e: DragEvent) => {
+    dragCounter++
+    if (e.dataTransfer?.types.includes('Files')) {
+      isDragOver.value = true
+    }
+  }
+
+  // 拖拽经过
+  const handleDragOver = (e: DragEvent) => {
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }
+
+  // 拖拽离开
+  const handleDragLeave = (_e: DragEvent) => {
+    dragCounter--
+    if (dragCounter <= 0) {
+      dragCounter = 0
+      isDragOver.value = false
+    }
+  }
+
+  // 释放文件 - 开始上传流程
+  const handleDrop = async (event: DragEvent) => {
+    isDragOver.value = false
+    dragCounter = 0
+
+    const files = event.dataTransfer?.files
+    if (!files || files.length === 0) return
+
+    // 更新 targetPathId 为当前目录
+    const currentDir = pathHistory.value.at(-1)
+    if (currentDir?.id) {
+      setTargetPathId(currentDir.id)
+    }
+
+    addFilesFromDrop(event)
+
+    // 上传完成后刷新文件列表
+    // 监听上传状态变化，当没有活跃任务时自动刷新
+    const checkComplete = setInterval(() => {
+      const allDone = uploadList.value.every(
+        (item) => item.status === 'done' || item.status === 'error' || item.status === 'cancelled'
+      )
+      if (uploadList.value.length > 0 && allDone) {
+        clearInterval(checkComplete)
+        refreshData()
+      }
+    }, 500)
+  }
+
+  // 取消上传
+  const handleCancelUpload = (uid: string) => {
+    cancelUpload(uid)
+  }
+
+  // 移除上传项
+  const handleRemoveUpload = (uid: string) => {
+    removeItem(uid)
+  }
+
+  // 重试上传
+  const handleRetryUpload = (uid: string) => {
+    retryUpload(uid)
+  }
 
   interface FileListParams {
     path: string
@@ -742,5 +857,56 @@
       margin: 4px 0;
       background-color: #e4e7ed;
     }
+  }
+
+  /* ============================================================
+     拖拽上传区域样式
+  ============================================================ */
+  .right-content {
+    position: relative;
+  }
+
+  .drop-zone-active {
+    outline: 2px dashed #409eff;
+    outline-offset: -4px;
+  }
+
+  .drop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 999;
+    background: rgba(64, 158, 255, 0.08);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    pointer-events: none;
+
+    &__inner {
+      text-align: center;
+    }
+
+    &__icon {
+      color: #409eff;
+      margin-bottom: 8px;
+    }
+
+    &__text {
+      font-size: 16px;
+      color: #409eff;
+      font-weight: 500;
+      margin: 0;
+    }
+  }
+
+  // 拖拽遮罩过渡动画
+  .drop-overlay-fade-enter-active,
+  .drop-overlay-fade-leave-active {
+    transition: opacity 0.2s ease;
+  }
+  .drop-overlay-fade-enter-from,
+  .drop-overlay-fade-leave-to {
+    opacity: 0;
   }
 </style>
