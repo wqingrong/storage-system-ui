@@ -38,9 +38,15 @@
 
               <!-- 文件名 & 状态 -->
               <div class="upload-item__detail">
-                <!-- 文件名：有 relativePath 时显示路径，扫描中显示文件夹名 -->
-                <div class="upload-item__name" :title="item.relativePath || item.file.name">
-                  <template v-if="item.status === 'scanning'">
+                <!-- 文件名：文件夹始终显示 📁 + 名称，否则有 relativePath 时显示路径 -->
+                <div
+                  class="upload-item__name"
+                  :title="item.isFolder ? item.file.name : (item.relativePath || item.file.name)"
+                >
+                  <template v-if="item.isFolder">
+                    📁 {{ item.file.name }}
+                  </template>
+                  <template v-else-if="item.status === 'scanning'">
                     📁 {{ item.relativePath || item.file.name }}
                   </template>
                   <template v-else-if="item.relativePath">
@@ -52,16 +58,28 @@
                 </div>
                 <div class="upload-item__meta">
                   <span class="upload-item__status-text">{{ statusTextMap[item.status] }}</span>
-                  <span v-if="item.status !== 'scanning'" class="upload-item__size">{{
-                    formatSize(item.file.size)
-                  }}</span>
                   <span
-                    v-if="item.status === 'scanning' && item.totalChunks > 0"
+                    v-if="item.status !== 'scanning'"
+                    class="upload-item__size"
+                  >
+                    {{ formatSize((item as any)._totalBytes || (item as any)._storedSize || item.file.size) }}
+                  </span>
+                  <!-- 文件夹：显示文件进度 -->
+                  <span
+                    v-if="item.isFolder && item.fileCount"
+                    class="upload-item__chunk-info"
+                  >
+                    {{ item.completedFiles }}/{{ item.fileCount }} 个文件
+                  </span>
+                  <!-- 普通文件：扫描时显示已发现文件数 -->
+                  <span
+                    v-else-if="item.status === 'scanning' && item.totalChunks > 0"
                     class="upload-item__chunk-info"
                   >
                     {{ item.totalChunks }} 个文件
                   </span>
-                  <span v-if="item.status === 'uploading'" class="upload-item__chunk-info">
+                  <!-- 普通文件：上传中显示分片进度 -->
+                  <span v-else-if="item.status === 'uploading'" class="upload-item__chunk-info">
                     {{ item.uploadedChunks.length }}/{{ item.totalChunks }} 片
                   </span>
                   <span
@@ -77,10 +95,10 @@
               </div>
             </div>
 
-            <!-- 进度条：MD5/扫描阶段用不确定进度，完成/取消不显示 -->
+            <!-- 进度条：扫描/计算MD5阶段不显示，完成/取消不显示 -->
             <ElProgress
               v-if="
-                item.status !== 'done' && item.status !== 'cancelled' && item.status !== 'hashing'
+                item.status !== 'done' && item.status !== 'cancelled' && item.status !== 'hashing' && item.status !== 'scanning'
               "
               :percentage="item.progress"
               :indeterminate="item.status === 'scanning' && item.progress === 0"

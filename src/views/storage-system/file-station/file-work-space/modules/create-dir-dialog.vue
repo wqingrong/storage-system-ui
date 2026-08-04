@@ -41,7 +41,8 @@
 
   const formData = reactive({
     name: '',
-    fatherPath: ''
+    fatherPath: '',
+    isSkip: false
   })
 
   const rules: FormRules = {

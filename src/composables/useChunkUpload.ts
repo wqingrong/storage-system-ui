@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import SparkMD5 from 'spark-md5'
 import type { ChunkUploadReq, CheckUploadResp, MergeReq, MergeResp } from '@/entity/file-station'
 import {
@@ -52,6 +52,12 @@ export interface UploadFileItem {
   errorMsg?: string
   /** 文件在文件夹内的相对路径（上传文件夹时使用），用于 UI 展示 */
   relativePath: string
+  /** 是否为文件夹上传项（聚合进度） */
+  isFolder?: boolean
+  /** 文件夹内的文件总数 */
+  fileCount?: number
+  /** 文件夹内已完成文件数 */
+  completedFiles?: number
 }
 
 /** 文件夹扫描后收集的待上传文件 */
@@ -86,6 +92,155 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
   const isUploading = ref(false)
   /** 每个上传项的 AbortController，用于取消 */
   const abortControllers = new Map<string, AbortController>()
+  /** 文件夹上传项 → 内部文件 uid 列表（用于取消时级联中止） */
+  const folderChildren = new Map<string, string[]>()
+
+  // ---- 上传状态持久化（页面刷新后恢复上传列表）-----------------------
+
+  const STORAGE_KEY = 'chunk_upload_list'
+
+  interface StoredUploadItem {
+    uid: string
+    fileName: string
+    fileSize: number
+    fileMd5: string
+    status: UploadStatus
+    progress: number
+    totalChunks: number
+    uploadedBytes: number
+    mountPath: string
+    errorMsg?: string
+    relativePath: string
+    isFolder?: boolean
+    fileCount?: number
+    completedFiles?: number
+  }
+
+  function serializeList(list: UploadFileItem[]): StoredUploadItem[] {
+    return list.map((item) => ({
+      uid: item.uid,
+      fileName: item.file.name,
+      fileSize: item.file.size,
+      fileMd5: item.fileMd5,
+      status: item.status,
+      progress: item.progress,
+      totalChunks: item.totalChunks,
+      uploadedBytes: item.uploadedBytes,
+      mountPath: item.mountPath || '',
+      errorMsg: item.errorMsg,
+      relativePath: item.relativePath || '',
+      isFolder: item.isFolder,
+      fileCount: item.fileCount,
+      completedFiles: item.completedFiles
+    }))
+  }
+
+  function deserializeList(stored: StoredUploadItem[]): UploadFileItem[] {
+    const activeStatuses: UploadStatus[] = [
+      'pending',
+      'scanning',
+      'hashing',
+      'checking',
+      'uploading',
+      'merging'
+    ]
+
+    return stored.map((s) => {
+      const wasActive = activeStatuses.includes(s.status)
+      const item: UploadFileItem = {
+        uid: s.uid,
+        file: new File([], s.fileName, { type: '' }),
+        fileMd5: s.fileMd5,
+        // 刷新导致 JS 运行时销毁，File 对象和网络连接全部丢失，无法恢复 → 标记为 cancelled
+        status: wasActive ? 'cancelled' : (s.status as UploadStatus),
+        progress: wasActive ? 0 : s.progress,
+        chunkProgress: [],
+        uploadedChunks: [],
+        totalChunks: s.totalChunks,
+        uploadedBytes: 0,
+        speed: 0,
+        mountPath: s.mountPath,
+        errorMsg: wasActive ? '页面刷新，上传已中断（请重新拖入文件上传）' : s.errorMsg,
+        relativePath: s.relativePath
+      }
+      // 保留文件夹相关字段
+      if (s.isFolder) {
+        item.isFolder = true
+        item.fileCount = s.fileCount
+        item.completedFiles = s.completedFiles
+        ;(item as any)._totalBytes = s.fileSize
+      }
+      // 保留原始文件大小（用于 UI 显示，因为占位 File 的 size 为 0）
+      ;(item as any)._storedSize = s.fileSize
+      return item
+    })
+  }
+
+  /** 从 sessionStorage 恢复上传列表，同时收集需要通知服务端取消的中断项 fileMd5 */
+  function restoreUploadList(): { items: UploadFileItem[]; activeMd5s: string[] } {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const stored = JSON.parse(raw) as StoredUploadItem[]
+        if (Array.isArray(stored) && stored.length > 0) {
+          const activeStatuses: UploadStatus[] = [
+            'pending',
+            'scanning',
+            'hashing',
+            'checking',
+            'uploading',
+            'merging'
+          ]
+          // 收集所有中断项的 fileMd5（用于通知服务端取消）
+          const activeMd5s = stored
+            .filter((s) => activeStatuses.includes(s.status) && s.fileMd5)
+            .map((s) => s.fileMd5)
+          return { items: deserializeList(stored), activeMd5s }
+        }
+      }
+    } catch {
+      // 解析失败则丢弃
+    }
+    return { items: [], activeMd5s: [] }
+  }
+
+  /** 持久化上传列表到 sessionStorage */
+  function persistUploadList(list: UploadFileItem[]) {
+    try {
+      if (list.length > 0) {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(serializeList(list)))
+      } else {
+        sessionStorage.removeItem(STORAGE_KEY)
+      }
+    } catch {
+      // 存储满则静默失败
+    }
+  }
+
+  // 初始化：恢复上次未完成的上传记录，并通知服务端取消中断的上传
+  const { items: restoredItems, activeMd5s: interruptedMd5s } = restoreUploadList()
+  if (restoredItems.length > 0) {
+    uploadList.value = restoredItems
+  }
+  // 异步通知服务端取消中断的上传（不阻塞页面加载）
+  if (interruptedMd5s.length > 0) {
+    interruptedMd5s.forEach((md5) => {
+      fetchCancelChunkUpload({ fileMd5: md5, mountPath: options.mountPath }).catch(() => {
+        // 取消通知失败不影响本地状态
+      })
+    })
+  }
+
+  // 监听上传列表变化，自动持久化（防抖 500ms）
+  let persistTimer: ReturnType<typeof setTimeout> | null = null
+  watch(
+    uploadList,
+    (newVal) => {
+      if (persistTimer) clearTimeout(persistTimer)
+      persistTimer = setTimeout(() => persistUploadList(newVal), 500)
+    },
+    { deep: true }
+  )
 
   /**
    * 判断错误是否由主动取消引起
@@ -211,6 +366,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
     formData.append('chunkMd5', req.chunkMd5)
     formData.append('chunkFile', chunkBlob)
     formData.append('mountPath', req.mountPath)
+    formData.append('targetPathId', req.targetPathId)
     await fetchChunkUpload(formData, signal)
     console.log(`[uploadChunk] index=${req.chunkIndex}/${req.totalChunks}, md5=${req.chunkMd5}`)
   }
@@ -363,7 +519,8 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
       totalChunks: item.totalChunks,
       chunkMd5,
       chunkFile: true,
-      mountPath: options.mountPath || ''
+      mountPath: options.mountPath || '',
+      targetPathId: options.targetPathId || ''
     }
 
     let lastError: any = null
@@ -438,7 +595,6 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
       // 2. 校验服务端已上传分片
       item.status = 'checking'
       const checkResp: CheckUploadResp = await checkUpload(item.fileMd5)
-      console.log('checkResp>>', checkResp)
       // 秒传：服务端已有完整文件
       if (checkResp.isUploaded) {
         item.progress = 100
@@ -537,7 +693,9 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
         uploadedChunks: [],
         totalChunks: 0,
         uploadedBytes: 0,
-        speed: 0
+        speed: 0,
+        mountPath: options.mountPath || '',
+        relativePath: ''
       }
     })
 
@@ -681,7 +839,12 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
         const parentRelPath = segs.join('/')
         const fatherPath = parentRelPath ? `${basePath}/${parentRelPath}` : basePath
 
-        const res: any = await fetchNewFolder({ fatherPath, name: folderName, loading: 'close' })
+        const res: any = await fetchNewFolder({
+          fatherPath,
+          name: folderName,
+          loading: 'close',
+          isSkip: true
+        })
         if (res?.id) {
           pathMap.set(relPath, res.id)
         }
@@ -720,7 +883,8 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
       totalChunks: 0,
       uploadedBytes: 0,
       speed: 0,
-      relativePath: folderEntry.name
+      relativePath: folderEntry.name,
+      mountPath: options.mountPath
     }
 
     uploadList.value.push(scanItem)
@@ -760,49 +924,70 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
         scanController
       )
 
-      // ---------- Phase 3: 移除扫描项，创建文件上传项 ----------
-      abortControllers.delete(scanUid)
-      const removeIdx = uploadList.value.findIndex((i) => i.uid === scanUid)
-      if (removeIdx !== -1) uploadList.value.splice(removeIdx, 1)
-
+      // ---------- Phase 3: 过渡 —— 保留文件夹扫描项作为聚合进度项 ----------
       // 为每个文件匹配其父目录的 serverId
       const matchedFiles = scannedFiles.map((sf) => {
         const parentId = folderIdMap.get(sf.relativePath) || baseParentId
         return { ...sf, parentDirId: parentId }
       })
 
-      const plainItems: UploadFileItem[] = matchedFiles.map((pe) => {
-        const uid = genUid()
-        abortControllers.set(uid, new AbortController())
-        return {
-          uid,
-          file: pe.file,
-          fileMd5: '',
-          status: 'pending' as UploadStatus,
-          progress: 0,
-          chunkProgress: [],
-          uploadedChunks: [],
-          totalChunks: 0,
-          uploadedBytes: 0,
-          speed: 0,
-          relativePath: pe.relativePath
-        }
-      })
+      const totalBytes = matchedFiles.reduce((sum, f) => sum + f.file.size, 0)
 
-      uploadList.value.push(...plainItems)
-      const newStartIdx = uploadList.value.length - plainItems.length
-      const reactiveItems = plainItems.map((_, i) => uploadList.value[newStartIdx + i])
+      // 将扫描项转为文件夹上传进度项（不从列表中移除）
+      reactiveScanItem.status = 'uploading'
+      reactiveScanItem.isFolder = true
+      reactiveScanItem.fileCount = matchedFiles.length
+      reactiveScanItem.completedFiles = 0
+      reactiveScanItem.progress = 0
+      reactiveScanItem.errorMsg = undefined
+      ;(reactiveScanItem as any)._totalBytes = totalBytes
 
-      // ---------- Phase 4: 逐个上传文件（失败跳过） ----------
-      for (let fi = 0; fi < reactiveItems.length; fi++) {
-        const item = reactiveItems[fi]
-        if (item.status === 'cancelled') continue
-        ;(item as any)._parentDirId = matchedFiles[fi]?.parentDirId || baseParentId
-        try {
-          await processFile(item)
-        } catch {
-          // 单个文件失败不阻塞后续
+      // ---------- Phase 4: 逐个上传文件（内部处理，不加入 uploadList）----------
+      const childUids: string[] = []
+      let cumulativeBytes = 0
+
+      for (let fi = 0; fi < matchedFiles.length; fi++) {
+        if (reactiveScanItem.status !== 'cancelled') {
+          const pe = matchedFiles[fi]
+          const uid = genUid()
+          childUids.push(uid)
+          abortControllers.set(uid, new AbortController())
+          const internalItem: UploadFileItem = {
+            uid,
+            file: pe.file,
+            fileMd5: '',
+            status: 'pending',
+            progress: 0,
+            chunkProgress: [],
+            uploadedChunks: [],
+            totalChunks: 0,
+            uploadedBytes: 0,
+            speed: 0,
+            relativePath: pe.relativePath,
+            mountPath: options.mountPath
+          }
+          ;(internalItem as any)._parentDirId = pe.parentDirId
+          try {
+            await processFile(internalItem)
+          } catch {
+            // 单个文件失败不阻塞后续
+          }
+          cumulativeBytes += pe.file.size
+          reactiveScanItem.completedFiles = fi + 1
+          reactiveScanItem.progress =
+            totalBytes > 0 ? Math.round((cumulativeBytes / totalBytes) * 100) : 0
+        } else {
+          break
         }
+      }
+
+      // 注册父子关系（用于取消时级联中止）
+      folderChildren.set(scanUid, childUids)
+
+      // 最终状态
+      if (reactiveScanItem.status !== 'cancelled') {
+        reactiveScanItem.status = 'done'
+        reactiveScanItem.progress = 100
       }
     } catch (err: any) {
       if (isAbortError(err)) {
@@ -872,14 +1057,27 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
     // 1. ⚠️ 必须先标记取消，让 tryLaunchOne 立即停止排期新分片
     item.status = 'cancelled'
 
-    // 2. abort 所有正在进行的网络请求（前端侧）
+    // 2. 级联中止文件夹内所有内部文件的上传
+    const children = folderChildren.get(uid)
+    if (children) {
+      for (const childUid of children) {
+        const childCtrl = abortControllers.get(childUid)
+        if (childCtrl) {
+          childCtrl.abort()
+          abortControllers.delete(childUid)
+        }
+      }
+      folderChildren.delete(uid)
+    }
+
+    // 3. abort 当前项的请求
     const controller = abortControllers.get(uid)
     if (controller) {
       controller.abort()
       abortControllers.delete(uid)
     }
 
-    // 3. 通知服务端取消（清理服务端已上传的分片）
+    // 4. 通知服务端取消（清理服务端已上传的分片）
     if (item.fileMd5) {
       fetchCancelChunkUpload({ fileMd5: item.fileMd5, mountPath: options.mountPath }).catch(() => {
         // 取消通知失败不影响本地状态
@@ -891,6 +1089,16 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
    * 移除已完成的文件项
    */
   function removeItem(uid: string): void {
+    // 清理文件夹子项
+    const children = folderChildren.get(uid)
+    if (children) {
+      for (const childUid of children) {
+        abortControllers.delete(childUid)
+      }
+      folderChildren.delete(uid)
+    }
+    abortControllers.delete(uid)
+
     const idx = uploadList.value.findIndex((item) => item.uid === uid)
     if (idx !== -1) {
       uploadList.value.splice(idx, 1)

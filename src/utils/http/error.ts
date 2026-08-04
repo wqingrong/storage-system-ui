@@ -121,18 +121,25 @@ export function handleError(error: AxiosError<ErrorResponse>): never {
  * @param error 错误对象
  * @param showMessage 是否显示错误消息
  */
+/** 错误弹窗是否正在显示（防止重复弹窗） */
+let isErrorDialogShown = false
+
 export function showError(error: HttpError, showMessage: boolean = true): void {
-  if (showMessage) {
-    // ElMessage.error(error.message)
+  // 记录错误日志（无论弹窗是否显示，都记录）
+  console.error('[HTTP Error]', error.toLogData())
+
+  if (showMessage && !isErrorDialogShown) {
+    isErrorDialogShown = true
     ElMessageBox.confirm(error.message, '操作失败', {
       confirmButtonText: '关闭',
       type: 'error'
     })
       .then(() => {})
       .catch(() => {})
+      .finally(() => {
+        isErrorDialogShown = false
+      })
   }
-  // 记录错误日志
-  console.error('[HTTP Error]', error.toLogData())
 }
 
 /**

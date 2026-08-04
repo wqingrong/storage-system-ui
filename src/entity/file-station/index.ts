@@ -14,6 +14,7 @@ export interface ChunkUploadReq {
   chunkMd5: string
   chunkFile: boolean
   mountPath: string
+  targetPathId: string
 }
 
 /**
