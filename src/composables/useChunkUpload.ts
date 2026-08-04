@@ -64,7 +64,26 @@ export interface UploadFileItem {
 export interface PendingFileEntry {
   file: File
   relativePath: string
-  parentDirId: string
+}
+
+/** 文件夹树节点（扫描阶段构建，上传阶段直接遍历） */
+export interface FolderTreeNode {
+  /** 文件夹名称 */
+  name: string
+  /** 相对于拖入根文件夹的路径，如 "MyDocs/sub1" */
+  relativePath: string
+  /** 该文件夹下的文件 */
+  files: PendingFileEntry[]
+  /** 子文件夹 */
+  children: FolderTreeNode[]
+  /** 服务端创建目录后的 ID（创建阶段回填） */
+  serverId?: string
+}
+
+/** 扫描进度上下文（跨递归共享） */
+interface ScanProgress {
+  filesFound: number
+  totalBytes: number
 }
 
 export interface UseChunkUploadOptions {
@@ -347,6 +366,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
    */
   async function checkUpload(fileMd5: string): Promise<CheckUploadResp> {
     // ====== 伪代码：请替换为实际接口调用 ======
+    // console.log('mergeChunk: ', req)
     return fetchCheckChunkUpload({ fileMd5: fileMd5, totalChunks: 0, mountPath: options.mountPath })
   }
 
@@ -368,6 +388,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
     formData.append('mountPath', req.mountPath)
     formData.append('targetPathId', req.targetPathId)
     await fetchChunkUpload(formData, signal)
+    console.log('upload:', formData)
     console.log(`[uploadChunk] index=${req.chunkIndex}/${req.totalChunks}, md5=${req.chunkMd5}`)
   }
 
@@ -376,6 +397,8 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
    * TODO: 替换为实际请求
    */
   async function mergeChunks(req: MergeReq): Promise<MergeResp> {
+    // return {}
+    console.log('mergeChunk: ', req)
     return fetchMergeChunkUpload(req)
   }
 
@@ -678,8 +701,11 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
    * 将文件加入上传队列并开始处理
    */
   async function addFiles(files: File[]): Promise<void> {
+    // 过滤大小为 0 的文件
+    const validFiles = files.filter((f) => f.size > 0)
+
     // 创建上传项（先用普通对象入队，再从响应式数组中取回代理对象）
-    const plainItems: UploadFileItem[] = files.map((file) => {
+    const plainItems: UploadFileItem[] = validFiles.map((file) => {
       const uid = genUid()
       // 为每个文件创建独立的 AbortController
       abortControllers.set(uid, new AbortController())
@@ -719,32 +745,24 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
 
   // ---- 文件夹上传 --------------------------------------------------
 
-  /** 扫描结果：文件夹路径集合 + 待上传文件列表 */
-  interface ScanResult {
-    /** 所有子文件夹的相对路径（已排序，父目录在前） */
-    folderPaths: string[]
-    /** 待上传文件列表 */
-    files: PendingFileEntry[]
-    /** 总字节数 */
-    totalBytes: number
-  }
-
   /**
-   * 递归扫描文件夹树（纯前端遍历，不调用服务端接口）
-   *   - 收集所有子文件夹路径
-   *   - 收集所有文件
-   *   - 统计总大小
+   * 递归扫描文件夹树（纯前端遍历）
+   *   - 构建 FolderTreeNode 树形结构
+   *   - 统计文件数量与总大小
    *   - 支持通过 AbortController 取消
+   *
+   * @returns 当前目录对应的树节点（包含子节点和文件）
    */
   async function scanFolderTree(
     entry: FileSystemDirectoryEntry,
     parentPath: string,
     controller: AbortController,
-    onProgress?: (filesFound: number, totalBytes: number, currentPath: string) => void
-  ): Promise<ScanResult> {
+    progress?: ScanProgress,
+    onProgress?: (ctx: ScanProgress, currentPath: string) => void
+  ): Promise<FolderTreeNode> {
     const currentPath = parentPath ? `${parentPath}/${entry.name}` : entry.name
 
-    // 读取目录下所有条目
+    // 批量读取目录下所有条目
     const allEntries: FileSystemEntry[] = []
     const reader = entry.createReader()
 
@@ -766,101 +784,130 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
       readBatch()
     })
 
-    // 分类处理
-    const folderPaths: string[] = []
-    const files: PendingFileEntry[] = []
-    let totalBytes = 0
-    let filesFound = 0
+    // 构建当前节点
+    const node: FolderTreeNode = {
+      name: entry.name,
+      relativePath: currentPath,
+      files: [],
+      children: []
+    }
 
     for (const childEntry of allEntries) {
       if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
       if (childEntry.isDirectory) {
-        folderPaths.push(currentPath ? `${currentPath}/${childEntry.name}` : childEntry.name)
-        const subResult = await scanFolderTree(
+        // 递归扫描子目录 → 挂到 children 上
+        const childNode = await scanFolderTree(
           childEntry as FileSystemDirectoryEntry,
           currentPath,
           controller,
+          progress,
           onProgress
         )
-        folderPaths.push(...subResult.folderPaths)
-        files.push(...subResult.files)
-        totalBytes += subResult.totalBytes
-        filesFound += subResult.files.length
+        node.children.push(childNode)
       } else if (childEntry.isFile) {
+        // 文件直接挂到当前节点的 files 上
         const fileEntry = childEntry as FileSystemFileEntry
         const file: File = await new Promise((resolve, reject) => {
           fileEntry.file(resolve, reject)
         })
-        files.push({
-          file,
-          relativePath: currentPath,
-          parentDirId: '' // 将在创建文件夹后回填
-        })
-        totalBytes += file.size
-        filesFound++
+        // 跳过大小为 0 的空文件
+        if (file.size === 0) continue
+        node.files.push({ file, relativePath: currentPath })
+        if (progress) {
+          progress.filesFound++
+          progress.totalBytes += file.size
+        }
       }
 
-      if (onProgress) {
-        onProgress(filesFound, totalBytes, currentPath)
+      // 每处理完一个条目就通知进度
+      if (onProgress && progress) {
+        onProgress(progress, currentPath)
       }
     }
 
-    return { folderPaths, files, totalBytes }
+    return node
+  }
+
+  // ---- 树遍历工具函数 ------------------------------------------------
+
+  /** 递归统计树中文件夹总数（含根节点） */
+  function countAllFolders(node: FolderTreeNode): number {
+    let count = 1
+    for (const child of node.children) {
+      count += countAllFolders(child)
+    }
+    return count
+  }
+
+  /** 深度优先遍历树，将所有文件收集为平铺上传队列 */
+  function collectUploadQueue(
+    node: FolderTreeNode,
+    fallbackServerId: string,
+    out: Array<{ file: PendingFileEntry; parentServerId: string }>
+  ): void {
+    const serverId = node.serverId || fallbackServerId
+    for (const f of node.files) {
+      out.push({ file: f, parentServerId: serverId })
+    }
+    for (const child of node.children) {
+      collectUploadQueue(child, serverId, out)
+    }
   }
 
   /**
-   * 将文件夹路径按层级排序（父目录在前）
+   * 遍历文件夹树，在服务端逐层创建目录
+   *   - BFS 保证父目录先于子目录创建
+   *   - 创建成功后将 serverId 回填到节点上
+   *   - 单个文件夹创建失败不影响其他文件夹（子文件使用父级 serverId 兜底）
    */
-  function sortFolderPaths(paths: string[]): string[] {
-    return [...new Set(paths)].sort((a, b) => a.split('/').length - b.split('/').length)
-  }
-
-  /**
-   * 批量创建服务端文件夹，返回 relativePath → serverDirId 的映射
-   * 单个文件夹创建失败不影响其他文件夹
-   */
-  async function createServerFolders(
-    folderPaths: string[],
+  async function createFolderTree(
+    rootNode: FolderTreeNode,
     baseParentId: string,
     basePath: string,
     controller: AbortController
-  ): Promise<Map<string, string>> {
-    const pathMap = new Map<string, string>() // relativePath → serverDirId
-    const sorted = sortFolderPaths(folderPaths)
+  ): Promise<void> {
+    // BFS 队列：[节点, 父目录服务端路径, 兜底 serverId]
+    const queue: Array<{ node: FolderTreeNode; fatherPath: string; fallbackServerId: string }> = [
+      { node: rootNode, fatherPath: basePath, fallbackServerId: baseParentId }
+    ]
 
-    for (const relPath of sorted) {
+    while (queue.length > 0) {
       if (controller.signal.aborted) break
 
-      try {
-        // 父路径 = basePath + "/" + 除最后一段外的部分
-        const segs = relPath.split('/')
-        const folderName = segs.pop()!
-        const parentRelPath = segs.join('/')
-        const fatherPath = parentRelPath ? `${basePath}/${parentRelPath}` : basePath
+      const { node, fatherPath, fallbackServerId } = queue.shift()!
 
+      try {
         const res: any = await fetchNewFolder({
           fatherPath,
-          name: folderName,
+          name: node.name,
           loading: 'close',
           isSkip: true
         })
         if (res?.id) {
-          pathMap.set(relPath, res.id)
+          node.serverId = res.id
         }
       } catch (err: any) {
         if (isAbortError(err)) throw err
-        // 单个文件夹创建失败 → 跳过，其子文件将使用父目录兜底
-        console.warn(`[CreateFolder] 创建失败，跳过: ${relPath}`, err)
+        console.warn(`[CreateFolder] 创建失败，跳过: ${node.relativePath}`, err)
+      }
+
+      // 子节点的 fatherPath = basePath + "/" + 当前节点的 relativePath
+      const childFatherPath = `${basePath}/${node.relativePath}`
+      // 如果当前节点创建成功，子节点用它的 serverId；否则沿用父级兜底
+      const childFallbackId = node.serverId || fallbackServerId
+
+      for (const child of node.children) {
+        queue.push({ node: child, fatherPath: childFatherPath, fallbackServerId: childFallbackId })
       }
     }
-
-    return pathMap
   }
 
   /**
-   * 上传文件夹：扫描 → 创建目录 → 逐个上传文件
-   * 任一步骤失败不影响其他文件/文件夹
+   * 上传文件夹（树形结构驱动，三步走）
+   *   Phase 1: 前端扫描 → 构建 FolderTreeNode 树
+   *   Phase 2: 遍历树创建服务端目录 → 回填 serverId
+   *   Phase 3: 遍历树上传所有文件 → 使用节点上的 serverId
    */
   async function addFolderFromEntry(
     folderEntry: FileSystemDirectoryEntry,
@@ -892,63 +939,54 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
     const reactiveScanItem = uploadList.value[scanIdx]
 
     try {
-      // ---------- Phase 1: 纯前端扫描 ----------
-      const { folderPaths, files: scannedFiles } = await scanFolderTree(
+      // ---------- Phase 1: 前端扫描 → 构建树 ----------
+      const progress: ScanProgress = { filesFound: 0, totalBytes: 0 }
+      const rootNode = await scanFolderTree(
         folderEntry,
         '',
         scanController,
-        (filesFound, _bytes, currentPath) => {
+        progress,
+        (ctx, currentPath) => {
           reactiveScanItem.progress = Math.min(
             99,
-            Math.round((filesFound / Math.max(filesFound + 5, 10)) * 100)
+            Math.round((ctx.filesFound / Math.max(ctx.filesFound + 5, 10)) * 100)
           )
-          reactiveScanItem.errorMsg = `已发现 ${filesFound} 个文件，当前: ${currentPath}`
-          reactiveScanItem.totalChunks = filesFound
+          reactiveScanItem.errorMsg = `已发现 ${ctx.filesFound} 个文件，当前: ${currentPath}`
+          reactiveScanItem.totalChunks = ctx.filesFound
         }
       )
 
-      if (scannedFiles.length === 0) {
+      if (progress.filesFound === 0) {
         reactiveScanItem.status = 'done'
         reactiveScanItem.errorMsg = '文件夹为空'
         return
       }
 
-      // ---------- Phase 2: 创建服务端文件夹 ----------
-      // 顶层拖入的文件夹本身也需要创建，然后才是子目录
-      const allFolderPaths = [folderEntry.name, ...folderPaths]
-      reactiveScanItem.errorMsg = `正在创建 ${allFolderPaths.length} 个文件夹...`
-      const folderIdMap = await createServerFolders(
-        allFolderPaths,
-        baseParentId,
-        basePath,
-        scanController
-      )
+      // ---------- Phase 2: 遍历树创建服务端目录 ----------
+      const totalFolders = countAllFolders(rootNode)
+      reactiveScanItem.errorMsg = `正在创建 ${totalFolders} 个文件夹...`
+      await createFolderTree(rootNode, baseParentId, basePath, scanController)
 
-      // ---------- Phase 3: 过渡 —— 保留文件夹扫描项作为聚合进度项 ----------
-      // 为每个文件匹配其父目录的 serverId
-      const matchedFiles = scannedFiles.map((sf) => {
-        const parentId = folderIdMap.get(sf.relativePath) || baseParentId
-        return { ...sf, parentDirId: parentId }
-      })
+      // ---------- Phase 3: 遍历树收集上传队列 ----------
+      const uploadQueue: Array<{ file: PendingFileEntry; parentServerId: string }> = []
+      collectUploadQueue(rootNode, baseParentId, uploadQueue)
 
-      const totalBytes = matchedFiles.reduce((sum, f) => sum + f.file.size, 0)
-
-      // 将扫描项转为文件夹上传进度项（不从列表中移除）
+      // 过渡：文件夹扫描项 → 聚合进度项
       reactiveScanItem.status = 'uploading'
       reactiveScanItem.isFolder = true
-      reactiveScanItem.fileCount = matchedFiles.length
+      reactiveScanItem.fileCount = uploadQueue.length
       reactiveScanItem.completedFiles = 0
       reactiveScanItem.progress = 0
       reactiveScanItem.errorMsg = undefined
-      ;(reactiveScanItem as any)._totalBytes = totalBytes
+      ;(reactiveScanItem as any)._totalBytes = progress.totalBytes
 
       // ---------- Phase 4: 逐个上传文件（内部处理，不加入 uploadList）----------
       const childUids: string[] = []
       let cumulativeBytes = 0
 
-      for (let fi = 0; fi < matchedFiles.length; fi++) {
-        if (reactiveScanItem.status !== 'cancelled') {
-          const pe = matchedFiles[fi]
+      for (let fi = 0; fi < uploadQueue.length; fi++) {
+        if ((reactiveScanItem.status as string) !== 'cancelled') {
+          const { file: pe, parentServerId } = uploadQueue[fi]
           const uid = genUid()
           childUids.push(uid)
           abortControllers.set(uid, new AbortController())
@@ -966,7 +1004,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
             relativePath: pe.relativePath,
             mountPath: options.mountPath
           }
-          ;(internalItem as any)._parentDirId = pe.parentDirId
+          ;(internalItem as any)._parentDirId = parentServerId
           try {
             await processFile(internalItem)
           } catch {
@@ -975,7 +1013,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
           cumulativeBytes += pe.file.size
           reactiveScanItem.completedFiles = fi + 1
           reactiveScanItem.progress =
-            totalBytes > 0 ? Math.round((cumulativeBytes / totalBytes) * 100) : 0
+            progress.totalBytes > 0 ? Math.round((cumulativeBytes / progress.totalBytes) * 100) : 0
         } else {
           break
         }
@@ -985,7 +1023,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
       folderChildren.set(scanUid, childUids)
 
       // 最终状态
-      if (reactiveScanItem.status !== 'cancelled') {
+      if ((reactiveScanItem.status as string) !== 'cancelled') {
         reactiveScanItem.status = 'done'
         reactiveScanItem.progress = 100
       }
@@ -1023,7 +1061,7 @@ export function useChunkUpload(options: UseChunkUploadOptions) {
             folderEntries.push(entry as FileSystemDirectoryEntry)
           } else {
             const file = item.getAsFile()
-            if (file) regularFiles.push(file)
+            if (file && file.size > 0) regularFiles.push(file)
           }
         }
       }
