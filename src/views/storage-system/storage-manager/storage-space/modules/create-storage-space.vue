@@ -173,6 +173,10 @@
 
   interface Props {
     visible: boolean
+    // 只展示指定类型的存储池（如 ZFS），不传则展示全部
+    filterPoolType?: string
+    // 默认选中的存储池卷组名
+    defaultVgName?: string
   }
   // 创建存储空间的表单信息
   const createStorageSpaceFormData = reactive<Disk.Device.StorageSpaceFormData>({
@@ -271,9 +275,17 @@
   const storagePoolList = ref<Disk.Device.StoragePoolSimpleInfo[]>([])
   const loadingStoragePoolList = () => {
     fetchGetStoragePoolSimpleList().then((res) => {
-      storagePoolList.value = res.records
+      let records = res.records
+      if (props.filterPoolType) {
+        records = records.filter(
+          (item: Disk.Device.StoragePoolSimpleInfo) => item.poolType === props.filterPoolType
+        )
+      }
+      storagePoolList.value = records
       if (storagePoolList.value.length > 0) {
-        createStorageSpaceFormData.vgName = storagePoolList.value[0].vgName
+        // 优先选中指定的存储池，否则默认选中第一个
+        const target = storagePoolList.value.find((item) => item.vgName === props.defaultVgName)
+        createStorageSpaceFormData.vgName = target ? target.vgName : storagePoolList.value[0].vgName
       }
     })
   }

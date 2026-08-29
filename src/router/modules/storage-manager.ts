@@ -20,6 +20,15 @@ export const storageManager: AppRouteRecord = {
       }
     },
     {
+      path: 'zpool-manager',
+      name: 'ZpoolManager',
+      component: '/storage-system/storage-manager/zpool-manager',
+      meta: {
+        title: 'Zpool存储池',
+        keepAlive: true
+      }
+    },
+    {
       path: 'disk-message',
       name: 'DiskMessage',
       component: '/storage-system/storage-manager/disk-message',
