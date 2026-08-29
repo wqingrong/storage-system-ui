@@ -1,9 +1,10 @@
 import request from '@/utils/http'
+import { TimeTaskPlanList } from '@/entity/scheduled-task'
 
 /** 获取定时任务列表 */
 export function fetchScheduledTaskList(params?: Record<string, any>) {
-  return request.get<any>({
-    url: '/scheduled-task/list',
+  return request.get<TimeTaskPlanList>({
+    url: '/timeTask/list',
     params
   })
 }
@@ -11,7 +12,7 @@ export function fetchScheduledTaskList(params?: Record<string, any>) {
 /** 创建定时任务 */
 export function fetchCreateScheduledTask(data: Record<string, any>) {
   return request.post<any>({
-    url: '/scheduled-task/create',
+    url: '/timeTask/create',
     data
   })
 }
@@ -19,7 +20,7 @@ export function fetchCreateScheduledTask(data: Record<string, any>) {
 /** 更新定时任务 */
 export function fetchUpdateScheduledTask(data: Record<string, any>) {
   return request.post<any>({
-    url: '/scheduled-task/update',
+    url: '/timeTask/save',
     data
   })
 }
@@ -27,7 +28,7 @@ export function fetchUpdateScheduledTask(data: Record<string, any>) {
 /** 删除定时任务 */
 export function fetchDeleteScheduledTask(data: { id: string }) {
   return request.post<any>({
-    url: '/scheduled-task/delete',
+    url: '/timeTask/delete',
     data
   })
 }
@@ -35,15 +36,15 @@ export function fetchDeleteScheduledTask(data: { id: string }) {
 /** 立即执行定时任务 */
 export function fetchExecuteScheduledTask(data: { id: string }) {
   return request.post<any>({
-    url: '/scheduled-task/execute',
+    url: '/timeTask/execute',
     data
   })
 }
 
-/** 启用/禁用定时任务 */
-export function fetchToggleScheduledTask(data: { id: string; enabled: boolean }) {
-  return request.post<any>({
-    url: '/scheduled-task/toggle',
-    data
-  })
-}
+// /** 启用/禁用定时任务 */
+// export function fetchToggleScheduledTask(data: { id: string; enabled: boolean }) {
+//   return request.post<any>({
+//     url: '/scheduled-task/toggle',
+//     data
+//   })
+// }

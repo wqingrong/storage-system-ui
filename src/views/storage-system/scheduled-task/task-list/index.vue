@@ -5,7 +5,7 @@
     <div class="table-filter-bar">
       <div class="filter-left">
         <ElInput
-          v-model="searchParams.taskName"
+          v-model="searchParams.name"
           placeholder="搜索任务名称"
           clearable
           style="width: 220px"
@@ -18,12 +18,11 @@
           style="width: 140px; margin-left: 12px"
         >
           <ElOption label="全部" value="" />
-          <ElOption label="启用" value="enabled" />
-          <ElOption label="禁用" value="disabled" />
+          <ElOption label="启用" value="ENABLED" />
+          <ElOption label="禁用" value="DISABLED" />
+          <ElOption label="暂停" value="PAUSED" />
         </ElSelect>
-        <ElButton type="primary" style="margin-left: 12px" @click="handleSearch">
-          搜索
-        </ElButton>
+        <ElButton type="primary" style="margin-left: 12px" @click="handleSearch"> 搜索 </ElButton>
         <ElButton @click="handleReset">重置</ElButton>
       </div>
       <div class="filter-right">
@@ -46,17 +45,25 @@
       >
         <!-- 状态列 -->
         <template #status="{ row }">
-          <ElTag :type="row.enabled ? 'success' : 'info'" size="small">
-            {{ row.enabled ? '启用' : '禁用' }}
+          <ElTag :type="statusMap[row.status as TaskStatus]?.type || 'info'" size="small">
+            {{ statusMap[row.status as TaskStatus]?.label || row.status }}
           </ElTag>
         </template>
         <!-- 最近执行结果 -->
         <template #lastResult="{ row }">
           <ElTag
-            :type="row.lastResult === 'success' ? 'success' : row.lastResult === 'fail' ? 'danger' : 'info'"
+            :type="
+              row.lastResult === 'success'
+                ? 'success'
+                : row.lastResult === 'fail'
+                  ? 'danger'
+                  : 'info'
+            "
             size="small"
           >
-            {{ row.lastResult === 'success' ? '成功' : row.lastResult === 'fail' ? '失败' : '无记录' }}
+            {{
+              row.lastResult === 'success' ? '成功' : row.lastResult === 'fail' ? '失败' : '无记录'
+            }}
           </ElTag>
         </template>
         <!-- 操作列 -->
@@ -64,9 +71,7 @@
           <ElButton type="primary" link size="small" @click="handleExecute(row)">
             立即执行
           </ElButton>
-          <ElButton type="primary" link size="small" @click="handleEdit(row)">
-            编辑
-          </ElButton>
+          <ElButton type="primary" link size="small" @click="handleEdit(row)"> 编辑 </ElButton>
           <ElPopconfirm
             title="确定删除该任务吗？"
             confirm-button-text="确定"
@@ -86,10 +91,22 @@
 <script setup lang="ts">
   import { Plus } from '@element-plus/icons-vue'
   import { useTable } from '@/composables/useTable'
-  import { fetchScheduledTaskList, fetchDeleteScheduledTask, fetchExecuteScheduledTask } from '@/api/scheduled-task-service'
+  import {
+    fetchScheduledTaskList,
+    fetchDeleteScheduledTask,
+    fetchExecuteScheduledTask
+  } from '@/api/scheduled-task-service'
+  import type { TimeTaskPlan, TaskStatus } from '@/entity/scheduled-task'
   import { ElMessage } from 'element-plus'
 
   defineOptions({ name: 'ScheduledTaskList' })
+
+  /** 任务状态展示配置 */
+  const statusMap: Record<TaskStatus, { label: string; type: 'success' | 'info' | 'warning' }> = {
+    ENABLED: { label: '启用', type: 'success' },
+    DISABLED: { label: '禁用', type: 'info' },
+    PAUSED: { label: '暂停', type: 'warning' }
+  }
 
   const {
     columns,
@@ -110,17 +127,17 @@
       columnsFactory: () => [
         { type: 'index', width: 60, label: '序号' },
         {
-          prop: 'taskName',
+          prop: 'name',
           label: '任务名称',
           minWidth: 180
         },
         {
-          prop: 'cronExpression',
+          prop: 'cronExpr',
           label: 'Cron 表达式',
           width: 160
         },
         {
-          prop: 'taskDescription',
+          prop: 'description',
           label: '任务描述',
           minWidth: 200,
           showOverflowTooltip: true
@@ -132,12 +149,12 @@
           slot: 'status'
         },
         {
-          prop: 'lastRunTime',
+          prop: 'lastExecuteTimeStr',
           label: '上次执行时间',
           width: 180
         },
         {
-          prop: 'nextRunTime',
+          prop: 'nextExecuteTimeStr',
           label: '下次执行时间',
           width: 180
         },
@@ -165,7 +182,7 @@
 
   /** 重置搜索 */
   const handleReset = () => {
-    searchParams.taskName = ''
+    searchParams.name = ''
     searchParams.status = ''
     getData()
   }
@@ -176,12 +193,12 @@
   }
 
   /** 编辑任务 */
-  const handleEdit = (row: Record<string, any>) => {
-    ElMessage.info(`编辑任务: ${row.taskName}`)
+  const handleEdit = (row: TimeTaskPlan) => {
+    ElMessage.info(`编辑任务: ${row.name}`)
   }
 
   /** 删除任务 */
-  const handleDelete = async (row: Record<string, any>) => {
+  const handleDelete = async (row: TimeTaskPlan) => {
     try {
       await fetchDeleteScheduledTask({ id: row.id })
       ElMessage.success('删除成功')
@@ -192,7 +209,7 @@
   }
 
   /** 立即执行 */
-  const handleExecute = async (row: Record<string, any>) => {
+  const handleExecute = async (row: TimeTaskPlan) => {
     try {
       await fetchExecuteScheduledTask({ id: row.id })
       ElMessage.success('任务已触发执行')

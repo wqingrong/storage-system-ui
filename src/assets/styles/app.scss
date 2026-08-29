@@ -215,7 +215,7 @@
   }
 }
 
-// 修复老机型 loading 定位问题
+// 全局加载：遮罩透明不遮白页面（仍拦截点击），中心显示高亮矩形
 .art-loading-fix {
   position: fixed !important;
   top: 0 !important;
@@ -227,6 +227,7 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  background-color: transparent !important;
 }
 
 .art-loading-fix .el-loading-spinner {
@@ -234,4 +235,22 @@
   top: auto !important;
   left: auto !important;
   transform: none !important;
+  margin-top: 0 !important;
+  width: auto !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 140px;
+  padding: 28px 36px;
+  background-color: var(--art-main-bg-color);
+  border: 1px solid var(--art-card-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.art-loading-fix .el-loading-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--art-text-gray-900);
 }
