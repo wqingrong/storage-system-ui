@@ -4,8 +4,18 @@
       <p class="title">阵列信息</p>
     </div>
 
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-box">
+      <ElIcon class="is-loading" :size="18"><Loading /></ElIcon>
+      <span>正在加载阵列信息</span>
+    </div>
+
     <!-- 空状态 -->
-    <ElEmpty v-if="storagePoolList.length === 0" :image-size="200" description="暂无存储池" />
+    <ElEmpty
+      v-if="!loading && storagePoolList.length === 0"
+      :image-size="200"
+      description="暂无存储池"
+    />
 
     <div v-for="(item, index) in storagePoolList" :key="index" class="pool-row">
       <!-- 顶部：池名称 + 容量概览 + 状态醒目卡片 -->
@@ -108,7 +118,7 @@
 <script setup lang="ts">
   import { ref, onMounted } from 'vue'
   import { useRouter } from 'vue-router'
-  import { ArrowRight } from '@element-plus/icons-vue'
+  import { ArrowRight, Loading } from '@element-plus/icons-vue'
   import volumeProgress from './volume-progress.vue'
   import { Disk } from '@/typings/disk'
   import { fetchGetStoragePoolList } from '@/api/system-manage'
@@ -117,17 +127,23 @@
   const router = useRouter()
 
   const storagePoolList = ref<Disk.Device.StoragePool[]>([])
+  const loading = ref(false)
 
   onMounted(() => {
     refreshStorageSpaceData()
   })
 
   const refreshStorageSpaceData = () => {
-    fetchGetStoragePoolList().then((res) => {
-      if (res) {
-        storagePoolList.value = res.records
-      }
-    })
+    loading.value = true
+    fetchGetStoragePoolList()
+      .then((res) => {
+        if (res) {
+          storagePoolList.value = res.records
+        }
+      })
+      .finally(() => {
+        loading.value = false
+      })
   }
 
   /** 跳转到存储管理 → 存储空间页面 */
@@ -137,6 +153,17 @@
 </script>
 
 <style scoped>
+  /* ===== 加载状态 ===== */
+  .loading-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px 0;
+    color: #909399;
+    font-size: 14px;
+  }
+
   /* ===== 存储池行间距 ===== */
   .pool-row {
     margin-bottom: 24px;

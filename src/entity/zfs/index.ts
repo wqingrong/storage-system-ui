@@ -237,6 +237,8 @@ export interface ZFSPool {
   imported_at: string
   /** 最近一次scrub完成时间(RFC3339) */
   last_scrub_complete: string | null
+  /** 数据集列表 */
+  data_sets: ZFSDataSet[]
 }
 
 /** 池健康概览，列表页/告警使用，一行一个池 */
@@ -259,6 +261,19 @@ export interface PoolSummary {
   problem_count: number
   /** 快照生成时间(RFC3339) */
   updated_at: string
+}
+
+export interface ZFSDataSet {
+  name: string
+  device_path: string
+  type: string
+  pool_name: string
+  mount_point: string
+  total_bytes: number
+  used_bytes: number
+  free_bytes: number
+  use_ratio: number
+  is_mount: boolean
 }
 
 /** GET /zfs/getZPoolMap 返回结构: 池名 → 完整池信息 */

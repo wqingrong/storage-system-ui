@@ -49,10 +49,13 @@
               <!-- 1.基本信息 -->
               <div class="card-section">
                 <div class="section-title">基本信息</div>
+                <div class="pool-uuid" :title="pool.uuid">UUID: {{ pool.uuid }}</div>
+
                 <div class="info-item">
                   <span class="info-label">存储池等级</span>
                   <span class="info-value">{{ getPoolGrade(pool) }}</span>
                 </div>
+
                 <div class="info-item">
                   <span class="info-label">磁盘数量</span>
                   <span class="info-value">{{ getDiskCountText(pool) }}</span>
@@ -61,11 +64,10 @@
                   <span class="info-label">单盘容量(约)</span>
                   <span class="info-value">{{ getPerDiskSize(pool) }}</span>
                 </div>
-              </div>
-
-              <!-- 容量信息 -->
-              <div class="card-section">
-                <div class="section-title">容量信息</div>
+                <div class="info-item">
+                  <span class="info-label">存储池总容量</span>
+                  <span class="info-value">{{ formatBytes(pool.total_bytes) }}</span>
+                </div>
                 <div class="capacity-main">
                   <el-progress
                     type="circle"
@@ -81,12 +83,66 @@
                     <span
                       >可用 <b>{{ formatBytes(pool.free_bytes) }}</b></span
                     >
-                    <span
-                      >总容量 <b>{{ formatBytes(pool.total_bytes) }}</b></span
-                    >
                   </div>
                 </div>
-                <div class="pool-uuid" :title="pool.uuid">UUID: {{ pool.uuid }}</div>
+              </div>
+
+              <!-- 容量信息 -->
+              <div class="card-section">
+                <div class="section-title">数据集列表</div>
+                <!-- 数据集容量与挂载状态 -->
+                <div v-if="pool.data_sets?.length" class="dataset-list">
+                  <div v-for="ds in pool.data_sets" :key="ds.name" class="dataset-item">
+                    <div class="dataset-row">
+                      <span class="dataset-name" :title="ds.name">{{ ds.name }}</span>
+                      <span class="dataset-ratio">{{ getDatasetUsePct(ds) }}%</span>
+                      <el-tag
+                        :type="ds.is_mount ? 'success' : 'info'"
+                        size="small"
+                        class="dataset-mount-tag"
+                      >
+                        {{ ds.is_mount ? '已挂载' : '未挂载' }}
+                      </el-tag>
+                    </div>
+                    <el-progress
+                      class="dataset-progress"
+                      :percentage="getDatasetUsePct(ds)"
+                      :color="getUsageColorByPct(getDatasetUsePct(ds))"
+                      :stroke-width="4"
+                      :show-text="false"
+                    />
+                    <div class="dataset-meta">
+                      <span :title="ds.mount_point">挂载点: {{ ds.mount_point || '—' }}</span>
+                      <span
+                        >已用 {{ formatBytes(ds.used_bytes) }} / 共
+                        {{ formatBytes(ds.total_bytes) }}</span
+                      >
+                    </div>
+                    <!-- 数据集操作按钮(接口待对接) -->
+                    <div class="dataset-actions">
+                      <ElButton
+                        v-if="!ds.is_mount"
+                        size="small"
+                        type="primary"
+                        link
+                        @click="handleDatasetMount(ds)"
+                        >挂载
+                      </ElButton>
+                      <ElButton
+                        v-else
+                        size="small"
+                        type="warning"
+                        link
+                        @click="handleDatasetUnmount(ds)"
+                        >卸载
+                      </ElButton>
+                      <ElButton size="small" type="danger" link @click="handleDatasetDestroy(ds)"
+                        >销毁
+                      </ElButton>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="dataset-empty">暂无数据集</div>
               </div>
 
               <!-- 健康状态 -->
@@ -317,7 +373,7 @@
 <script lang="ts" setup>
   import { computed, nextTick, ref, watch } from 'vue'
   import { fetchGetZPoolMap } from '@/api/zfs-service'
-  import type { HealthLevel, PoolHealthState, VdevNode, ZFSPool } from '@/entity/zfs'
+  import type { HealthLevel, PoolHealthState, VdevNode, ZFSDataSet, ZFSPool } from '@/entity/zfs'
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
   import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'
   import { List, MoreFilled, Plus, Refresh, WarningFilled } from '@element-plus/icons-vue'
@@ -376,7 +432,15 @@
   }
 
   onMounted(startPolling)
-  onActivated(startPolling)
+  // keepAlive 下首次挂载会同时触发 mounted 和 activated，跳过紧随其后的首次 activated，避免重复请求
+  let isFirstActivated = true
+  onActivated(() => {
+    if (isFirstActivated) {
+      isFirstActivated = false
+      return
+    }
+    startPolling()
+  })
   onDeactivated(stopPolling)
   onUnmounted(stopPolling)
 
@@ -764,12 +828,73 @@
     return Math.min(100, Math.round((pool.used_bytes / pool.total_bytes) * 100))
   }
 
-  /** 使用率对应进度条颜色 */
-  const getUsageColor = (pool: ZFSPool): string => {
-    const pct = getUsagePct(pool)
+  /** 使用率百分比对应进度条颜色 */
+  const getUsageColorByPct = (pct: number): string => {
     if (pct >= 90) return '#e80536'
     if (pct >= 70) return '#e6a23c'
     return '#4caf50'
+  }
+
+  /** 使用率对应进度条颜色 */
+  const getUsageColor = (pool: ZFSPool): string => getUsageColorByPct(getUsagePct(pool))
+
+  /** 数据集使用率(%)：优先按已用/总容量计算，总容量缺失时回退use_ratio(兼容0~1或0~100两种口径) */
+  const getDatasetUsePct = (ds: ZFSDataSet): number => {
+    if (ds.total_bytes > 0) {
+      return Math.min(100, Math.round((ds.used_bytes / ds.total_bytes) * 100))
+    }
+    const ratio = ds.use_ratio ?? 0
+    const pct = ratio > 1 ? ratio : ratio * 100
+    return Math.min(100, Math.max(0, Math.round(pct)))
+  }
+
+  // ========== 数据集操作(按钮占位，接口待对接) ==========
+  /** 挂载数据集(待对接接口) */
+  const handleDatasetMount = (ds: ZFSDataSet) => {
+    // TODO: 对接数据集挂载接口
+    ElMessage.info(`数据集「${ds.name}」挂载功能待对接`)
+  }
+
+  /** 卸载数据集(待对接接口，需二次确认) */
+  const handleDatasetUnmount = (ds: ZFSDataSet) => {
+    ElMessageBox.confirm(
+      `确定卸载数据集「${ds.name}」吗？<br/>卸载后该数据集将不可访问。`,
+      '卸载确认',
+      {
+        confirmButtonText: '确定卸载',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+      .then(() => {
+        // TODO: 对接数据集卸载接口
+        ElMessage.info(`数据集「${ds.name}」卸载功能待对接`)
+      })
+      .catch(() => {
+        ElMessage.info('已取消卸载操作')
+      })
+  }
+
+  /** 销毁数据集(待对接接口，需二次确认) */
+  const handleDatasetDestroy = (ds: ZFSDataSet) => {
+    ElMessageBox.confirm(
+      `确定销毁数据集「${ds.name}」吗？<br/>销毁后数据集上的数据将无法恢复。`,
+      '销毁确认',
+      {
+        confirmButtonText: '确定销毁',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+      .then(() => {
+        // TODO: 对接数据集销毁接口
+        ElMessage.info(`数据集「${ds.name}」销毁功能待对接`)
+      })
+      .catch(() => {
+        ElMessage.info('已取消销毁操作')
+      })
   }
 
   /** 字节数格式化为可读容量 */
@@ -1105,6 +1230,89 @@
 
   .capacity-detail b {
     color: #303133;
+  }
+
+  /* 数据集为空提示 */
+  .dataset-empty {
+    padding: 12px 0;
+    font-size: 12px;
+    color: #c0c4cc;
+    text-align: center;
+  }
+
+  /* 数据集容量与挂载状态列表 */
+  .dataset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 170px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .dataset-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 8px;
+    background: #fafbfc;
+    border-radius: 6px;
+  }
+
+  .dataset-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .dataset-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .dataset-ratio {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #909399;
+  }
+
+  .dataset-mount-tag {
+    flex-shrink: 0;
+  }
+
+  .dataset-progress {
+    width: 100%;
+  }
+
+  .dataset-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: #909399;
+  }
+
+  .dataset-meta span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 数据集操作按钮 */
+  .dataset-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    padding-top: 4px;
+    border-top: 1px dashed #ebeef5;
   }
 
   .pool-uuid {

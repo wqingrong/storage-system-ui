@@ -1,0 +1,727 @@
+<template>
+  <div class="zpool-manager">
+    <!-- 顶部工具栏 -->
+    <div class="menu-container">
+      <ElSpace wrap>
+        <ElButton type="primary" @click="handleCreateZpool">
+          <ElIcon><Plus /></ElIcon>
+          创建Zpool
+        </ElButton>
+        <ElButton @click="handleCreateStorageSpace">
+          <ElIcon><Plus /></ElIcon>
+          创建存储空间
+        </ElButton>
+      </ElSpace>
+    </div>
+
+    <!-- Zpool存储池列表 -->
+    <div class="demo-collapse">
+      <el-empty
+        v-if="zpoolList === null || zpoolList.length === 0"
+        :image-size="300"
+        description="未创建Zpool存储池"
+      />
+      <el-collapse v-for="item in zpoolList" :key="item.poolName">
+        <el-collapse-item name="1">
+          <template #title>
+            <div style="display: flex; flex-direction: row; align-items: center">
+              <img
+                style="width: 50px; height: 50px; margin-left: 10px; margin-right: 10px"
+                :src="getStoragePoolStatus(item.poolStatus).imageUrl"
+              />
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-content: center;
+                  justify-content: center;
+                  width: 80%;
+                "
+              >
+                <!-- 第一行：设置为flex布局并两端对齐 -->
+                <div style="display: flex; justify-self: flex-start; width: 100%">
+                  <div style="width: 60%"
+                    ><span>{{ item.poolName }} </span></div
+                  >
+                  <div style="width: 40%; display: flex; align-items: center; /* 仅垂直居中 */">
+                    <el-progress :percentage="item.useRatio" style="width: 70%" />
+                  </div>
+                </div>
+                <!-- 第二行 -->
+                <div style="display: flex; justify-self: flex-start; width: 100%">
+                  <div style="width: 60%">
+                    <span :style="{ color: getStoragePoolStatus(item.poolStatus).color }">{{
+                      getStoragePoolStatus(item.poolStatus).statusTxt
+                    }}</span>
+                  </div>
+                  <div style="width: 40%">
+                    <span style="color: #2b8dfa">{{ item.storageSize }} </span>
+                    <span>| {{ item.freeSize }}可用</span>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  text-align: center;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  width: 40px;
+                  height: 40px;
+                  cursor: pointer;
+                "
+                @click.stop="showMenu($event, 'zpool', item)"
+              >
+                <el-icon style="font-size: 20px">
+                  <MoreFilled />
+                </el-icon>
+              </div>
+            </div>
+          </template>
+          <!-- 存储池详细信息 -->
+          <div style="margin-left: 10px; width: 100%; background: #f4f6f9; padding: 5px">
+            <div class="detail-item">
+              <div class="detail-label">
+                <span>RAID类别:</span>
+              </div>
+              <div class="detail-value">
+                <span>{{ item.raidDetailInfo.grade }}</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span>块大小:</span>
+              </div>
+              <div class="detail-value">
+                <span>{{ item.raidDetailInfo.chunkSize }}</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span>RAID状态:</span>
+              </div>
+              <div class="detail-value">
+                <span>{{ item.raidDetailInfo.status }}</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span>存储池UUID:</span>
+              </div>
+              <div class="detail-value">
+                <span>{{ item.UUID }}</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span>总容量:</span>
+              </div>
+              <div class="detail-value">
+                <span>{{ item.storageSize }}</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">
+                <span>可用空间:</span>
+              </div>
+              <div class="detail-value">
+                <span>{{ item.freeSize }}</span>
+              </div>
+            </div>
+            <!-- 磁盘列表表格 -->
+            <div>
+              <el-table
+                :data="item.raidDetailInfo.diskDeviceList"
+                style="width: 100%"
+                @current-change="handleCurrentChange"
+              >
+                <el-table-column property="device" label="盘符" width="120" />
+                <el-table-column property="model" label="硬盘类型" width="120" />
+                <el-table-column property="serialNumber" label="序列号" />
+                <el-table-column property="totalSize" label="容量" />
+                <el-table-column property="use" label="用途" />
+                <el-table-column property="diskHealth.healthStatus" label="健康状态" />
+                <el-table-column property="raidMetData.status" label="硬盘状态" />
+                <!-- 操作列 -->
+                <el-table-column label="操作" width="120" align="center">
+                  <template #default="scope">
+                    <el-dropdown trigger="click">
+                      <span class="el-dropdown-link" style="cursor: pointer">
+                        操作 <i class="el-icon-arrow-down el-icon--right"></i>
+                      </span>
+                      <template #dropdown>
+                        <el-dropdown-menu>
+                          <el-dropdown-item
+                            v-if="
+                              scope.row.raidMetData.status === 'active sync' ||
+                              scope.row.raidMetData.status === 'ONLINE'
+                            "
+                            @click="handleKickDisk(item, scope.row)"
+                            >踢盘
+                          </el-dropdown-item>
+                          <el-dropdown-item
+                            v-if="scope.row.raidMetData.status === 'active sync'"
+                            @click="handleDiskOrientation(item, scope.row)"
+                            >定位
+                          </el-dropdown-item>
+                          <el-dropdown-item
+                            v-if="scope.row.raidMetData.status === 'active sync'"
+                            divided
+                            @click="handleDiskDetail(item, scope.row)"
+                            >详情
+                          </el-dropdown-item>
+                          <el-dropdown-item
+                            v-if="scope.row.raidMetData.status === 'removed'"
+                            divided
+                            @click="sortRaidImportDisk(item, scope.row)"
+                            >引入
+                          </el-dropdown-item>
+                          <el-dropdown-item
+                            v-if="
+                              scope.row.raidMetData.status === 'DEGRADED' ||
+                              scope.row.raidMetData.status === 'FAULTED'
+                            "
+                            divided
+                            @click="onlineDisk(item, scope.row)"
+                            >上线
+                          </el-dropdown-item>
+                          <el-dropdown-item
+                            v-if="
+                              scope.row.raidMetData.status === 'DEGRADED' ||
+                              scope.row.raidMetData.status === 'FAULTED'
+                            "
+                            divided
+                            @click="zfsReplaceDisk(item, scope.row)"
+                            >替换
+                          </el-dropdown-item>
+                        </el-dropdown-menu>
+                      </template>
+                    </el-dropdown>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+            <!-- 存储空间显示列表 -->
+            <div
+              v-for="spaceItem in item.storageSpaceList"
+              :key="spaceItem.volumeName"
+              style="margin-top: 15px; margin-left: 50px; width: 80%"
+            >
+              <div style="display: flex; flex-direction: row; align-items: center">
+                <img
+                  style="width: 50px; height: 50px"
+                  :src="getStorageSpaceStatusImage(spaceItem.mountStatus)"
+                />
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-content: center;
+                    justify-content: center;
+                    width: 80%;
+                  "
+                >
+                  <!-- 第一行：设置为flex布局并两端对齐 -->
+                  <div style="display: flex; justify-self: flex-start; width: 100%">
+                    <div style="width: 60%"
+                      ><span>{{ spaceItem.spaceName }}</span></div
+                    >
+                    <div style="width: 40%; display: flex; align-items: center">
+                      <el-progress :percentage="spaceItem.useRatio" style="width: 60%" />
+                    </div>
+                  </div>
+                  <!-- 第二行 -->
+                  <div style="display: flex; justify-self: flex-start; width: 100%">
+                    <div style="width: 60%">
+                      <span v-if="spaceItem.mountStatus === 'MOUNTED'" style="color: #4caf50"
+                        >已挂载</span
+                      >
+                      <span v-else style="color: #ec6f30">异常</span>
+                    </div>
+                    <div style="width: 40%">
+                      <span style="color: #2b8dfa">{{ spaceItem.spaceSize }} </span>
+                      <span>| {{ spaceItem.freeSize }}可用</span>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    text-align: center;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 40px;
+                    height: 40px;
+                    cursor: pointer;
+                  "
+                  @click.stop="showMenu($event, 'storageSpace', spaceItem)"
+                >
+                  <el-icon style="font-size: 20px">
+                    <MoreFilled />
+                  </el-icon>
+                </div>
+              </div>
+              <div style="background: #f4f6f9; padding: 5px">
+                <div class="detail-item">
+                  <div class="detail-label">
+                    <span>文件系统:</span>
+                  </div>
+                  <div class="detail-value">
+                    <span>{{ spaceItem.fileSystem }}</span>
+                  </div>
+                </div>
+                <div v-if="spaceItem.fileSystem === 'ZFS'" class="detail-item">
+                  <div class="detail-label">
+                    <span>数据集:</span>
+                  </div>
+                  <div class="detail-value">
+                    <span>{{ spaceItem.volumeName }}</span>
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">
+                    <span>挂载点:</span>
+                  </div>
+                  <div class="detail-value">
+                    <span>{{ spaceItem.mountPath }}</span>
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">
+                    <span>挂载状态:</span>
+                  </div>
+                  <div class="detail-value">
+                    <span>{{ spaceItem.mountStatus }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-collapse-item>
+      </el-collapse>
+    </div>
+
+    <!-- 右键菜单组件 -->
+    <ArtMenuRight
+      ref="menuRef"
+      :menu-items="menuItems"
+      :submenu-width="140"
+      :border-radius="10"
+      @select="handleSelect"
+    />
+    <!-- 引入/替换磁盘弹窗 -->
+    <disk-selected-dialog
+      v-model:viable="diskDialogVisible"
+      v-model:pool-item="optionPoolItem"
+      v-model:option-disk-item="optionDiskItem"
+      v-model:option="option"
+      @refresh-storage-list="refreshZpoolData"
+    />
+    <!-- 创建Zpool弹窗 -->
+    <CreateZPool v-model:visible="createZPoolDialogVisible" />
+    <!-- 创建存储空间弹窗 -->
+    <CreateStorageSpace
+      v-model:visible="createStorageSpaceDialogVisible"
+      :filter-pool-type="'ZFS'"
+      :default-vg-name="createSpaceDefaultVgName"
+      @call-storage-method="handleCallStorageMethod"
+    />
+  </div>
+</template>
+
+<script lang="ts" setup>
+  import { computed, nextTick, ref, watch } from 'vue'
+  import {
+    fetchDestroyStorageSpace,
+    fetchGetStoragePoolList,
+    fetchMountStorageSpace,
+    fetchUmountStorageSpace
+  } from '@/api/system-manage'
+  import { Disk } from '@/typings/disk'
+  import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
+  import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'
+  import { MoreFilled, Plus } from '@element-plus/icons-vue'
+  import {
+    fetchDestroyZPool,
+    fetchImportZPool,
+    fetchPoolKickDisk,
+    fetchPoolImportDisk,
+    fetchStopZPool
+  } from '@/api/storage-service'
+  import { Api } from '@/typings/api'
+  import { getStoragePoolStatus } from '@utils/tools'
+  import { ElMessage, ElMessageBox } from 'element-plus'
+  import DiskSelectedDialog from '@views/storage-system/storage-manager/storage-space/modules/disk-selected-dialog.vue'
+  import CreateZPool from '@views/storage-system/storage-manager/disk-manager/modules/create-zpool.vue'
+  import CreateStorageSpace from '@views/storage-system/storage-manager/storage-space/modules/create-storage-space.vue'
+
+  defineOptions({ name: 'ZpoolManager' })
+
+  // ZFS存储池列表
+  const zpoolList = ref<Disk.Device.StoragePool[]>([])
+  // 创建Zpool弹窗显隐
+  const createZPoolDialogVisible = ref(false)
+  // 创建存储空间弹窗显隐
+  const createStorageSpaceDialogVisible = ref(false)
+  // 创建存储空间弹窗默认选中的存储池
+  const createSpaceDefaultVgName = ref('')
+  // 磁盘选择弹窗
+  const diskDialogVisible = ref(false)
+  const optionPoolItem = ref<Disk.Device.StoragePool>({} as Disk.Device.StoragePool) // 当前选中的存储池
+  const optionDiskItem = ref(null) // 当前需要操作的磁盘
+  const option = ref('')
+
+  onMounted(() => {
+    refreshZpoolData()
+  })
+
+  // 刷新Zpool存储池列表（仅展示ZFS类型）
+  const refreshZpoolData = () => {
+    fetchGetStoragePoolList().then((res) => {
+      if (res) {
+        zpoolList.value = res.records.filter(
+          (item: Disk.Device.StoragePool) => item.poolType === 'ZFS'
+        )
+      }
+    })
+  }
+
+  const handleCreateZpool = () => {
+    createZPoolDialogVisible.value = true
+  }
+
+  // 工具栏创建存储空间（不指定默认存储池）
+  const handleCreateStorageSpace = () => {
+    createSpaceDefaultVgName.value = ''
+    createStorageSpaceDialogVisible.value = true
+  }
+
+  // 在指定存储池上创建存储空间
+  const handleZpoolCreateSpace = () => {
+    createSpaceDefaultVgName.value = menuItemData.value.vgName
+    createStorageSpaceDialogVisible.value = true
+  }
+
+  // 创建存储空间成功后的回调，刷新列表
+  const handleCallStorageMethod = (methodName: string) => {
+    if (methodName === 'refreshStorageSpaceData') {
+      refreshZpoolData()
+    }
+  }
+
+  // 创建弹窗关闭后刷新列表
+  watch(createZPoolDialogVisible, (newVal) => {
+    if (!newVal) {
+      refreshZpoolData()
+    }
+  })
+
+  const currentRow = ref()
+  const handleCurrentChange = (val: any) => {
+    currentRow.value = val
+  }
+
+  const menuRef = ref<InstanceType<typeof ArtMenuRight>>()
+  const menuItemData = ref<Disk.Device.StoragePool>({} as Disk.Device.StoragePool)
+  const spaceItemData = ref<Disk.Device.StorageSpace>({} as Disk.Device.StorageSpace)
+  // 右键菜单所属容器（存储池 / 存储空间）
+  const menuContainer = ref<'zpool' | 'storageSpace'>('zpool')
+
+  /**
+   * 右键菜单选项配置
+   */
+  const menuItems = computed<MenuItemType[]>(() => {
+    if (menuContainer.value === 'storageSpace') {
+      return [
+        {
+          key: 'space_mount',
+          label: '存储空间挂载',
+          icon: '&#xe67a;'
+        },
+        {
+          key: 'space_umount',
+          label: '存储空间卸载',
+          icon: '&#xe701;'
+        },
+        {
+          key: 'space_destroy',
+          label: '存储空间销毁',
+          icon: '&#xe6d4;',
+          showLine: true
+        }
+      ]
+    }
+    return [
+      {
+        key: 'zpool_create_space',
+        label: '创建存储空间',
+        icon: '&#xe6cb;'
+      },
+      {
+        key: 'zpool_import',
+        label: 'Zpool启动',
+        icon: '&#xe67a;'
+      },
+      {
+        key: 'zpool_stop',
+        label: 'Zpool停止',
+        icon: '&#xe701;'
+      },
+      {
+        key: 'zpool_destroy',
+        label: 'Zpool销毁',
+        icon: '&#xe6d4;',
+        showLine: true
+      }
+    ]
+  })
+
+  /**
+   * 处理右键菜单项选择
+   * @param item 选中的菜单项
+   */
+  const handleSelect = (item: MenuItemType) => {
+    switch (item.key) {
+      case 'zpool_create_space':
+        // 在选中的存储池上创建存储空间
+        handleZpoolCreateSpace()
+        break
+      case 'zpool_import':
+        // Zpool启动
+        fetchImportZPool(buildZPoolDto()).then(() => {
+          refreshZpoolData()
+        })
+        break
+      case 'zpool_stop':
+        // Zpool停止
+        fetchStopZPool(buildZPoolDto()).then(() => {
+          refreshZpoolData()
+        })
+        break
+      case 'zpool_destroy':
+        // Zpool销毁（需二次确认）
+        destroyZPool()
+        break
+      case 'space_mount':
+        // 存储空间挂载
+        storageSpaceMount()
+        break
+      case 'space_umount':
+        // 存储空间卸载
+        storageSpaceUmount()
+        break
+      case 'space_destroy':
+        // 存储空间销毁
+        destroyStorageSpace()
+        break
+      default:
+        break
+    }
+  }
+
+  // 组装Zpool操作DTO
+  const buildZPoolDto = (): Api.Dto.ImportZPoolDto => {
+    const poolItem = menuItemData.value
+    return {
+      UUID: poolItem.UUID,
+      poolName: poolItem.poolName,
+      devicePath: poolItem.vgName
+    }
+  }
+
+  // Zpool销毁（需二次确认）
+  const destroyZPool = () => {
+    const poolItem = menuItemData.value
+    ElMessageBox.confirm(
+      `确定销毁Zpool存储池「${poolItem.poolName}」吗？<br/>销毁后存储池上的数据将无法恢复。`,
+      '销毁确认',
+      {
+        confirmButtonText: '确定销毁',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+      .then(() => {
+        fetchDestroyZPool(buildZPoolDto()).then(() => {
+          refreshZpoolData()
+        })
+      })
+      .catch(() => {
+        ElMessage.info('已取消销毁操作')
+      })
+  }
+
+  // 存储空间的挂载
+  const storageSpaceMount = () => {
+    const spaceItem = spaceItemData.value
+    const dto: Api.Dto.MountStorageSpaceDto = {
+      fileSystem: spaceItem.fileSystem,
+      vgName: spaceItem.vgName,
+      volumeName: spaceItem.volumeName
+    }
+    fetchMountStorageSpace(dto).finally(() => {
+      refreshZpoolData()
+    })
+  }
+
+  // 存储空间的卸载
+  const storageSpaceUmount = () => {
+    const spaceItem = spaceItemData.value
+    const dto: Api.Dto.UmountStorageSpaceDto = {
+      fileSystem: spaceItem.fileSystem,
+      vgName: spaceItem.vgName,
+      volumeName: spaceItem.volumeName
+    }
+    fetchUmountStorageSpace(dto).finally(() => {
+      refreshZpoolData()
+    })
+  }
+
+  // 存储空间的销毁（需二次确认）
+  const destroyStorageSpace = () => {
+    const spaceItem = spaceItemData.value
+    ElMessageBox.confirm(
+      `确定销毁存储空间「${spaceItem.spaceName}」吗？<br/>销毁后存储空间上的数据将无法恢复。`,
+      '销毁确认',
+      {
+        confirmButtonText: '确定销毁',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+      .then(() => {
+        const dto: Api.Dto.DestroyStorageSpace = {
+          fileSystem: spaceItem.fileSystem,
+          vgName: spaceItem.vgName,
+          volumeName: spaceItem.volumeName
+        }
+        fetchDestroyStorageSpace(dto).finally(() => {
+          refreshZpoolData()
+        })
+      })
+      .catch(() => {
+        ElMessage.info('已取消销毁操作')
+      })
+  }
+
+  /**
+   * 显示右键菜单
+   * @param e 鼠标事件
+   * @param container 菜单所属容器
+   * @param itemData 容器数据
+   */
+  const showMenu = (e: MouseEvent, container: 'zpool' | 'storageSpace', itemData: any) => {
+    e.preventDefault()
+    e.stopPropagation()
+    menuContainer.value = container
+    if (container === 'storageSpace') {
+      spaceItemData.value = itemData
+    } else {
+      menuItemData.value = itemData
+    }
+    nextTick(() => {
+      menuRef.value?.show(e)
+    })
+  }
+
+  // 存储空间状态图标
+  const getStorageSpaceStatusImage = (status: string) => {
+    if (status) {
+      return new URL('/src/assets/img/svg/storage-space.svg', import.meta.url).href
+    }
+  }
+
+  interface PoolKickDiskParams {
+    poolName: string
+    poolType: string
+    grade: string
+    diskDevice: string
+    raidDevice: string
+    serialNumber: string
+    wwn: string
+  }
+
+  // 踢盘
+  const handleKickDisk = (poolItem: Disk.Device.StoragePool, row: any) => {
+    const params: PoolKickDiskParams = {
+      poolName: poolItem.poolName,
+      poolType: poolItem.poolType,
+      grade: poolItem.raidDetailInfo.grade,
+      diskDevice: row.devicePath,
+      raidDevice: poolItem.raidDetailInfo.devicePath,
+      serialNumber: row.serialNumber,
+      wwn: row.wwn
+    }
+    fetchPoolKickDisk(params).then(() => {
+      refreshZpoolData()
+    })
+  }
+
+  // 定位
+  const handleDiskOrientation = (poolItem: Disk.Device.StoragePool, row: any) => {
+    console.log('定位当前磁盘：', row)
+    console.log('item>>', poolItem)
+  }
+
+  // 查看详情
+  const handleDiskDetail = (poolItem: Disk.Device.StoragePool, row: any) => {
+    console.log('查看详情：', row)
+    console.log('item>>', poolItem)
+  }
+
+  // 重新引入硬盘（打开磁盘选择弹窗）
+  const sortRaidImportDisk = (poolItem: Disk.Device.StoragePool, row: any) => {
+    optionPoolItem.value = poolItem
+    optionDiskItem.value = row
+    option.value = 'sortRaidImportDisk'
+    diskDialogVisible.value = true
+  }
+
+  // zfs存储池重新上线磁盘
+  const onlineDisk = (poolItem: Disk.Device.StoragePool, row: any) => {
+    const params = {
+      poolName: poolItem.poolName,
+      poolType: poolItem.poolType,
+      grade: poolItem.raidDetailInfo.grade,
+      raidDevicePath: poolItem.raidDetailInfo.devicePath,
+      diskDeviceBasic: row
+    }
+    fetchPoolImportDisk(params).then(() => {
+      refreshZpoolData()
+    })
+  }
+
+  // zfs进行替换磁盘操作（打开磁盘选择弹窗）
+  const zfsReplaceDisk = (poolItem: Disk.Device.StoragePool, row: any) => {
+    optionPoolItem.value = poolItem
+    optionDiskItem.value = row
+    diskDialogVisible.value = true
+    option.value = 'zfsReplaceDisk'
+  }
+</script>
+
+<style scoped>
+  .menu-container {
+    margin: 10px;
+  }
+
+  .detail-item {
+    display: flex;
+    justify-self: flex-start;
+    width: 100%;
+  }
+
+  /* 标签居左，固定宽度让内容对齐 */
+  .detail-label {
+    width: 40%;
+    color: #666;
+    flex-shrink: 0; /* 防止标签被压缩 */
+  }
+
+  .detail-value {
+    width: 60%;
+    color: #333;
+  }
+</style>
