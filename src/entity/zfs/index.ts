@@ -1,6 +1,6 @@
 // ZFS存储池状态查询的实体类数据结构
 // 与后端 storage-system/device/zfs_device/zfsmodel 的 JSON 输出一一对应
-// 接口来源: GET /zfs/getZPoolMap | /zfs/getZPoolSummary | /zfs/getZPoolDetail
+// 接口来源: GET /zfs/getZPoolMap | /zfs/getZPoolSummary | /zfs/getZPoolDetail | POST /zfs/createZfsDataSet
 
 /** 存储池整体健康状态(zpool status 原始状态) */
 export type PoolHealthState =
@@ -278,3 +278,21 @@ export interface ZFSDataSet {
 
 /** GET /zfs/getZPoolMap 返回结构: 池名 → 完整池信息 */
 export type ZFSPoolMap = Record<string, ZFSPool>
+
+/** 创建ZFS数据集(存储空间)的请求参数，与后端 zfsmodel.NewZFSDataSet 的 JSON 标签一一对应 */
+export interface NewZfsDataSet {
+  /** 存储池名称 */
+  storage_pool_name: string
+  /** 存储池类型 ZFS / SOFT_LVM */
+  pool_type: string
+  /** 备注信息 */
+  desc_txt: string
+  /** 空间大小(纯数字，单位由 unit 字段决定) */
+  space_size: string
+  /** 文件系统，zfs存储池固定为 zfs */
+  file_system: string
+  /** 空间大小单位，最小为G，最大不超过存储池总容量的单位，如 G / T / P；按比例分配时为 % */
+  unit: string
+  /** 最大空间(0~100，单位固定为%，占存储池总容量的百分比) */
+  max_space_size: string
+}

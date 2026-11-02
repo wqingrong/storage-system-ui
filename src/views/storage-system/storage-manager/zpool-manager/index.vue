@@ -43,9 +43,10 @@
             </div>
           </div>
 
-          <!-- 存储池信息卡片：1基本信息/2容量/3健康/4磁盘运行状态 横向平铺 -->
+          <!-- 存储池信息卡片：上(基本信息/健康状态/磁盘运行状态)/下(数据集列表) -->
           <div class="pool-card">
-            <div class="card-sections">
+            <!-- 上部：基本信息 + 健康状态 + 磁盘运行状态 横向平铺（分隔符分格） -->
+            <div class="card-top">
               <!-- 1.基本信息 -->
               <div class="card-section">
                 <div class="section-title">基本信息</div>
@@ -87,65 +88,7 @@
                 </div>
               </div>
 
-              <!-- 容量信息 -->
-              <div class="card-section">
-                <div class="section-title">数据集列表</div>
-                <!-- 数据集容量与挂载状态 -->
-                <div v-if="pool.data_sets?.length" class="dataset-list">
-                  <div v-for="ds in pool.data_sets" :key="ds.name" class="dataset-item">
-                    <div class="dataset-row">
-                      <span class="dataset-name" :title="ds.name">{{ ds.name }}</span>
-                      <span class="dataset-ratio">{{ getDatasetUsePct(ds) }}%</span>
-                      <el-tag
-                        :type="ds.is_mount ? 'success' : 'info'"
-                        size="small"
-                        class="dataset-mount-tag"
-                      >
-                        {{ ds.is_mount ? '已挂载' : '未挂载' }}
-                      </el-tag>
-                    </div>
-                    <el-progress
-                      class="dataset-progress"
-                      :percentage="getDatasetUsePct(ds)"
-                      :color="getUsageColorByPct(getDatasetUsePct(ds))"
-                      :stroke-width="4"
-                      :show-text="false"
-                    />
-                    <div class="dataset-meta">
-                      <span :title="ds.mount_point">挂载点: {{ ds.mount_point || '—' }}</span>
-                      <span
-                        >已用 {{ formatBytes(ds.used_bytes) }} / 共
-                        {{ formatBytes(ds.total_bytes) }}</span
-                      >
-                    </div>
-                    <!-- 数据集操作按钮(接口待对接) -->
-                    <div class="dataset-actions">
-                      <ElButton
-                        v-if="!ds.is_mount"
-                        size="small"
-                        type="primary"
-                        link
-                        @click="handleDatasetMount(ds)"
-                        >挂载
-                      </ElButton>
-                      <ElButton
-                        v-else
-                        size="small"
-                        type="warning"
-                        link
-                        @click="handleDatasetUnmount(ds)"
-                        >卸载
-                      </ElButton>
-                      <ElButton size="small" type="danger" link @click="handleDatasetDestroy(ds)"
-                        >销毁
-                      </ElButton>
-                    </div>
-                  </div>
-                </div>
-                <div v-else class="dataset-empty">暂无数据集</div>
-              </div>
-
-              <!-- 健康状态 -->
+              <!-- 2.健康状态 -->
               <div class="card-section">
                 <div class="section-title">健康状态</div>
                 <div class="health-row">
@@ -189,7 +132,7 @@
                 </div>
               </div>
 
-              <!-- 磁盘运行状态（内含查看磁盘列表按钮） -->
+              <!-- 3.磁盘运行状态（分隔符分格在健康状态后面） -->
               <div class="card-section">
                 <div class="section-title">磁盘运行状态</div>
                 <div class="disk-run-stats">
@@ -204,6 +147,70 @@
                   查看磁盘列表
                 </ElButton>
               </div>
+            </div>
+
+            <!-- 数据集列表：一次显示全部，以列表形式在下方排列 -->
+            <div class="dataset-section">
+              <div class="dataset-section-header">
+                <div class="section-title">数据集列表</div>
+                <span class="dataset-count">
+                  共 <b>{{ pool.data_sets?.length ?? 0 }}</b> 个 · 已挂载
+                  <b>{{ mountedDatasetCount(pool) }}</b> 个
+                </span>
+              </div>
+              <!-- 数据集基本容量信息与挂载状态 -->
+              <div v-if="pool.data_sets?.length" class="dataset-list">
+                <div v-for="ds in pool.data_sets" :key="ds.name" class="dataset-item">
+                  <div class="dataset-row">
+                    <span class="dataset-name" :title="ds.name">{{ ds.name }}</span>
+                    <span class="dataset-ratio">{{ getDatasetUsePct(ds) }}%</span>
+                    <el-tag
+                      :type="ds.is_mount ? 'success' : 'info'"
+                      size="small"
+                      class="dataset-mount-tag"
+                    >
+                      {{ ds.is_mount ? '已挂载' : '未挂载' }}
+                    </el-tag>
+                  </div>
+                  <el-progress
+                    class="dataset-progress"
+                    :percentage="getDatasetUsePct(ds)"
+                    :color="getUsageColorByPct(getDatasetUsePct(ds))"
+                    :stroke-width="4"
+                    :show-text="false"
+                  />
+                  <div class="dataset-meta">
+                    <span :title="ds.mount_point">挂载点: {{ ds.mount_point || '—' }}</span>
+                    <span
+                      >已用 {{ formatBytes(ds.used_bytes) }} / 共
+                      {{ formatBytes(ds.total_bytes) }}</span
+                    >
+                  </div>
+                  <!-- 数据集操作按钮(接口待对接) -->
+                  <div class="dataset-actions">
+                    <ElButton
+                      v-if="!ds.is_mount"
+                      size="small"
+                      type="primary"
+                      link
+                      @click="handleDatasetMount(ds)"
+                      >挂载
+                    </ElButton>
+                    <ElButton
+                      v-else
+                      size="small"
+                      type="warning"
+                      link
+                      @click="handleDatasetUnmount(ds)"
+                      >卸载
+                    </ElButton>
+                    <ElButton size="small" type="danger" link @click="handleDatasetDestroy(ds)"
+                      >销毁
+                    </ElButton>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="dataset-empty">暂无数据集</div>
             </div>
           </div>
         </div>
@@ -360,11 +367,10 @@
     />
     <!-- 创建Zpool弹窗 -->
     <CreateZPool v-model:visible="createZPoolDialogVisible" />
-    <!-- 创建存储空间弹窗 -->
-    <CreateStorageSpace
+    <!-- 创建ZFS存储空间弹窗 -->
+    <CreateZfsStorageSpace
       v-model:visible="createStorageSpaceDialogVisible"
-      :filter-pool-type="'ZFS'"
-      :default-vg-name="createSpaceDefaultVgName"
+      :default-pool-name="createSpaceDefaultPoolName"
       @call-storage-method="handleCallStorageMethod"
     />
   </div>
@@ -388,7 +394,7 @@
   import { unitConvertAdapter } from '@utils/tools'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import CreateZPool from '@views/storage-system/storage-manager/disk-manager/modules/create-zpool.vue'
-  import CreateStorageSpace from '@views/storage-system/storage-manager/storage-space/modules/create-storage-space.vue'
+  import CreateZfsStorageSpace from './modules/create-zfs-storage-space.vue'
 
   defineOptions({ name: 'ZpoolManager' })
 
@@ -400,8 +406,8 @@
   const createZPoolDialogVisible = ref(false)
   // 创建存储空间弹窗显隐
   const createStorageSpaceDialogVisible = ref(false)
-  // 创建存储空间弹窗默认选中的存储池
-  const createSpaceDefaultVgName = ref('')
+  // 创建存储空间弹窗默认选中的存储池名称
+  const createSpaceDefaultPoolName = ref('')
 
   /** 刷新Zpool存储池列表（拉取 /zfs/getZPoolMap 数据） */
   const refreshZpoolData = async () => {
@@ -450,13 +456,13 @@
 
   // 工具栏创建存储空间（不指定默认存储池）
   const handleCreateStorageSpace = () => {
-    createSpaceDefaultVgName.value = ''
+    createSpaceDefaultPoolName.value = ''
     createStorageSpaceDialogVisible.value = true
   }
 
   // 在指定存储池上创建存储空间
   const handleZpoolCreateSpace = () => {
-    createSpaceDefaultVgName.value = menuItemData.value.pool_name
+    createSpaceDefaultPoolName.value = menuItemData.value.pool_name
     createStorageSpaceDialogVisible.value = true
   }
 
@@ -848,6 +854,10 @@
     return Math.min(100, Math.max(0, Math.round(pct)))
   }
 
+  /** 已挂载的数据集数量 */
+  const mountedDatasetCount = (pool: ZFSPool): number =>
+    pool.data_sets?.filter((ds) => ds.is_mount).length ?? 0
+
   // ========== 数据集操作(按钮占位，接口待对接) ==========
   /** 挂载数据集(待对接接口) */
   const handleDatasetMount = (ds: ZFSDataSet) => {
@@ -1078,8 +1088,8 @@
     border-radius: 8px;
   }
 
-  /* 卡片信息横向平铺(1基本信息/2容量/3健康/4磁盘运行状态) */
-  .card-sections {
+  /* 卡片上部：基本信息 + 健康状态 横向平铺 */
+  .card-top {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
@@ -1240,14 +1250,37 @@
     text-align: center;
   }
 
-  /* 数据集容量与挂载状态列表 */
+  /* 数据集列表区：一次显示全部，以列表形式在下方排列 */
+  .dataset-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f2f5;
+  }
+
+  /* 数据集列表标题行：标题 + 数量统计 */
+  .dataset-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dataset-count {
+    font-size: 12px;
+    color: #909399;
+  }
+
+  .dataset-count b {
+    color: #303133;
+  }
+
+  /* 数据集容量与挂载状态列表（全部展示，不做内部滚动） */
   .dataset-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 170px;
-    overflow-y: auto;
-    padding-right: 4px;
   }
 
   .dataset-item {

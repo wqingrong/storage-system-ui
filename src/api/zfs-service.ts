@@ -1,5 +1,5 @@
 import request from '@/utils/http'
-import { PoolSummary, ZFSPool, ZFSPoolMap } from '@/entity/zfs'
+import { NewZfsDataSet, PoolSummary, ZFSDataSet, ZFSPool, ZFSPoolMap } from '@/entity/zfs'
 
 /**
  * 获取当前全部ZFS存储池(池名 → 完整池信息)
@@ -30,5 +30,17 @@ export function fetchGetZPoolDetail(poolName: string) {
   return request.get<ZFSPool>({
     url: '/zfs/getZPoolDetail',
     params: { pool: poolName }
+  })
+}
+
+/**
+ * 在ZFS存储池上创建数据集(存储空间)
+ * @param data 创建参数
+ * @returns 创建成功的数据集信息
+ */
+export function fetchCreateZfsDataSet(data: NewZfsDataSet) {
+  return request.post<ZFSDataSet>({
+    url: '/zfs/createZfsDataSet',
+    data
   })
 }
