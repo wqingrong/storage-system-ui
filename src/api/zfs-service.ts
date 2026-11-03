@@ -1,5 +1,6 @@
 import request from '@/utils/http'
 import { NewZfsDataSet, PoolSummary, ZFSDataSet, ZFSPool, ZFSPoolMap } from '@/entity/zfs'
+import { Disk } from '@/typings/disk'
 
 /**
  * 获取当前全部ZFS存储池(池名 → 完整池信息)
@@ -41,6 +42,53 @@ export function fetchGetZPoolDetail(poolName: string) {
 export function fetchCreateZfsDataSet(data: NewZfsDataSet) {
   return request.post<ZFSDataSet>({
     url: '/zfs/createZfsDataSet',
+    data
+  })
+}
+
+/**
+ * 销毁ZFS存储池
+ * @param data 池标识(按池名销毁)
+ * @returns 销毁的存储池信息
+ */
+export function fetchDestroyZPool(data: Pick<ZFSPool, 'pool_name'>) {
+  return request.post<ZFSPool>({
+    url: '/zfs/destroyZPool',
+    data
+  })
+}
+
+/**
+ * 获取未导入的ZFS存储池列表
+ * @returns 未导入存储池列表
+ */
+export function fetchUnImportZPoolList() {
+  return request.get<Disk.Device.StoragePool[]>({
+    url: '/zfs/unImportZPoolList'
+  })
+}
+
+/**
+ * 导入ZFS存储池(按UUID导入)
+ * @param uuid 池UUID
+ * @param poolName 池名称
+ * @returns 导入结果
+ */
+export function fetchImportZPool(uuid: string, poolName: string) {
+  return request.get<{ uuid: string; poolName: string }>({
+    url: '/zfs/importZPool',
+    params: { uuid, poolName }
+  })
+}
+
+/**
+ * 停止ZFS存储池
+ * @param data 池标识(按池名停止)
+ * @returns 停止的存储池信息
+ */
+export function fetchStopZPool(data: Pick<ZFSPool, 'pool_name'>) {
+  return request.post<ZFSPool>({
+    url: '/zfs/stopZPool',
     data
   })
 }

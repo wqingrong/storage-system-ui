@@ -42,11 +42,22 @@
   import { ElCheckbox, ElMessageBox } from 'element-plus'
   import DiskFormatDialog from '@views/storage-system/storage-manager/disk-manager/modules/disk-format-dialog.vue'
 
+  /** 弹窗所需的存储池最小信息（软RAID场景传完整StoragePool，ZFS场景可只传名称/类型） */
+  interface PoolItemLike {
+    poolName: string
+    poolType: string
+    raidDetailInfo?: { grade?: string; devicePath?: string }
+  }
+
   interface Props {
     viable: boolean
-    poolItem: Disk.Device.StoragePool
+    poolItem: PoolItemLike
     optionDiskItem: any
     option: string
+    /** 可选：外部传入的raid等级（ZFS场景为vdev分组类型，如 mirror/raidz2），缺省回退 poolItem.raidDetailInfo.grade */
+    raidGrade?: string
+    /** 可选：外部传入的raid设备路径（ZFS场景为分组dev_path），缺省回退 poolItem.raidDetailInfo.devicePath */
+    raidDevicePath?: string
   }
 
   const diskDeviceList = ref<Disk.Device.DeviceMessage[]>([])
@@ -122,8 +133,8 @@
         const params: PoolImportDisk = {
           poolName: props.poolItem.poolName,
           poolType: props.poolItem.poolType,
-          grade: props.poolItem.raidDetailInfo.grade,
-          raidDevicePath: props.poolItem.raidDetailInfo.devicePath,
+          grade: props.raidGrade ?? props.poolItem.raidDetailInfo?.grade ?? '',
+          raidDevicePath: props.raidDevicePath ?? props.poolItem.raidDetailInfo?.devicePath ?? '',
           diskDeviceBasic: selectedDisk.value
         }
         fetchPoolImportDisk(params).then(() => {
@@ -136,8 +147,8 @@
         const params = {
           poolName: props.poolItem.poolName,
           poolType: props.poolItem.poolType,
-          grade: props.poolItem.raidDetailInfo.grade,
-          raidDevicePath: props.poolItem.raidDetailInfo.devicePath,
+          grade: props.raidGrade ?? props.poolItem.raidDetailInfo?.grade ?? '',
+          raidDevicePath: props.raidDevicePath ?? props.poolItem.raidDetailInfo?.devicePath ?? '',
           isForce: false,
           olderDiskDevice: props.optionDiskItem,
           newerDiskDevice: selectedDisk.value

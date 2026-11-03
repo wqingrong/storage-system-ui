@@ -15,8 +15,36 @@
       </ElSpace>
     </div>
 
+    <!-- 未导入Zpool列表 -->
+    <div v-if="unImportPoolList.length" class="unimport-section">
+      <div class="unimport-header">
+        <span class="unimport-title">未导入Zpool</span>
+        <span class="unimport-count">
+          共 <b>{{ unImportPoolList.length }}</b> 个存储池
+        </span>
+      </div>
+      <div class="unimport-list">
+        <div v-for="pool in unImportPoolList" :key="pool.UUID" class="unimport-item">
+          <span class="unimport-pool-name">{{ pool.poolName }}</span>
+          <span class="unimport-pool-uuid" :title="pool.UUID">UUID: {{ pool.UUID }}</span>
+          <span class="unimport-disk-count">
+            {{ pool.raidDetailInfo?.diskDeviceList?.length ?? 0 }} 块盘
+          </span>
+          <span class="unimport-grade">{{ pool.raidDetailInfo?.grade || '—' }}</span>
+          <ElButton
+            type="primary"
+            size="small"
+            :loading="importingUuid === pool.UUID"
+            @click="handleImportUnImportPool(pool)"
+          >
+            导入
+          </ElButton>
+        </div>
+      </div>
+    </div>
+
     <div class="zpool-layout">
-      <!-- 左侧：每个存储池一列，列内多张卡片 -->
+      <!-- 每个存储池占一整行，纵向排列 -->
       <div v-loading="loading" class="zpool-columns">
         <el-empty
           v-if="!loading && zpoolList.length === 0"
@@ -149,7 +177,7 @@
               </div>
             </div>
 
-            <!-- 数据集列表：一次显示全部，以列表形式在下方排列 -->
+            <!-- 数据集列表：一次显示全部，以卡片形式在下方排列 -->
             <div class="dataset-section">
               <div class="dataset-section-header">
                 <div class="section-title">数据集列表</div>
@@ -158,55 +186,61 @@
                   <b>{{ mountedDatasetCount(pool) }}</b> 个
                 </span>
               </div>
-              <!-- 数据集基本容量信息与挂载状态 -->
+              <!-- 数据集卡片：图标+名称+挂载状态 / 容量进度 / 更多操作 / 详细信息 -->
               <div v-if="pool.data_sets?.length" class="dataset-list">
                 <div v-for="ds in pool.data_sets" :key="ds.name" class="dataset-item">
-                  <div class="dataset-row">
-                    <span class="dataset-name" :title="ds.name">{{ ds.name }}</span>
-                    <span class="dataset-ratio">{{ getDatasetUsePct(ds) }}%</span>
-                    <el-tag
-                      :type="ds.is_mount ? 'success' : 'info'"
-                      size="small"
-                      class="dataset-mount-tag"
-                    >
-                      {{ ds.is_mount ? '已挂载' : '未挂载' }}
-                    </el-tag>
+                  <!-- 卡片头部 -->
+                  <div class="dataset-head">
+                    <img class="dataset-icon" :src="datasetIcon" alt="" />
+                    <div class="dataset-head-main">
+                      <div class="dataset-title" :title="ds.name">
+                        存储空间:{{ getDatasetDisplayName(ds) }}
+                      </div>
+                      <div
+                        class="dataset-status"
+                        :class="ds.is_mount ? 'is-mounted' : 'is-unmounted'"
+                      >
+                        {{ ds.is_mount ? '已挂载' : '未挂载' }}
+                      </div>
+                    </div>
+                    <div class="dataset-capacity">
+                      <div class="dataset-capacity-top">
+                        <el-progress
+                          class="dataset-progress"
+                          :percentage="getDatasetUsePct(ds)"
+                          :color="getUsageColorByPct(getDatasetUsePct(ds))"
+                          :stroke-width="4"
+                          :show-text="false"
+                        />
+                        <span class="dataset-ratio">{{ getDatasetUsePct(ds) }}%</span>
+                      </div>
+                      <div class="dataset-capacity-bottom">
+                        <span class="dataset-total">{{ formatBytes(ds.total_bytes) }}</span>
+                        <span class="dataset-free">| {{ formatBytes(ds.free_bytes) }}可用</span>
+                      </div>
+                    </div>
+                    <div class="dataset-more" @click.stop="showDatasetMenu($event, ds)">
+                      <ElIcon><MoreFilled /></ElIcon>
+                    </div>
                   </div>
-                  <el-progress
-                    class="dataset-progress"
-                    :percentage="getDatasetUsePct(ds)"
-                    :color="getUsageColorByPct(getDatasetUsePct(ds))"
-                    :stroke-width="4"
-                    :show-text="false"
-                  />
-                  <div class="dataset-meta">
-                    <span :title="ds.mount_point">挂载点: {{ ds.mount_point || '—' }}</span>
-                    <span
-                      >已用 {{ formatBytes(ds.used_bytes) }} / 共
-                      {{ formatBytes(ds.total_bytes) }}</span
-                    >
-                  </div>
-                  <!-- 数据集操作按钮(接口待对接) -->
-                  <div class="dataset-actions">
-                    <ElButton
-                      v-if="!ds.is_mount"
-                      size="small"
-                      type="primary"
-                      link
-                      @click="handleDatasetMount(ds)"
-                      >挂载
-                    </ElButton>
-                    <ElButton
-                      v-else
-                      size="small"
-                      type="warning"
-                      link
-                      @click="handleDatasetUnmount(ds)"
-                      >卸载
-                    </ElButton>
-                    <ElButton size="small" type="danger" link @click="handleDatasetDestroy(ds)"
-                      >销毁
-                    </ElButton>
+                  <!-- 卡片详细信息 -->
+                  <div class="dataset-detail">
+                    <div class="dataset-detail-row">
+                      <span class="dataset-detail-label">文件系统:</span>
+                      <span class="dataset-detail-value">{{ getDatasetFileSystem(ds) }}</span>
+                    </div>
+                    <div class="dataset-detail-row">
+                      <span class="dataset-detail-label">数据集:</span>
+                      <span class="dataset-detail-value">{{ getDatasetPath(ds) }}</span>
+                    </div>
+                    <div class="dataset-detail-row">
+                      <span class="dataset-detail-label">挂载点:</span>
+                      <span class="dataset-detail-value">{{ ds.mount_point || '—' }}</span>
+                    </div>
+                    <div class="dataset-detail-row">
+                      <span class="dataset-detail-label">挂载状态:</span>
+                      <span class="dataset-detail-value">{{ getDatasetMountState(ds) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -343,7 +377,17 @@
                 >踢盘
               </ElButton>
               <ElButton
-                v-if="selectedDiskRow.vdev.state === 'REMOVED'"
+                v-if="isFaultedDisk(selectedDiskRow.vdev)"
+                size="small"
+                type="warning"
+                plain
+                @click="handleReplaceDisk(diskListPool, selectedDiskRow)"
+                >替换
+              </ElButton>
+              <ElButton
+                v-if="
+                  selectedDiskRow.vdev.state === 'REMOVED' || isFaultedDisk(selectedDiskRow.vdev)
+                "
                 size="small"
                 type="primary"
                 plain
@@ -357,11 +401,23 @@
       </div>
     </el-dialog>
 
+    <!-- 替换故障盘弹窗（选择空闲磁盘） -->
+    <DiskSelectedDialog
+      v-model:viable="replaceDialogVisible"
+      v-model:pool-item="replacePoolItem"
+      v-model:option-disk-item="replaceDiskItem"
+      v-model:option="replaceOption"
+      :raid-grade="replaceGrade"
+      :raid-device-path="replaceRaidDevicePath"
+      @refresh-storage-list="handleReplaceDiskSuccess"
+    />
     <!-- 右键菜单组件 -->
     <ArtMenuRight
       ref="menuRef"
       :menu-items="menuItems"
+      :menu-width="170"
       :submenu-width="140"
+      :item-height="34"
       :border-radius="10"
       @select="handleSelect"
     />
@@ -378,28 +434,33 @@
 
 <script lang="ts" setup>
   import { computed, nextTick, ref, watch } from 'vue'
-  import { fetchGetZPoolMap } from '@/api/zfs-service'
+  import {
+    fetchDestroyZPool,
+    fetchGetZPoolMap,
+    fetchImportZPool,
+    fetchStopZPool,
+    fetchUnImportZPoolList
+  } from '@/api/zfs-service'
   import type { HealthLevel, PoolHealthState, VdevNode, ZFSDataSet, ZFSPool } from '@/entity/zfs'
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
   import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'
   import { List, MoreFilled, Plus, Refresh, WarningFilled } from '@element-plus/icons-vue'
-  import {
-    fetchDestroyZPool,
-    fetchImportZPool,
-    fetchPoolImportDisk,
-    fetchPoolKickDisk,
-    fetchStopZPool
-  } from '@/api/storage-service'
-  import { Api } from '@/typings/api'
+  import { fetchPoolImportDisk, fetchPoolKickDisk } from '@/api/storage-service'
+  import { Disk } from '@/typings/disk'
   import { unitConvertAdapter } from '@utils/tools'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import CreateZPool from '@views/storage-system/storage-manager/disk-manager/modules/create-zpool.vue'
   import CreateZfsStorageSpace from './modules/create-zfs-storage-space.vue'
+  import DiskSelectedDialog from '@views/storage-system/storage-manager/storage-space/modules/disk-selected-dialog.vue'
 
   defineOptions({ name: 'ZpoolManager' })
 
   // ZFS存储池列表(来自 /zfs/getZPoolMap)
   const zpoolList = ref<ZFSPool[]>([])
+  // 未导入Zpool列表(来自 /zfs/unImportZPoolList)
+  const unImportPoolList = ref<Disk.Device.StoragePool[]>([])
+  // 正在导入的池UUID(按钮loading态)
+  const importingUuid = ref('')
   // 列表加载状态
   const loading = ref(false)
   // 创建Zpool弹窗显隐
@@ -420,6 +481,18 @@
       zpoolList.value = []
     } finally {
       loading.value = false
+    }
+    // 未导入列表独立刷新，失败不影响已导入列表展示
+    refreshUnImportZPoolList()
+  }
+
+  /** 刷新未导入Zpool列表（拉取 /zfs/unImportZPoolList 数据） */
+  const refreshUnImportZPoolList = async () => {
+    try {
+      const list = await fetchUnImportZPoolList()
+      unImportPoolList.value = Array.isArray(list) ? list : []
+    } catch {
+      unImportPoolList.value = []
     }
   }
 
@@ -483,11 +556,15 @@
   // ========== 右键菜单 ==========
   const menuRef = ref<InstanceType<typeof ArtMenuRight>>()
   const menuItemData = ref<ZFSPool>({} as ZFSPool)
+  // 当前操作的数据集
+  const menuDataset = ref<ZFSDataSet | null>(null)
+  // 菜单作用对象：存储池 / 数据集
+  const menuContainer = ref<'zpool' | 'dataset'>('zpool')
 
   /**
    * 右键菜单选项配置（存储池）
    */
-  const menuItems: MenuItemType[] = [
+  const ZPOOL_MENU_ITEMS: MenuItemType[] = [
     {
       key: 'zpool_create_space',
       label: '创建存储空间',
@@ -512,6 +589,48 @@
   ]
 
   /**
+   * 右键菜单选项配置（数据集，接口待对接）
+   * 已挂载时不允许再次挂载，未挂载时不允许卸载
+   */
+  const menuItems = computed<MenuItemType[]>(() => {
+    if (menuContainer.value === 'dataset') {
+      const mounted = !!menuDataset.value?.is_mount
+      return [
+        {
+          key: 'dataset_mount',
+          label: '存储空间挂载',
+          icon: '&#xe67a;',
+          disabled: mounted
+        },
+        {
+          key: 'dataset_unmount',
+          label: '存储空间卸载',
+          icon: '&#xe701;',
+          disabled: !mounted
+        },
+        {
+          key: 'dataset_destroy',
+          label: '存储空间销毁',
+          icon: '&#xe6d4;',
+          showLine: true
+        }
+      ]
+    }
+    return ZPOOL_MENU_ITEMS
+  })
+
+  /** 显示数据集「更多操作」菜单 */
+  const showDatasetMenu = (e: MouseEvent, ds: ZFSDataSet) => {
+    e.preventDefault()
+    e.stopPropagation()
+    menuContainer.value = 'dataset'
+    menuDataset.value = ds
+    nextTick(() => {
+      menuRef.value?.show(e)
+    })
+  }
+
+  /**
    * 处理右键菜单项选择
    * @param item 选中的菜单项
    */
@@ -522,14 +641,14 @@
         handleZpoolCreateSpace()
         break
       case 'zpool_import':
-        // Zpool启动
-        fetchImportZPool(buildZPoolDto()).then(() => {
+        // Zpool启动(导入，对接 /zfs/importZPool)
+        fetchImportZPool(menuItemData.value.uuid, menuItemData.value.pool_name).then(() => {
           refreshZpoolData()
         })
         break
       case 'zpool_stop':
-        // Zpool停止
-        fetchStopZPool(buildZPoolDto()).then(() => {
+        // Zpool停止(对接 /zfs/stopZPool)
+        fetchStopZPool({ pool_name: menuItemData.value.pool_name }).then(() => {
           refreshZpoolData()
         })
         break
@@ -537,19 +656,44 @@
         // Zpool销毁（需二次确认）
         destroyZPool()
         break
+      case 'dataset_mount':
+        // 数据集挂载（接口待对接）
+        if (menuDataset.value) handleDatasetMount(menuDataset.value)
+        break
+      case 'dataset_unmount':
+        // 数据集卸载（需二次确认，接口待对接）
+        if (menuDataset.value) handleDatasetUnmount(menuDataset.value)
+        break
+      case 'dataset_destroy':
+        // 数据集销毁（需二次确认，接口待对接）
+        if (menuDataset.value) handleDatasetDestroy(menuDataset.value)
+        break
       default:
         break
     }
   }
 
-  // 组装Zpool操作DTO（ZFS池以池名作为devicePath）
-  const buildZPoolDto = (): Api.Dto.ImportZPoolDto => {
-    const poolItem = menuItemData.value
-    return {
-      UUID: poolItem.uuid,
-      poolName: poolItem.pool_name,
-      devicePath: poolItem.pool_name
-    }
+  /** 导入未导入的Zpool（需二次确认，按UUID导入） */
+  const handleImportUnImportPool = (pool: Disk.Device.StoragePool) => {
+    ElMessageBox.confirm(`确定导入Zpool存储池「${pool.poolName}」吗？`, '导入确认', {
+      confirmButtonText: '确定导入',
+      cancelButtonText: '取消',
+      type: 'info'
+    })
+      .then(() => {
+        importingUuid.value = pool.UUID
+        fetchImportZPool(pool.UUID, pool.poolName)
+          .then(() => {
+            ElMessage.success(`Zpool存储池「${pool.poolName}」导入成功`)
+            refreshZpoolData()
+          })
+          .finally(() => {
+            importingUuid.value = ''
+          })
+      })
+      .catch(() => {
+        ElMessage.info('已取消导入操作')
+      })
   }
 
   // Zpool销毁（需二次确认）
@@ -566,7 +710,9 @@
       }
     )
       .then(() => {
-        fetchDestroyZPool(buildZPoolDto()).then(() => {
+        // 对接zfs模块销毁接口(/zfs/destroyZPool)，按池名销毁
+        fetchDestroyZPool({ pool_name: poolItem.pool_name }).then(() => {
+          ElMessage.success(`Zpool存储池「${poolItem.pool_name}」销毁成功`)
           refreshZpoolData()
         })
       })
@@ -583,6 +729,7 @@
   const showMenu = (e: MouseEvent, poolItem: ZFSPool) => {
     e.preventDefault()
     e.stopPropagation()
+    menuContainer.value = 'zpool'
     menuItemData.value = poolItem
     nextTick(() => {
       menuRef.value?.show(e)
@@ -769,6 +916,42 @@
     selectedDiskRow.value = row
   }
 
+  // ========== 故障盘替换/引入 ==========
+  // 替换故障盘弹窗显隐
+  const replaceDialogVisible = ref(false)
+  // 替换弹窗关联的存储池（仅需名称/类型，软RAID详情由外部传入）
+  const replacePoolItem = ref<{ poolName: string; poolType: string }>({
+    poolName: '',
+    poolType: 'ZFS'
+  })
+  // 待替换的故障盘vdev
+  const replaceDiskItem = ref<VdevNode | null>(null)
+  // 替换弹窗操作类型
+  const replaceOption = ref('zfsReplaceDisk')
+  // 故障盘所属分组（raid等级/设备路径）
+  const replaceGrade = ref('')
+  const replaceRaidDevicePath = ref('')
+
+  /** 磁盘是否处于故障状态（故障/不可用，支持替换和引入） */
+  const isFaultedDisk = (vdev: VdevNode): boolean =>
+    vdev.state === 'FAULTED' || vdev.state === 'UNAVAIL'
+
+  /** 替换：打开磁盘选择弹窗，选择新盘替换故障盘 */
+  const handleReplaceDisk = (pool: ZFSPool | null, leaf: DiskLeaf) => {
+    if (!pool) return
+    replacePoolItem.value = { poolName: pool.pool_name, poolType: 'ZFS' }
+    replaceDiskItem.value = leaf.vdev
+    replaceGrade.value = leaf.parent?.vdev_type ?? ''
+    replaceRaidDevicePath.value = leaf.parent?.dev_path ?? ''
+    replaceDialogVisible.value = true
+  }
+
+  /** 替换成功后：刷新存储池数据并关闭磁盘列表弹窗 */
+  const handleReplaceDiskSuccess = () => {
+    refreshZpoolData()
+    closeDiskList()
+  }
+
   /** 踢盘：将磁盘从存储池中踢出（需二次确认） */
   const handleKickDisk = (pool: ZFSPool | null, leaf: DiskLeaf) => {
     if (!pool) return
@@ -857,6 +1040,23 @@
   /** 已挂载的数据集数量 */
   const mountedDatasetCount = (pool: ZFSPool): number =>
     pool.data_sets?.filter((ds) => ds.is_mount).length ?? 0
+
+  // ========== 数据集卡片展示 ==========
+  // 数据集卡片图标（蓝色三维方块）
+  const datasetIcon = new URL('/src/assets/img/svg/storage-space.svg', import.meta.url).href
+
+  /** 数据集展示名称（取数据集路径末段，如 zpool1/data-set1 → data-set1） */
+  const getDatasetDisplayName = (ds: ZFSDataSet): string =>
+    ds.name?.split('/').pop() || ds.name || '—'
+
+  /** 数据集文件系统（后端未返回类型时按 ZFS 展示） */
+  const getDatasetFileSystem = (ds: ZFSDataSet): string => (ds.type ? ds.type.toUpperCase() : 'ZFS')
+
+  /** 数据集完整路径（device_path 优先，缺失时回退 name） */
+  const getDatasetPath = (ds: ZFSDataSet): string => ds.device_path || ds.name || '—'
+
+  /** 数据集挂载状态原始值（与 zfs 命令输出保持一致） */
+  const getDatasetMountState = (ds: ZFSDataSet): string => (ds.is_mount ? 'MOUNTED' : 'UNMOUNTED')
 
   // ========== 数据集操作(按钮占位，接口待对接) ==========
   /** 挂载数据集(待对接接口) */
@@ -1005,6 +1205,87 @@
     margin: 10px;
   }
 
+  /* 未导入Zpool列表 */
+  .unimport-section {
+    margin: 0 10px 10px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+  }
+
+  .unimport-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .unimport-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .unimport-count {
+    font-size: 12px;
+    color: #909399;
+  }
+
+  .unimport-count b {
+    color: #e6a23c;
+  }
+
+  .unimport-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .unimport-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    background: #fafbfc;
+    border: 1px solid #f0f2f5;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .unimport-pool-name {
+    font-weight: 500;
+    color: #303133;
+  }
+
+  .unimport-pool-uuid {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 360px;
+    color: #c0c4cc;
+    font-size: 12px;
+  }
+
+  .unimport-disk-count {
+    color: #606266;
+    font-size: 12px;
+  }
+
+  .unimport-grade {
+    padding: 0 8px;
+    border-radius: 10px;
+    background: #f0f2f5;
+    color: #606266;
+    font-size: 12px;
+    line-height: 20px;
+  }
+
+  .unimport-item .el-button {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
   /* 整体布局：左侧存储池列 + 右侧磁盘详情面板 */
   .zpool-layout {
     display: flex;
@@ -1013,16 +1294,15 @@
     padding: 10px;
   }
 
-  /* 每个存储池一列，横向排列铺满整个宽度（超出横向滚动） */
+  /* 每个存储池占一整行，纵向排列铺满整个宽度 */
   .zpool-columns {
     flex: 1;
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
     gap: 20px;
     min-width: 0;
     min-height: 200px;
-    overflow-x: auto;
     padding-bottom: 4px;
   }
 
@@ -1035,8 +1315,8 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    flex: 1 1 0;
-    min-width: 640px;
+    width: 100%;
+    min-width: 0;
   }
 
   /* 列头：池名 + 健康状态 + 更多操作 */
@@ -1250,7 +1530,7 @@
     text-align: center;
   }
 
-  /* 数据集列表区：一次显示全部，以列表形式在下方排列 */
+  /* 数据集列表区：一次显示全部，以卡片形式在下方排列 */
   .dataset-section {
     display: flex;
     flex-direction: column;
@@ -1276,76 +1556,158 @@
     color: #303133;
   }
 
-  /* 数据集容量与挂载状态列表（全部展示，不做内部滚动） */
+  /* 数据集卡片列表（全部展示，不做内部滚动） */
   .dataset-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 16px;
   }
 
   .dataset-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 6px 8px;
-    background: #fafbfc;
-    border-radius: 6px;
+    gap: 8px;
   }
 
-  .dataset-row {
+  /* 卡片头部：图标 + 名称/挂载状态 + 容量进度 + 更多操作 */
+  .dataset-head {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 12px;
+  }
+
+  .dataset-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    object-fit: contain;
+  }
+
+  .dataset-head-main {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 2px;
     min-width: 0;
   }
 
-  .dataset-name {
-    flex: 1;
-    min-width: 0;
+  .dataset-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
     color: #303133;
+  }
+
+  .dataset-status {
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .dataset-status.is-mounted {
+    color: #4caf50;
+  }
+
+  .dataset-status.is-unmounted {
+    color: #ec6f30;
+  }
+
+  /* 容量进度区（宽度在原有基础上加宽 50px，进度条更长） */
+  .dataset-capacity {
+    display: flex;
+    flex: 0 0 calc(40% + 50px);
+    flex-direction: column;
+    gap: 4px;
+    max-width: 370px;
+    min-width: 210px;
+  }
+
+  .dataset-capacity-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dataset-progress {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 进度条轨道与圆角（与设计稿一致） */
+  .dataset-progress :deep(.el-progress-bar__outer) {
+    background: #e9edf5;
+    border-radius: 3px;
+  }
+
+  .dataset-progress :deep(.el-progress-bar__inner) {
+    border-radius: 3px;
   }
 
   .dataset-ratio {
     flex-shrink: 0;
     font-size: 12px;
-    color: #909399;
+    color: #303133;
   }
 
-  .dataset-mount-tag {
-    flex-shrink: 0;
-  }
-
-  .dataset-progress {
-    width: 100%;
-  }
-
-  .dataset-meta {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
+  .dataset-capacity-bottom {
     font-size: 12px;
     color: #909399;
   }
 
-  .dataset-meta span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .dataset-total {
+    color: #2b8dfa;
   }
 
-  /* 数据集操作按钮 */
-  .dataset-actions {
+  .dataset-free {
+    margin-left: 2px;
+  }
+
+  /* 更多操作（点击弹出右键菜单） */
+  .dataset-more {
     display: flex;
-    justify-content: flex-end;
-    gap: 4px;
-    padding-top: 4px;
-    border-top: 1px dashed #ebeef5;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    border-radius: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: 20px;
+    color: #606266;
+  }
+
+  .dataset-more:hover {
+    background: #f0f2f5;
+  }
+
+  /* 数据集详细信息（灰底，标签40% 值60% 两列对齐） */
+  .dataset-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    background: #f4f6f9;
+    border-radius: 4px;
+  }
+
+  .dataset-detail-row {
+    display: flex;
+    font-size: 12px;
+    line-height: 22px;
+  }
+
+  .dataset-detail-label {
+    width: 40%;
+    flex-shrink: 0;
+    color: #666;
+  }
+
+  .dataset-detail-value {
+    width: 60%;
+    color: #333;
+    word-break: break-all;
   }
 
   .pool-uuid {
