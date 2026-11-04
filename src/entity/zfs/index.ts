@@ -23,6 +23,7 @@ export type VdevState =
   | 'OFFLINE'
   | 'REMOVED'
   | 'SPARE'
+  | 'DEGRADED'
   | 'unknown'
 
 /** VDEV类型 */
@@ -295,4 +296,28 @@ export interface NewZfsDataSet {
   unit: string
   /** 最大空间(0~100，单位固定为%，占存储池总容量的百分比) */
   max_space_size: string
+}
+
+/** ZFS踢盘请求参数，与后端 zfsmodel.KickVdevNode 的 JSON 标签一一对应 */
+export interface KickVdevNode {
+  /** 存储池名称 */
+  pool_name: string
+  /** vdev设备路径，如 /dev/disk/by-id/wwn-xxx */
+  vdev_path: string
+  /** 节点名称(磁盘的by-id名，如 wwn-0x5000cca...，用于拼 /dev/disk/by-id/<name>) */
+  vdev_name: string
+  /** 节点类型，踢盘固定为 disk */
+  vdev_type: VdevType
+  /** 是否强制踢出 */
+  is_force: boolean
+  /** 序列号(后端仅用于日志展示，vdev树未返回真实序列号，以by-id名兜底) */
+  serial_number: string
+}
+
+/** ZFS引入磁盘请求参数，与后端 zfsmodel.ImportDiskNode 的 JSON 标签一一对应 */
+export interface ImportDiskParams {
+  /** 存储池名称 */
+  pool_name: string
+  /** 待引入的磁盘vdev节点(后端取 name 拼 /dev/disk/by-id/<name> 执行 zpool online) */
+  device: VdevNode
 }

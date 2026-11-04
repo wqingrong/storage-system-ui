@@ -1,5 +1,13 @@
 import request from '@/utils/http'
-import { NewZfsDataSet, PoolSummary, ZFSDataSet, ZFSPool, ZFSPoolMap } from '@/entity/zfs'
+import {
+  ImportDiskParams,
+  KickVdevNode,
+  NewZfsDataSet,
+  PoolSummary,
+  ZFSDataSet,
+  ZFSPool,
+  ZFSPoolMap
+} from '@/entity/zfs'
 import { Disk } from '@/typings/disk'
 
 /**
@@ -126,5 +134,29 @@ export function fetchDestroyDataset(dataSet: ZFSDataSet) {
   return request.post<ZFSDataSet>({
     url: '/zfs/destroyDataset',
     data: dataSet
+  })
+}
+
+/**
+ * ZFS存储池踢盘(将磁盘从存储池中踢出，执行 zpool offline -f)
+ * @param data 踢盘参数(与后端 zfsmodel.KickVdevNode 对应)
+ * @returns 踢盘结果
+ */
+export function fetchKickVdev(data: KickVdevNode) {
+  return request.post<KickVdevNode>({
+    url: '/zfs/kickVdev',
+    data
+  })
+}
+
+/**
+ * ZFS存储池引入磁盘(将已移除/故障磁盘重新上线，执行 zpool online + zpool clear)
+ * @param data 引入参数(与后端 zfsmodel.ImportDiskNode 对应)
+ * @returns 引入结果
+ */
+export function fetchZfsImportDisk(data: ImportDiskParams) {
+  return request.post<ImportDiskParams>({
+    url: '/zfs/importDisk',
+    data
   })
 }

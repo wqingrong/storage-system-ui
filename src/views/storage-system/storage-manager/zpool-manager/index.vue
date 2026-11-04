@@ -439,16 +439,18 @@
     fetchDestroyZPool,
     fetchGetZPoolMap,
     fetchImportZPool,
+    fetchKickVdev,
     fetchMountVolume,
     fetchStopZPool,
     fetchUnImportZPoolList,
-    fetchUnmountVolume
+    fetchUnmountVolume,
+    fetchZfsImportDisk
   } from '@/api/zfs-service'
   import type { HealthLevel, PoolHealthState, VdevNode, ZFSDataSet, ZFSPool } from '@/entity/zfs'
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
   import ArtMenuRight from '@/components/core/others/art-menu-right/index.vue'
   import { List, MoreFilled, Plus, Refresh, WarningFilled } from '@element-plus/icons-vue'
-  import { fetchPoolImportDisk, fetchPoolKickDisk } from '@/api/storage-service'
+
   import { Disk } from '@/typings/disk'
   import { unitConvertAdapter } from '@utils/tools'
   import { ElMessage, ElMessageBox } from 'element-plus'
@@ -474,7 +476,7 @@
   const createSpaceDefaultPoolName = ref('')
 
   /** 刷新Zpool存储池列表（拉取 /zfs/getZPoolMap 数据） */
-  const refreshZpoolData = async () => {
+  const refreshZpoolData = async (): Promise<ZFSPool[]> => {
     loading.value = true
     try {
       const poolMap = await fetchGetZPoolMap()
@@ -487,6 +489,7 @@
     }
     // 未导入列表独立刷新，失败不影响已导入列表展示
     refreshUnImportZPoolList()
+    return zpoolList.value
   }
 
   /** 刷新未导入Zpool列表（拉取 /zfs/unImportZPoolList 数据） */
@@ -916,6 +919,16 @@
     selectedDiskRow.value = null
   }
 
+  /** 池数据刷新后同步磁盘列表弹窗引用的池对象(弹窗保持打开并更新列表) */
+  const syncDiskListPool = () => {
+    const current = diskListPool.value
+    if (!current) return
+    diskListPool.value =
+      zpoolList.value.find((item) => item.pool_name === current.pool_name) ?? current
+    // 行数据随池对象重建，清空选中避免详情面板引用旧对象
+    selectedDiskRow.value = null
+  }
+
   /** 点击磁盘行：左侧面板显示该磁盘详细信息 */
   const handleTableRowClick = (row: DiskLeaf) => {
     selectedDiskRow.value = row
@@ -939,7 +952,7 @@
 
   /** 磁盘是否处于故障状态（故障/不可用，支持替换和引入） */
   const isFaultedDisk = (vdev: VdevNode): boolean =>
-    vdev.state === 'FAULTED' || vdev.state === 'UNAVAIL'
+    vdev.state === 'FAULTED' || vdev.state === 'UNAVAIL' || vdev.state === 'DEGRADED'
 
   /** 替换：打开磁盘选择弹窗，选择新盘替换故障盘 */
   const handleReplaceDisk = (pool: ZFSPool | null, leaf: DiskLeaf) => {
@@ -957,9 +970,17 @@
     closeDiskList()
   }
 
-  /** 踢盘：将磁盘从存储池中踢出（需二次确认） */
+  /** vdev的by-id名(/dev/disk/by-id/xxx 的后缀，缺失时回退节点名称) */
+  const vdevByIdName = (vdev: VdevNode): string => {
+    const prefix = '/dev/disk/by-id/'
+    if (vdev.dev_path?.startsWith(prefix)) return vdev.dev_path.slice(prefix.length)
+    return vdev.name
+  }
+
+  /** 踢盘：将磁盘从存储池中踢出（需二次确认，对接 /zfs/kickVdev） */
   const handleKickDisk = (pool: ZFSPool | null, leaf: DiskLeaf) => {
     if (!pool) return
+    const byIdName = vdevByIdName(leaf.vdev)
     ElMessageBox.confirm(
       `确定将磁盘「${leaf.vdev.name}」从存储池「${pool.pool_name}」中踢出吗？`,
       '踢盘确认',
@@ -970,16 +991,16 @@
       }
     )
       .then(() => {
-        fetchPoolKickDisk({
-          poolName: pool.pool_name,
-          poolType: 'ZFS',
-          grade: leaf.parent?.vdev_type ?? '',
-          diskDevice: leaf.vdev.dev_path || leaf.vdev.name,
-          raidDevice: leaf.parent?.dev_path ?? '',
-          serialNumber: '',
-          wwn: ''
+        fetchKickVdev({
+          pool_name: pool.pool_name,
+          vdev_path: leaf.vdev.dev_path || leaf.vdev.name,
+          vdev_name: byIdName,
+          vdev_type: leaf.vdev.vdev_type,
+          is_force: true,
+          serial_number: byIdName
         }).then(() => {
-          refreshZpoolData()
+          // 踢盘成功后刷新池数据，并同步磁盘列表弹窗(保持打开，列表展示最新vdev状态)
+          refreshZpoolData().then(syncDiskListPool)
         })
       })
       .catch(() => {
@@ -987,7 +1008,7 @@
       })
   }
 
-  /** 引入：将已移除磁盘重新引入存储池（需二次确认） */
+  /** 引入：将已移除磁盘重新引入存储池（需二次确认，对接 /zfs/importDisk） */
   const handleImportDisk = (pool: ZFSPool | null, leaf: DiskLeaf) => {
     if (!pool) return
     ElMessageBox.confirm(
@@ -1000,14 +1021,12 @@
       }
     )
       .then(() => {
-        fetchPoolImportDisk({
-          poolName: pool.pool_name,
-          poolType: 'ZFS',
-          grade: leaf.parent?.vdev_type ?? '',
-          raidDevicePath: leaf.parent?.dev_path ?? '',
-          diskDeviceBasic: leaf.vdev
+        fetchZfsImportDisk({
+          pool_name: pool.pool_name,
+          device: leaf.vdev
         }).then(() => {
-          refreshZpoolData()
+          // 引入成功后刷新池数据，并同步磁盘列表弹窗(保持打开，列表展示最新vdev状态)
+          refreshZpoolData().then(syncDiskListPool)
         })
       })
       .catch(() => {
