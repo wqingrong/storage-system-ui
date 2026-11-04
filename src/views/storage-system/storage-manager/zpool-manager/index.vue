@@ -435,11 +435,14 @@
 <script lang="ts" setup>
   import { computed, nextTick, ref, watch } from 'vue'
   import {
+    fetchDestroyDataset,
     fetchDestroyZPool,
     fetchGetZPoolMap,
     fetchImportZPool,
+    fetchMountVolume,
     fetchStopZPool,
-    fetchUnImportZPoolList
+    fetchUnImportZPoolList,
+    fetchUnmountVolume
   } from '@/api/zfs-service'
   import type { HealthLevel, PoolHealthState, VdevNode, ZFSDataSet, ZFSPool } from '@/entity/zfs'
   import type { MenuItemType } from '@/components/core/others/art-menu-right/index.vue'
@@ -589,8 +592,9 @@
   ]
 
   /**
-   * 右键菜单选项配置（数据集，接口待对接）
+   * 右键菜单选项配置（数据集）
    * 已挂载时不允许再次挂载，未挂载时不允许卸载
+   * 销毁仅允许在卸载后进行
    */
   const menuItems = computed<MenuItemType[]>(() => {
     if (menuContainer.value === 'dataset') {
@@ -612,7 +616,8 @@
           key: 'dataset_destroy',
           label: '存储空间销毁',
           icon: '&#xe6d4;',
-          showLine: true
+          showLine: true,
+          disabled: mounted
         }
       ]
     }
@@ -657,15 +662,15 @@
         destroyZPool()
         break
       case 'dataset_mount':
-        // 数据集挂载（接口待对接）
+        // 存储空间挂载(对接 /zfs/mountVolume)
         if (menuDataset.value) handleDatasetMount(menuDataset.value)
         break
       case 'dataset_unmount':
-        // 数据集卸载（需二次确认，接口待对接）
+        // 存储空间卸载(对接 /zfs/unmountVolume，需二次确认)
         if (menuDataset.value) handleDatasetUnmount(menuDataset.value)
         break
       case 'dataset_destroy':
-        // 数据集销毁（需二次确认，接口待对接）
+        // 存储空间销毁(对接 /zfs/destroyDataset，仅卸载后可操作)
         if (menuDataset.value) handleDatasetDestroy(menuDataset.value)
         break
       default:
@@ -1058,14 +1063,15 @@
   /** 数据集挂载状态原始值（与 zfs 命令输出保持一致） */
   const getDatasetMountState = (ds: ZFSDataSet): string => (ds.is_mount ? 'MOUNTED' : 'UNMOUNTED')
 
-  // ========== 数据集操作(按钮占位，接口待对接) ==========
-  /** 挂载数据集(待对接接口) */
+  // ========== 数据集操作 ==========
+  /** 挂载数据集(对接 /zfs/mountVolume) */
   const handleDatasetMount = (ds: ZFSDataSet) => {
-    // TODO: 对接数据集挂载接口
-    ElMessage.info(`数据集「${ds.name}」挂载功能待对接`)
+    fetchMountVolume(ds).then(() => {
+      refreshZpoolData()
+    })
   }
 
-  /** 卸载数据集(待对接接口，需二次确认) */
+  /** 卸载数据集(对接 /zfs/unmountVolume，需二次确认) */
   const handleDatasetUnmount = (ds: ZFSDataSet) => {
     ElMessageBox.confirm(
       `确定卸载数据集「${ds.name}」吗？<br/>卸载后该数据集将不可访问。`,
@@ -1078,15 +1084,16 @@
       }
     )
       .then(() => {
-        // TODO: 对接数据集卸载接口
-        ElMessage.info(`数据集「${ds.name}」卸载功能待对接`)
+        fetchUnmountVolume(ds).then(() => {
+          refreshZpoolData()
+        })
       })
       .catch(() => {
         ElMessage.info('已取消卸载操作')
       })
   }
 
-  /** 销毁数据集(待对接接口，需二次确认) */
+  /** 销毁数据集(对接 /zfs/destroyDataset，仅卸载后可操作，需二次确认) */
   const handleDatasetDestroy = (ds: ZFSDataSet) => {
     ElMessageBox.confirm(
       `确定销毁数据集「${ds.name}」吗？<br/>销毁后数据集上的数据将无法恢复。`,
@@ -1099,8 +1106,9 @@
       }
     )
       .then(() => {
-        // TODO: 对接数据集销毁接口
-        ElMessage.info(`数据集「${ds.name}」销毁功能待对接`)
+        fetchDestroyDataset(ds).then(() => {
+          refreshZpoolData()
+        })
       })
       .catch(() => {
         ElMessage.info('已取消销毁操作')

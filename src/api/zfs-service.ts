@@ -92,3 +92,39 @@ export function fetchStopZPool(data: Pick<ZFSPool, 'pool_name'>) {
     data
   })
 }
+
+/**
+ * 挂载ZFS数据集(存储空间)
+ * @param dataSet 数据集信息(由 /zfs/getZPoolMap 返回)
+ * @returns 挂载后的数据集信息
+ */
+export function fetchMountVolume(dataSet: ZFSDataSet) {
+  return request.post<ZFSDataSet>({
+    url: '/zfs/mountVolume',
+    data: dataSet
+  })
+}
+
+/**
+ * 卸载ZFS数据集(存储空间)
+ * @param dataSet 数据集信息(由 /zfs/getZPoolMap 返回)
+ * @returns 卸载后的数据集信息
+ */
+export function fetchUnmountVolume(dataSet: ZFSDataSet) {
+  return request.post<ZFSDataSet>({
+    url: '/zfs/unmountVolume',
+    data: dataSet
+  })
+}
+
+/**
+ * 销毁ZFS数据集(存储空间，需先卸载)
+ * @param dataSet 数据集信息(由 /zfs/getZPoolMap 返回)
+ * @returns 销毁的数据集信息
+ */
+export function fetchDestroyDataset(dataSet: ZFSDataSet) {
+  return request.post<ZFSDataSet>({
+    url: '/zfs/destroyDataset',
+    data: dataSet
+  })
+}
