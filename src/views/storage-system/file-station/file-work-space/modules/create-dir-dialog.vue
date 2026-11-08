@@ -1,7 +1,7 @@
 <template>
   <ElDialog v-model="dialogVisible" title="新建文件夹" width="30%" align-center>
     <ElForm ref="formRef" :model="formData" :rules="rules" label-width="100px">
-      <ElFormItem label="文件夹名称" prop="dirName">
+      <ElFormItem label="文件夹名称" prop="name">
         <ElInput v-model="formData.name" placeholder="请输入文件夹名称" />
       </ElFormItem>
     </ElForm>
@@ -75,11 +75,14 @@
 
   const handleSubmit = async () => {
     if (!formRef.value) return
-    await formRef.value.validate((valid) => {
-      if (valid) {
-        emit('createDirectory', formData) // 抛出数据
-        dialogVisible.value = false
-      }
+    const valid = await formRef.value.validate().catch(() => false)
+    if (!valid) return
+    // 只回传后端 NewDirectoryParam 需要的字段（name / fatherPath / isSkip）
+    emit('createDirectory', {
+      name: formData.name.trim(),
+      fatherPath: formData.fatherPath,
+      isSkip: false
     })
+    dialogVisible.value = false
   }
 </script>

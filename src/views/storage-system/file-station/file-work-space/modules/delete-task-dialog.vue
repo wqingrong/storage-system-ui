@@ -244,8 +244,8 @@
 
   interface Emits {
     (e: 'update:visible', value: boolean): void
-    /** 任务结束后触发，通知父组件可以刷新列表 */
-    (e: 'task-done', taskId: string): void
+    /** 任务结束后触发，通知父组件刷新列表；outcome.success 表示是否全部删除成功 */
+    (e: 'task-done', taskId: string, outcome: { success: boolean }): void
   }
 
   const props = defineProps<Props>()
@@ -493,17 +493,24 @@
   }
 
   // ======================== 关闭弹窗 ========================
+
+  /** 只有「已完成且没有失败项」才算全部删除成功 */
+  const buildOutcome = (): { success: boolean } => ({
+    success:
+      currentPhase.value === TaskPhase.Completed && (resultPayload.value?.failedCount ?? 0) === 0
+  })
+
   const forceHandleClose = async () => {
     if (!isFinished.value) {
       await fetchSubmitCancelTask({ taskId: props.taskId })
     }
     dialogVisible.value = false
-    emit('task-done', props.taskId)
+    emit('task-done', props.taskId, buildOutcome())
   }
 
   const handleClose = () => {
     dialogVisible.value = false
-    emit('task-done', props.taskId)
+    emit('task-done', props.taskId, buildOutcome())
   }
 
   // ======================== 工具函数 ========================

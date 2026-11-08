@@ -42,6 +42,7 @@
               >
               <ElButton
                 @click="handleDeleteFileInfos"
+                :loading="deleteSubmitting"
                 :disabled="selectionFileInfoRows.length === 0"
                 >删除</ElButton
               >
@@ -148,11 +149,12 @@
   } from '@/api/file-station-service'
   import { FileStoryField, SortType } from '@/enums/formEnum'
   import folder from '@imgs/svg/folder.svg'
-  import { ElIcon } from 'element-plus'
+  import { ElIcon, ElMessageBox } from 'element-plus'
   import { Folder, Document, ArrowRight, ArrowLeft } from '@element-plus/icons-vue'
   import CreateDirDialog from '@views/storage-system/file-station/file-work-space/modules/create-dir-dialog.vue'
   import RenameDialog from '@views/storage-system/file-station/file-work-space/modules/rename-dialog.vue'
   import { fetchSubmitDeleteDirectory } from '@/api/task-service'
+  import type { RenamePathReq } from '@/entity/file-station'
   import FileAttributeDialog from '@views/storage-system/file-station/file-work-space/modules/file-attribute-dialog.vue'
 
   interface Props {
@@ -289,16 +291,53 @@
     }
   }
 
-  const handleDeleteFileInfos = () => {
-    console.log('点击了删除')
-    if (selectionFileInfoRows.value.length > 0) {
-      let deletePathList = []
-      deletePathList = selectionFileInfoRows.value.map((item) => item.path)
-      fetchSubmitDeleteDirectory({
-        pathList: deletePathList
-      }).then((res) => {
-        console.log('res>>', res)
-      })
+  /** 删除请求提交中，避免重复提交 */
+  const deleteSubmitting = ref(false)
+
+  const handleDeleteFileInfos = async () => {
+    if (deleteSubmitting.value) return
+    if (selectionFileInfoRows.value.length === 0) return
+
+    const rows = selectionFileInfoRows.value.map((row) => ({ ...row }))
+    const dirCount = rows.filter((row) => row.isDir).length
+    const fileCount = rows.length - dirCount
+
+    const typeParts: string[] = []
+    if (dirCount > 0) typeParts.push(`${dirCount} 个文件夹`)
+    if (fileCount > 0) typeParts.push(`${fileCount} 个文件`)
+
+    const names = rows.map((row) => row.name).filter(Boolean)
+    const preview =
+      names.length <= 3 ? names.join('、') : `${names.slice(0, 3).join('、')} 等 ${names.length} 项`
+
+    try {
+      await ElMessageBox.confirm(
+        `即将删除 ${typeParts.join('、')}：\n${preview}\n\n删除后将无法恢复，是否继续？`,
+        '删除确认',
+        {
+          confirmButtonText: '确定删除',
+          cancelButtonText: '取消',
+          type: 'warning',
+          confirmButtonClass: 'el-button--danger',
+          customClass: 'file-delete-confirm',
+          // 不自动聚焦「确定删除」，避免回车误删
+          autofocus: false,
+          distinguishCancelAndClose: true
+        }
+      )
+    } catch {
+      // 用户取消
+      return
+    }
+
+    deleteSubmitting.value = true
+    try {
+      await fetchSubmitDeleteDirectory({ pathList: rows.map((item) => item.path) })
+      // 删除是异步任务，这里只把列表拉一次；稍后用户刷新即可看到最终结果
+      selectionFileInfoRows.value = []
+      refreshData()
+    } finally {
+      deleteSubmitting.value = false
     }
   }
 
@@ -325,29 +364,44 @@
   }
 
   // 提交了确定重命名的请求参数
-  const submitRename = (params: FileInfo) => {
-    if (params) {
-      let renameParams = {
-        name: params.name,
-        path: params.path,
-        id: params.id
+  // 请求体严格对齐后端 entity.RenameFileParam：{ name, path, id }
+  const submitRename = async (params: FileInfo) => {
+    const newName = String(params?.name ?? '').trim()
+    if (!newName) {
+      ElMessage.warning('名称不能为空')
+      return
+    }
+    if (/[\\/:*?"<>|]/.test(newName)) {
+      ElMessage.warning('名称不能包含 \\ / : * ? " < > |')
+      return
+    }
+    // 弹窗回传的是副本，path / id 仍是重命名前的值，可直接作为请求参数
+    const body: RenamePathReq = { name: newName, path: params.path, id: params.id }
+    if (!body.path || !body.id) {
+      ElMessage.warning('缺少路径信息，请刷新列表后重试')
+      refreshData()
+      return
+    }
+
+    try {
+      const res = await fetchRenamePath(body)
+      const renamed = Object.assign(new FileInfo(), res)
+
+      // 目录重命名后 id（加密路径）会变：只改字段会让 node-key 停在旧值，
+      // 必须删掉旧节点再按新数据插入，子节点丢弃等展开时按新路径重拉
+      if (renamed.isDir) {
+        const node = treeRef.value?.getNode(body.id)
+        if (node) {
+          const parentData = node.parent?.data
+          const parentId = Array.isArray(parentData) ? '' : parentData?.id
+          treeRef.value.remove(body.id)
+          if (parentId) treeRef.value.append({ ...renamed, children: [] }, parentData)
+          else treeRef.value.append({ ...renamed, children: [] })
+        }
       }
-      fetchRenamePath(renameParams)
-        .then((res) => {
-          let olderId = params.id
-          let nodeValue = new FileInfo()
-          Object.assign(nodeValue, res)
-          // 更改树形节点
-          if (nodeValue.isDir) {
-            let node = treeRef.value.getNode(olderId)
-            if (node) {
-              Object.assign(node.data, res)
-            }
-          }
-        })
-        .catch(() => {
-          handleNodeClick(pathHistory.value.at(-1)!, false)
-        })
+      refreshData()
+    } catch {
+      refreshData()
     }
   }
   // 多选选中的文件列表

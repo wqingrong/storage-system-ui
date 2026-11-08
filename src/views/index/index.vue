@@ -16,10 +16,15 @@
     <div class="app-global">
       <ArtGlobalComponent />
     </div>
+
+    <!-- 全局上传任务面板：上传状态与页面解耦，切换页面后仍在后台继续 -->
+    <UploadTaskPanel />
   </div>
 </template>
 
 <script setup lang="ts">
+  import UploadTaskPanel from '@/components/custom/upload-task-panel/index.vue'
+
   defineOptions({ name: 'AppLayout' })
 </script>
 

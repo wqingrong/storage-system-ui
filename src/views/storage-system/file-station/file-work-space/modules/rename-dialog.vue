@@ -1,7 +1,7 @@
 <template>
   <ElDialog v-model="dialogVisible" title="重命名" width="30%" align-center>
     <ElForm ref="formRef" :model="formData" :rules="rules" label-width="100px">
-      <ElFormItem label="文件名称" :prop="fileInfo.name">
+      <ElFormItem label="文件名称" prop="name">
         <ElInput v-model="formData.name" placeholder="请输入重命名名称" />
       </ElFormItem>
     </ElForm>
@@ -71,12 +71,14 @@
 
   const handleSubmit = async () => {
     if (!formRef.value) return
-    await formRef.value.validate((valid) => {
-      if (valid) {
-        Object.assign(props.fileInfo, { name: formData.name })
-        emit('submitRename', props.fileInfo) // 抛出数据
-        dialogVisible.value = false
-      }
-    })
+    // 用 promise 形式拿到校验结果，校验不通过时不会有任何回传
+    const valid = await formRef.value.validate().catch(() => false)
+    if (!valid) return
+
+    const newName = formData.name.trim()
+    // 回传副本，不改写父组件的行数据：
+    // 请求失败时列表仍是旧名字，避免"看起来改名成功其实被后端拒绝"
+    emit('submitRename', { ...props.fileInfo, name: newName })
+    dialogVisible.value = false
   }
 </script>
