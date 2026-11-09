@@ -93,8 +93,8 @@
     <!-- 弹窗底部按钮 -->
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
-        <el-button type="primary" @click="handleConfirm">确定</el-button>
+        <el-button :disabled="submitting" @click="handleClose">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleConfirm">确定</el-button>
       </div>
     </template>
   </el-dialog>
@@ -112,7 +112,8 @@
     IPVersion,
     NetworkInterface
   } from '@/entity/network'
-  import { fetchSetNetworkConfig } from '@/api/network'
+  import { submitNetworkConfig } from '@/composables/useNetworkConfigSubmit'
+  import { notifyDhcpSwitch } from '@/utils/network/host-switch'
 
   const dnsInputText = ref('')
   // 处理输入确认（回车/失去焦点触发）
@@ -182,19 +183,30 @@
     bonder: { mode: BondMode.BOND_MODE_UNKNOWN, slaveInterfaces: [] }
   })
 
+  /** 打开弹窗时的配置快照，用于比对「改前 / 改后」的地址变化 */
+  const originConfig = ref<NetworkInterface | null>(null)
+  /** 提交中，避免重复点击 */
+  const submitting = ref(false)
+
+  /** 深拷贝：表单里的 ipv4Addresses 是数组，浅拷贝会直接改写父组件的行数据 */
+  const cloneConfig = (value: NetworkInterface): NetworkInterface =>
+    JSON.parse(JSON.stringify(value)) as NetworkInterface
+
   // 弹窗双向绑定
   const dialogVisible = ref(false)
   watch(
     () => props.visible,
     (val) => {
       dialogVisible.value = val
-      if (val) {
-        // 打开弹窗时重置表单
-        if (props.editData) {
-          dnsInputText.value = props.editData.dnsServers ? props.editData.dnsServers.join(',') : ''
-          Object.assign(formData.value, props.editData)
-        }
-      }
+      if (!val || !props.editData) return
+      // 打开弹窗时重置表单：先留一份快照，再深拷贝进表单。
+      // 若像原来那样 Object.assign 直接铺开，ipv4Addresses 会与父组件共用同一个
+      // 数组引用，用户在弹窗里一改 IP，父组件的行数据就被同步改掉，"改前的地址"
+      // 也就没有了，切换地址时无从比对。
+      const snapshot = cloneConfig(props.editData as unknown as NetworkInterface)
+      originConfig.value = snapshot
+      dnsInputText.value = snapshot.dnsServers ? snapshot.dnsServers.join(',') : ''
+      Object.assign(formData.value, cloneConfig(snapshot))
     },
     { immediate: true }
   )
@@ -209,15 +221,45 @@
     dialogVisible.value = false
   }
 
-  // 确认提交
+  /**
+   * 确认提交
+   *
+   * 这里要处理一个特殊场景：如果改的正是「当前访问所用的网卡」，
+   * 后端执行 `nmcli connection up` 后会立刻切断连接，前端大概率收不到响应，
+   * 只拿到一个 Network Error。但此时配置往往已经生效，所以不能按失败处理，
+   * 而应该转去探测新地址，探通后把页面跳过去。
+   */
   const handleConfirm = async () => {
-    // await formRef.value?.validate()
-    console.log('>>', formData.value)
-    fetchSetNetworkConfig(formData.value).then((res) => {
-      ElMessage.success('网络配置保存成功')
-      emit('emitReload')
+    if (submitting.value) return
+
+    submitting.value = true
+    try {
+      const res = await submitNetworkConfig(cloneConfig(formData.value), originConfig.value)
+
+      if (res.status === 'failed') {
+        if (res.error) ElMessage.error(res.error)
+        return
+      }
+
       handleClose()
-    })
+
+      if (res.status === 'switching') {
+        // 即将跳到新地址，不再刷新列表：旧连接此时可能已经断了
+        ElMessage.success(`配置已生效，正在切换到 ${res.plan?.toIp}`)
+        return
+      }
+
+      emit('emitReload')
+
+      if (res.status === 'dhcp') {
+        ElMessage.success('已切换为 DHCP 模式')
+        void notifyDhcpSwitch()
+        return
+      }
+      ElMessage.success('网络配置保存成功')
+    } finally {
+      submitting.value = false
+    }
   }
 </script>
 

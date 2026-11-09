@@ -28,6 +28,12 @@ export class HttpError extends Error {
   public readonly timestamp: string
   public readonly url?: string
   public readonly method?: string
+  /**
+   * 是否为网络层错误（请求没有拿到任何响应：连接被断开、DNS 失败、超时等）。
+   * 典型场景：修改网卡 IP 时 `nmcli connection up` 会立刻切断当前连接，
+   * 此时配置已经生效，但前端只会收到网络错误，需要靠这个标记区分。
+   */
+  public readonly isNetworkError: boolean
 
   constructor(
     message: string,
@@ -36,6 +42,7 @@ export class HttpError extends Error {
       data?: unknown
       url?: string
       method?: string
+      isNetworkError?: boolean
     }
   ) {
     super(message)
@@ -45,6 +52,7 @@ export class HttpError extends Error {
     this.timestamp = new Date().toISOString()
     this.url = options?.url
     this.method = options?.method
+    this.isNetworkError = options?.isNetworkError ?? false
   }
 
   public toLogData(): ErrorLogData {
@@ -97,11 +105,12 @@ export function handleError(error: AxiosError<ErrorResponse>): never {
   const errorMessage = error.response?.data?.msg || error.message
   const requestConfig = error.config
 
-  // 处理网络错误
+  // 处理网络错误（没有拿到任何响应：连接中断、DNS 失败、超时）
   if (!error.response) {
     throw new HttpError($t('httpMsg.networkError'), ApiStatus.error, {
       url: requestConfig?.url,
-      method: requestConfig?.method?.toUpperCase()
+      method: requestConfig?.method?.toUpperCase(),
+      isNetworkError: true
     })
   }
 

@@ -126,7 +126,7 @@
           :disabled="currentStep === 0"
           >上一步</el-button
         >
-        <el-button type="primary" @click="nextStep">
+        <el-button type="primary" :loading="submitting" @click="nextStep">
           {{ currentStep >= 1 ? '完成' : '下一步' }}
         </el-button>
       </div>
@@ -135,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-  import { defineEmits, defineProps, ref } from 'vue'
+  import { defineEmits, defineProps, ref, type PropType } from 'vue'
   import { InfoFilled } from '@element-plus/icons-vue'
   import { ElMessage } from 'element-plus'
   import {
@@ -147,15 +147,28 @@
     NetworkDeviceInterface,
     NetworkInterface
   } from '@/entity/network'
-  import { fetchGetNetworkDeviceList, fetchSetNetworkConfig } from '@/api/network'
+  import { fetchGetNetworkDeviceList } from '@/api/network'
+  import { submitNetworkConfig } from '@/composables/useNetworkConfigSubmit'
+  import { notifyDhcpSwitch } from '@/utils/network/host-switch'
 
   const deviceList = ref<NetworkDeviceInterface[]>([])
   const currentStep = ref(0)
+  /** 提交中，避免重复点击 */
+  const submitting = ref(false)
   // 父组件传入控制弹窗显示
   const props = defineProps({
     visible: {
       type: Boolean,
       default: false
+    },
+    /**
+     * 已配置的接口列表。
+     * 用来取「改前的地址」：只有知道这块网口原来是不是当前访问所用的地址，
+     * 才能判断改完 IP 之后页面要不要跳转。
+     */
+    interfaceList: {
+      type: Array as PropType<NetworkInterface[]>,
+      default: () => []
     }
   })
 
@@ -294,13 +307,40 @@
 
   // 确认提交
   const handleConfirm = async () => {
-    //  表单校验...
-    // await formRef.value?.validate()
-    fetchSetNetworkConfig(formData.value).then((res) => {
-      ElMessage.success('网络配置保存成功')
-      emit('emitReload')
+    if (submitting.value) return
+
+    const payload = JSON.parse(JSON.stringify(formData.value)) as NetworkInterface
+    // 同一块网口可能已经配过 IP：取原配置才能判断当前访问地址是否会被改掉
+    const origin = props.interfaceList.find((item) => item.name === payload.name) ?? null
+
+    submitting.value = true
+    try {
+      const res = await submitNetworkConfig(payload, origin)
+
+      if (res.status === 'failed') {
+        if (res.error) ElMessage.error(res.error)
+        return
+      }
+
       handleClose()
-    })
+
+      if (res.status === 'switching') {
+        // 即将跳到新地址，不再刷新列表：旧连接此时可能已经断了
+        ElMessage.success(`配置已生效，正在切换到 ${res.plan?.toIp}`)
+        return
+      }
+
+      emit('emitReload')
+
+      if (res.status === 'dhcp') {
+        ElMessage.success('已切换为 DHCP 模式')
+        void notifyDhcpSwitch()
+        return
+      }
+      ElMessage.success('网络配置保存成功')
+    } finally {
+      submitting.value = false
+    }
   }
 </script>
 

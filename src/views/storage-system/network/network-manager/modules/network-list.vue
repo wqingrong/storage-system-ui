@@ -152,6 +152,7 @@
 
     <network-create
       v-model:visible="createNetworkInterfaceDialog"
+      :interface-list="networkInterfaceList"
       @confirm="handleCreateNetworkInterface"
       @emitReload="emitReload"
     >
