@@ -75,49 +75,62 @@
           <div class="pool-card">
             <!-- 上部：基本信息 + 健康状态 + 磁盘运行状态 横向平铺（分隔符分格） -->
             <div class="card-top">
-              <!-- 1.基本信息 -->
-              <div class="card-section">
+              <!-- 1.基本信息：左侧容量使用率环形图，右侧容量明细 + 基础信息 -->
+              <div class="card-section card-section--basic">
                 <div class="section-title">基本信息</div>
-                <div class="pool-uuid" :title="pool.uuid">UUID: {{ pool.uuid }}</div>
 
-                <div class="info-item">
-                  <span class="info-label">存储池等级</span>
-                  <span class="info-value">{{ getPoolGrade(pool) }}</span>
-                </div>
+                <div class="basic-split">
+                  <!-- 左：使用率环形图 -->
+                  <div class="usage-ring">
+                    <el-progress
+                      type="circle"
+                      :percentage="getUsagePct(pool)"
+                      :color="getUsageColor(pool)"
+                      :width="112"
+                      :stroke-width="9"
+                    >
+                      <template #default="{ percentage }">
+                        <span class="usage-ring__pct">{{ percentage }}%</span>
+                        <span class="usage-ring__label">已使用</span>
+                      </template>
+                    </el-progress>
+                  </div>
 
-                <div class="info-item">
-                  <span class="info-label">磁盘数量</span>
-                  <span class="info-value">{{ getDiskCountText(pool) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">单盘容量(约)</span>
-                  <span class="info-value">{{ getPerDiskSize(pool) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">存储池总容量</span>
-                  <span class="info-value">{{ formatBytes(pool.total_bytes) }}</span>
-                </div>
-                <div class="capacity-main">
-                  <el-progress
-                    type="circle"
-                    :percentage="getUsagePct(pool)"
-                    :color="getUsageColor(pool)"
-                    :width="62"
-                    :stroke-width="6"
-                  />
-                  <div class="capacity-detail">
-                    <span
-                      >已用 <b>{{ formatBytes(pool.used_bytes) }}</b></span
-                    >
-                    <span
-                      >可用 <b>{{ formatBytes(pool.free_bytes) }}</b></span
-                    >
+                  <!-- 右：容量明细 + 基础信息 -->
+                  <div class="usage-detail">
+                    <div class="usage-headline">
+                      <span class="usage-headline__label">可用容量</span>
+                      <span class="usage-headline__value">{{ formatBytes(pool.free_bytes) }}</span>
+                    </div>
+
+                    <ul class="usage-list">
+                      <li>
+                        <i class="usage-dot" />
+                        已使用 <b>{{ formatBytes(pool.used_bytes) }}</b>
+                      </li>
+                      <li>
+                        <i class="usage-dot" />
+                        可用 <b>{{ formatBytes(pool.free_bytes) }}</b>
+                      </li>
+                      <li>
+                        <i class="usage-dot" />
+                        总容量 <b>{{ formatBytes(pool.total_bytes) }}</b>
+                      </li>
+                    </ul>
+
+                    <div class="usage-meta">
+                      <span>{{ getPoolGrade(pool) }}</span>
+                      <span>{{ getDiskCountText(pool) }}</span>
+                      <span>单盘 {{ getPerDiskSize(pool) }}</span>
+                    </div>
+
+                    <div class="pool-uuid" :title="pool.uuid">UUID: {{ pool.uuid }}</div>
                   </div>
                 </div>
               </div>
 
               <!-- 2.健康状态 -->
-              <div class="card-section">
+              <div class="card-section card-section--health">
                 <div class="section-title">健康状态</div>
                 <div class="health-row">
                   <span class="health-value" :style="{ color: getPoolHealthDisplay(pool).color }">{{
@@ -1417,24 +1430,6 @@
     padding-left: 12px;
   }
 
-  /* 基本信息行 */
-  .info-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 2px 0;
-    font-size: 13px;
-  }
-
-  .info-label {
-    color: #909399;
-  }
-
-  .info-value {
-    color: #303133;
-    font-weight: 500;
-  }
-
   /* 磁盘运行状态统计 */
   .disk-run-stats {
     display: flex;
@@ -1529,24 +1524,123 @@
     color: #606266;
   }
 
-  /* 容量信息 */
-  .capacity-main {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  /* 卡片上部三栏：gap 16px×2 = 32px，后两栏各 padding-left 12px（分隔线）共 24px。
+     基本信息原占 1.5/3.5 = 3/7，健康状态原占 1/3.5 = 2/7。
+     基本信息整体收窄 120px、健康状态对应加宽 120px，磁盘运行状态宽度保持不变（flex 占剩余）。 */
+  .card-section--basic {
+    flex: 0 1 calc((100% - 56px) * 3 / 7 - 120px);
   }
 
-  .capacity-detail {
+  .card-section--health {
+    flex: 0 1 calc((100% - 56px) * 2 / 7 + 120px);
+  }
+
+  .basic-split {
+    display: grid;
+    grid-template-columns: minmax(112px, 38%) minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+  }
+
+  .usage-ring {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 12px;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
+
+    :deep(.el-progress__text) {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: center;
+      line-height: 1.1;
+    }
+
+    :deep(.el-progress-circle__track) {
+      stroke: #e6eaf1;
+    }
+  }
+
+  .usage-ring__pct {
+    font-size: 24px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .usage-ring__label {
+    font-size: 11px;
     color: #909399;
+  }
+
+  .usage-detail {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
     min-width: 0;
   }
 
-  .capacity-detail b {
+  .usage-headline {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+
+  .usage-headline__label {
+    font-size: 12px;
+    color: #909399;
+  }
+
+  .usage-headline__value {
+    font-size: 17px;
+    font-weight: 600;
     color: #303133;
+  }
+
+  .usage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    color: #909399;
+    list-style: none;
+
+    li {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    b {
+      font-weight: 500;
+      color: #303133;
+    }
+  }
+
+  .usage-dot {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    background: #c8cdd4;
+    border-radius: 50%;
+  }
+
+  .usage-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    font-size: 12px;
+    color: #606266;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 6px;
+      background: #f5f7fa;
+      border-radius: 4px;
+    }
   }
 
   /* 数据集为空提示 */
