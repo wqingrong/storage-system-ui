@@ -72,7 +72,7 @@
           </div>
         </div>
 
-        <!-- 用户头像、菜单 -->
+        <!-- 用户图标、菜单 -->
         <div class="user">
           <ElPopover
             ref="userMenuPopover"
@@ -86,15 +86,14 @@
             popper-style="border: 1px solid var(--art-border-dashed-color); border-radius: calc(var(--custom-radius) / 2 + 4px); padding: 5px 16px; 5px 16px;"
           >
             <template #reference>
-              <img class="cover" src="@imgs/user/avatar.webp" alt="avatar" />
+              <i class="user-icon iconfont-sys">&#xe734;</i>
             </template>
             <template #default>
               <div class="user-menu-box">
                 <div class="user-head">
-                  <img class="cover" src="@imgs/user/avatar.webp" style="float: left" />
+                  <i class="user-icon iconfont-sys">&#xe734;</i>
                   <div class="user-wrap">
-                    <span class="name">{{ userInfo.userName }}</span>
-                    <span class="email">{{ userInfo.email }}</span>
+                    <span class="name">{{ userInfo.userAlias }}</span>
                   </div>
                 </div>
                 <ul class="user-menu">

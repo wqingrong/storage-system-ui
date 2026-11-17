@@ -1,9 +1,8 @@
-<!-- 登录、注册、忘记密码左侧背景 -->
+<!-- 登录、注册、忘记密码左侧品牌区（门户背景图铺满整页时本区域透明） -->
 <template>
-  <div class="login-left-view">
-    <div class="logo">
-      <ArtLogo class="icon" size="46" />
-      <h1 class="title">{{ AppConfig.systemInfo.name }}</h1>
+  <div class="login-left-view" :class="{ 'has-portal-bg': portalStore.hasBackground }">
+    <div class="logo" :style="siteNameSizeStyle">
+      <h1 class="title" :style="siteNameStyle">{{ portalSiteName }}</h1>
     </div>
 
     <div class="left-img">
@@ -11,8 +10,8 @@
     </div>
 
     <div class="text-wrap">
-      <h1> {{ $t('login.leftView.title') }} </h1>
-      <p> {{ $t('login.leftView.subTitle') }} </p>
+      <h1 :style="portalTitleStyle">{{ portalTitle }}</h1>
+      <p>{{ portalSlogan }}</p>
     </div>
 
     <!-- 几何装饰元素 -->
@@ -74,11 +73,49 @@
   import AppConfig from '@/config'
   import loginIcon from '@imgs/svg/login_icon.svg'
   import { themeAnimation } from '@/utils/theme/animation'
+  import { useI18n } from 'vue-i18n'
+  import { usePortalStore } from '@/store/modules/portal'
+  import {
+    getPortalSiteNameSizeStyle,
+    getPortalSiteNameStyle,
+    getPortalTitleStyle,
+    resolvePortalSiteName
+  } from '@/config/portal'
 
   // 定义 props
   defineProps<{
     hideContent?: boolean // 是否隐藏内容，只显示 logo
   }>()
+
+  const { t } = useI18n()
+  const portalStore = usePortalStore()
+
+  /** 门户设置：左上角站点名称，未设置时使用系统名称 */
+  const portalSiteName = computed(() =>
+    resolvePortalSiteName(portalStore.settings, AppConfig.systemInfo.name)
+  )
+
+  /** 门户设置：站点名称艺术字模板（有背景图时切换为浅色配色） */
+  const siteNameStyle = computed(() =>
+    getPortalSiteNameStyle(portalStore.settings, { onImage: portalStore.hasBackground })
+  )
+
+  /** 门户设置：站点名称字号（CSS 变量，小屏可用媒体查询收窄） */
+  const siteNameSizeStyle = computed(() => getPortalSiteNameSizeStyle(portalStore.settings))
+
+  /** 门户设置：登录页标题，未设置时使用默认文案 */
+  const portalTitle = computed(() => portalStore.settings.title || t('login.leftView.title'))
+
+  /** 门户设置：标题字号 */
+  const portalTitleStyle = computed(() => getPortalTitleStyle(portalStore.settings))
+
+  /** 门户设置：宣传标语，未设置时使用默认文案 */
+  const portalSlogan = computed(() => portalStore.settings.slogan || t('login.leftView.subTitle'))
+
+  // 登录 / 注册 / 忘记密码页统一从服务端同步门户设置（该接口已加入白名单，无需登录）
+  onMounted(() => {
+    portalStore.ensureLoaded()
+  })
 </script>
 
 <style lang="scss" scoped>
@@ -104,16 +141,19 @@
     background-color: $bg-mix-light-9;
 
     .logo {
-      position: relative;
+      position: absolute;
+      top: 40px;
+      left: 40px;
       z-index: 100;
       display: flex;
       align-items: center;
 
+      // 站点名称：字体与艺术字效果由门户设置内联下发，这里只负责布局与尺寸
       .title {
-        margin-left: 10px;
-        font-size: 20px;
-        font-weight: 400;
-        color: var(--art-text-gray-900) !important;
+        margin: 0;
+        font-size: var(--site-name-size, 30px);
+        line-height: 1.2;
+        white-space: nowrap;
       }
     }
 
@@ -129,6 +169,8 @@
     .text-wrap {
       position: absolute;
       bottom: 80px;
+      left: 0;
+      box-sizing: border-box;
       width: 100%;
       text-align: center;
       animation: slideInLeft 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
@@ -143,6 +185,7 @@
         margin-top: 10px;
         font-size: 14px;
         color: var(--art-text-gray-600) !important;
+        white-space: pre-wrap;
       }
     }
 
@@ -162,11 +205,17 @@
 
           @if $direction == 'up' {
             transform: translateY(30px) rotate($rotation);
-          } @else if $direction == 'down' {
+          }
+
+ @else if $direction == 'down' {
             transform: translateY(-30px) rotate($rotation);
-          } @else if $direction == 'left' {
+          }
+
+ @else if $direction == 'left' {
             transform: translateX(-30px) rotate($rotation);
-          } @else if $direction == 'right' {
+          }
+
+ @else if $direction == 'right' {
             transform: translateX(30px) rotate($rotation);
           }
         }
@@ -176,7 +225,9 @@
 
           @if $direction == 'up' or $direction == 'down' {
             transform: translateY(0) rotate($rotation);
-          } @else {
+          }
+
+ @else {
             transform: translateX(0) rotate($rotation);
           }
         }
@@ -485,6 +536,34 @@
       }
     }
 
+    // 门户设置：背景图铺满整页时，本区域透明，整页遮罩由登录页统一处理
+    &.has-portal-bg {
+      background-color: transparent;
+
+      .left-img,
+      .geometric-decorations {
+        display: none;
+      }
+
+      .logo {
+        z-index: 50;
+      }
+
+      .text-wrap {
+        z-index: 50;
+
+        h1 {
+          color: #fff !important;
+          text-shadow: 0 2px 18px rgb(0 0 0 / 45%);
+        }
+
+        p {
+          color: rgb(255 255 255 / 88%) !important;
+          text-shadow: 0 1px 10px rgb(0 0 0 / 40%);
+        }
+      }
+    }
+
     @media only screen and (max-width: $device-notebook) {
       width: 60vw;
 
@@ -506,11 +585,16 @@
         display: none;
       }
 
+      // 小屏空间有限，缩小留白与字号，避免与登录卡片重叠
       .logo {
         position: fixed;
-        top: 15px;
-        left: 25px;
+        top: 18px;
+        left: 20px;
         z-index: 1000;
+
+        .title {
+          font-size: min(var(--site-name-size, 30px), 22px);
+        }
       }
     }
   }
@@ -518,6 +602,13 @@
   // 暗色主题
   .dark .login-left-view {
     background-color: color-mix(in srgb, $primary-light-9 60%, #070707);
+
+    // 自定义背景图优先
+    &.has-portal-bg {
+      background-color: transparent;
+    }
+
+    // 深色背景下配色由艺术字模板内联样式决定，此处无需覆盖
 
     @media only screen and (max-width: $device-ipad-pro) {
       background: transparent;

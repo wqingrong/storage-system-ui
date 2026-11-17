@@ -311,6 +311,7 @@ declare namespace Api {
       roles: string[]
       userId: number
       userName: string
+      userAlias: string
       email: string
       avatar?: string
     }

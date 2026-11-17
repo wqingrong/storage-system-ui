@@ -1,6 +1,7 @@
 @use '@styles/variables.scss' as *;
 
 .login {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   width: 100%;
@@ -256,5 +257,100 @@
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* -------------------- 门户设置：整页背景图 + 右侧半透明悬浮登录卡片 -------------------- */
+.login.is-portal {
+  background-color: #0b1220;
+
+  // 整页统一的明暗过渡，避免只压暗左侧造成的竖向接缝
+  &::before {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    content: '';
+    background: linear-gradient(
+      180deg,
+      rgb(6 10 20 / 28%) 0%,
+      rgb(6 10 20 / 6%) 42%,
+      rgb(6 10 20 / 56%) 100%
+    );
+    pointer-events: none;
+  }
+
+  .login-left-view,
+  .right-wrap {
+    position: relative;
+    z-index: 1;
+  }
+
+  // 右上角工具栏在图片上改为白色，保证可读（子组件内部元素需要 :deep）
+  :deep(.top-right-wrap .btn) {
+    color: #fff;
+    text-shadow: 0 1px 6px rgb(0 0 0 / 45%);
+
+    &:hover {
+      color: #fff !important;
+      opacity: 0.85;
+    }
+
+    i {
+      color: inherit;
+    }
+  }
+
+  .login-left-view {
+    background-color: transparent;
+  }
+
+  .right-wrap {
+    background-color: transparent;
+  }
+
+  // 选择器权重高于小屏媒体查询，保证悬浮卡片样式不被覆盖
+  .right-wrap .login-wrap {
+    box-sizing: border-box;
+    padding: 0 34px;
+    background-color: rgb(255 255 255 / 58%);
+    border: 1px solid rgb(255 255 255 / 42%);
+    border-radius: 16px;
+    box-shadow:
+      0 24px 64px rgb(8 15 30 / 32%),
+      inset 0 1px 0 rgb(255 255 255 / 50%);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+  }
+}
+
+.dark .login.is-portal .right-wrap .login-wrap {
+  background-color: rgb(18 22 30 / 62%);
+  border-color: rgb(255 255 255 / 14%);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 45%);
+}
+
+@media only screen and (max-width: $device-ipad-pro) {
+  .login.is-portal .right-wrap .login-wrap {
+    box-sizing: border-box;
+    width: 440px;
+    padding: 0 26px;
+    margin: 6vh auto;
+    background-color: rgb(255 255 255 / 78%);
+    border: 1px solid rgb(255 255 255 / 45%);
+    border-radius: 14px;
+    box-shadow: 0 18px 48px rgb(8 15 30 / 26%);
+  }
+}
+
+@media only screen and (max-width: $device-phone) {
+  .login.is-portal .right-wrap .login-wrap {
+    width: 100%;
+    padding: 0 22px;
+    margin: 7vh auto;
+  }
+
+  // 卡片已提供顶部留白，表单不再叠加 12vh
+  .login.is-portal .right-wrap .login-wrap .form {
+    margin-top: 20px;
   }
 }

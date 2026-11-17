@@ -1,5 +1,9 @@
 <template>
-  <div class="login">
+  <div
+    class="login"
+    :class="{ 'is-portal': portalStore.hasBackground }"
+    :style="portalStore.backgroundStyle"
+  >
     <LoginLeftView></LoginLeftView>
 
     <div class="right-wrap">
@@ -101,6 +105,7 @@
 <script setup lang="ts">
   import AppConfig from '@/config'
   import { useUserStore } from '@/store/modules/user'
+  import { usePortalStore } from '@/store/modules/portal'
   import { getCssVar } from '@/utils/ui'
   import { useI18n } from 'vue-i18n'
   import { HttpError } from '@/utils/http/error'
@@ -143,6 +148,7 @@
   const dragVerify = ref()
 
   const userStore = useUserStore()
+  const portalStore = usePortalStore()
   const router = useRouter()
   const isPassing = ref(false)
   const isClickPass = ref(false)

@@ -18,6 +18,15 @@ export const systemManagerRoutes: AppRouteRecord = {
         title: '操作日志',
         keepAlive: true
       }
+    },
+    {
+      path: 'portal-setting',
+      name: 'PortalSetting',
+      component: '/storage-system/system-manager/portal-setting',
+      meta: {
+        title: '门户设置',
+        keepAlive: true
+      }
     }
   ]
 }

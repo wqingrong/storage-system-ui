@@ -27,6 +27,7 @@ export function fetchGetUserInfo() {
     resolve({
       userId: '1',
       userName: 'user1',
+      userAlias: '管理员',
       roles: ['R_SUPER'],
       buttons: ['B_CODE1', 'B_CODE2', 'B_CODE3'],
       email: 'art.design@gmail.com'

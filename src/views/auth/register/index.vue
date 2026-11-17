@@ -1,5 +1,9 @@
 <template>
-  <div class="login register">
+  <div
+    class="login register"
+    :class="{ 'is-portal': portalStore.hasBackground }"
+    :style="portalStore.backgroundStyle"
+  >
     <LoginLeftView></LoginLeftView>
     <div class="right-wrap">
       <AuthTopBar />
@@ -84,6 +88,7 @@
 
 <script setup lang="ts">
   import AppConfig from '@/config'
+  import { usePortalStore } from '@/store/modules/portal'
   import { useI18n } from 'vue-i18n'
   import type { FormInstance, FormRules } from 'element-plus'
 
@@ -103,6 +108,7 @@
 
   const { t, locale } = useI18n()
   const router = useRouter()
+  const portalStore = usePortalStore()
   const formRef = ref<FormInstance>()
 
   const systemName = AppConfig.systemInfo.name

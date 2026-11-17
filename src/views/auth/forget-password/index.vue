@@ -1,5 +1,9 @@
 <template>
-  <div class="login register">
+  <div
+    class="login register"
+    :class="{ 'is-portal': portalStore.hasBackground }"
+    :style="portalStore.backgroundStyle"
+  >
     <LoginLeftView></LoginLeftView>
     <div class="right-wrap">
       <AuthTopBar />
@@ -41,10 +45,12 @@
 
 <script setup lang="ts">
   import AppConfig from '@/config'
+  import { usePortalStore } from '@/store/modules/portal'
 
   defineOptions({ name: 'ForgetPassword' })
 
   const router = useRouter()
+  const portalStore = usePortalStore()
   const showInputLabel = ref(false)
 
   const systemName = AppConfig.systemInfo.name
